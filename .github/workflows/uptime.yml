@@ -1,0 +1,25 @@
+name: Uptime
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: uptime
+  cancel-in-progress: true
+jobs:
+  readiness:
+    if: vars.HERMES_UPTIME_URL != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Check application and database readiness
+        env:
+          HERMES_UPTIME_URL: ${{ vars.HERMES_UPTIME_URL }}
+        run: node tools/service-probe.mjs

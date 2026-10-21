@@ -12,16 +12,13 @@ import com.stripe.model.Event;
 import com.stripe.model.StripeObject;
 import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
-import com.stripe.param.checkout.SessionCreateParams;
 import jakarta.annotation.PostConstruct;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +44,7 @@ public class BillingController {
     private final RunnerRepository runnerRepository;
     private final AiUsageService aiUsageService;
     private final ProcessedStripeEventRepository processedStripeEventRepository;
+    private final CheckoutSessionService checkoutSessionService;
 
     private final String stripeSecretKey;
     private final String stripeWebhookSecret;
@@ -66,7 +64,8 @@ public class BillingController {
             @Value("${app.billing.stripe.price-pro-monthly:}") String stripePriceProMonthly,
             @Value("${app.billing.public-base-url:http://localhost:8080}") String publicBaseUrl,
             @Value("${app.billing.price-display-label:}") String priceDisplayLabel,
-            SystemConfigService systemConfigService) {
+            SystemConfigService systemConfigService,
+            CheckoutSessionService checkoutSessionService) {
         this.authService = authService;
         this.runnerRepository = runnerRepository;
         this.aiUsageService = aiUsageService;
@@ -77,6 +76,7 @@ public class BillingController {
         this.publicBaseUrl = trimTrailingSlash(publicBaseUrl);
         this.priceDisplayLabel = priceDisplayLabel;
         this.systemConfigService = systemConfigService;
+        this.checkoutSessionService = checkoutSessionService;
     }
 
     @PostConstruct
@@ -129,31 +129,13 @@ public class BillingController {
             return error(HttpStatus.BAD_REQUEST, ex.getMessage());
         }
 
-        String successUrl = publicBaseUrl + "/profile?checkout=success&session_id={CHECKOUT_SESSION_ID}";
-        String cancelUrl = publicBaseUrl + "/profile?checkout=cancel";
-
         try {
-            SessionCreateParams params = SessionCreateParams.builder()
-                    .setMode(SessionCreateParams.Mode.PAYMENT)
-                    .setCustomerEmail(runner.getEmail())
-                    .setClientReferenceId(String.valueOf(runner.getId()))
-                    .putMetadata("runnerId", String.valueOf(runner.getId()))
-                    .putMetadata("months", String.valueOf(months))
-                    .setSuccessUrl(successUrl)
-                    .setCancelUrl(cancelUrl)
-                    .addLineItem(
-                            SessionCreateParams.LineItem.builder()
-                                    .setPrice(stripePriceProMonthly.trim())
-                                    .setQuantity((long) months)
-                                    .build())
-                    .build();
-
-            Session session = Session.create(params);
-            Map<String, String> out = new LinkedHashMap<>();
-            out.put("url", session.getUrl());
-            return ResponseEntity.ok(out);
+            return ResponseEntity.ok(Map.of("url", checkoutSessionService.createOrReuse(runner.getId(), months)));
+        } catch (CheckoutSessionService.CheckoutConflictException e) {
+            return error(HttpStatus.CONFLICT, e.getMessage());
         } catch (StripeException e) {
-            return error(HttpStatus.BAD_GATEWAY, "Payment provider error: " + e.getMessage());
+            logger.warn("Checkout request failed with provider error type={}", e.getClass().getSimpleName());
+            return error(HttpStatus.BAD_GATEWAY, "Payment service temporarily unavailable. Please retry shortly.");
         }
     }
 
@@ -178,9 +160,11 @@ public class BillingController {
             event = Webhook.constructEvent(payload, sigHeader, stripeWebhookSecret.trim());
         } catch (SignatureVerificationException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("invalid signature");
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("invalid payload");
         }
 
-        if (!"checkout.session.completed".equals(event.getType())) {
+        if (!"checkout.session.completed".equals(event.getType()) && !"checkout.session.async_payment_succeeded".equals(event.getType())) {
             return ResponseEntity.ok("ignored");
         }
 
@@ -190,6 +174,9 @@ public class BillingController {
         }
 
         Session session = sessionOpt.get();
+        if (event.getId() == null || event.getId().isBlank() || session.getId() == null || session.getId().isBlank() || !"payment".equals(session.getMode())) {
+            return ResponseEntity.badRequest().body("invalid checkout session");
+        }
         if (!"paid".equals(session.getPaymentStatus())) {
             return ResponseEntity.ok("unpaid");
         }
@@ -200,7 +187,8 @@ public class BillingController {
         }
 
         int months = parseMonths(session);
-        Optional<Runner> runnerOpt = runnerRepository.findById(runnerId);
+        // Serialize all grants for a runner across processes and refresh stale account state.
+        Optional<Runner> runnerOpt = runnerRepository.findByIdForUpdate(runnerId);
         if (runnerOpt.isEmpty() || runnerOpt.get().isDeleted()) {
             return ResponseEntity.ok("runner-missing");
         }
@@ -210,12 +198,16 @@ public class BillingController {
             return ResponseEntity.ok("admin-skip");
         }
 
-        try {
-            processedStripeEventRepository.saveAndFlush(new ProcessedStripeEvent(event.getId()));
-        } catch (DataIntegrityViolationException e) {
+        String paymentKey = "checkout:" + session.getId();
+        if (processedStripeEventRepository.existsById(event.getId())
+                || processedStripeEventRepository.existsById(paymentKey)) {
             return ResponseEntity.ok("duplicate");
         }
 
+        // Assigned-ID JPA saves merge, so duplicate detection must precede persistence under the lock.
+        // Both receipts and the entitlement update commit (or roll back) in this transaction.
+        processedStripeEventRepository.save(new ProcessedStripeEvent(event.getId()));
+        processedStripeEventRepository.save(new ProcessedStripeEvent(paymentKey));
         aiUsageService.grantPro(runner, months);
         return ResponseEntity.ok("ok");
     }
@@ -235,9 +227,10 @@ public class BillingController {
             if (sessionId.isBlank()) {
                 return Optional.empty();
             }
-            return Optional.of(Session.retrieve(sessionId));
+            return Optional.of(Session.retrieve(sessionId, com.stripe.net.RequestOptions.builder()
+                    .setApiKey(stripeSecretKey).build()));
         } catch (Exception e) {
-            logger.warn("Failed to parse Stripe webhook payload: {}", e.getMessage(), e);
+            logger.warn("Failed to read Stripe checkout session type={}", e.getClass().getSimpleName());
             return Optional.empty();
         }
     }

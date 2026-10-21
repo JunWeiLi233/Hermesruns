@@ -1,0 +1,141 @@
+/* Quality sessions: manually typed and automatically detected runs, over a period, with their numbers, set against their other runs and the stretch before. Cards,
+   headings, chips, tiles and the light and midnight palettes follow the Trends and the VO2max estimates pages it sits beside; every colour below is one of the --qs-* tokens
+   defined here. */
+
+#root .quality-sessions-v2__automatic { display: block; margin-top: 4px; color: var(--qs-accent); font-size: .72rem; font-weight: 500; line-height: 1.4; }
+
+#root .quality-sessions-v2 {
+  --qs-card: #fff;
+  --qs-ink: #171717;
+  --qs-muted: #515563;
+  --qs-faint: #6f665c;
+  --qs-line: rgba(28, 25, 23, 0.08);
+  --qs-fill: rgba(28, 25, 23, 0.05);
+  --qs-accent: #a0392a;
+  --qs-on-accent: #fff;
+  --qs-error: #c4261a;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1180px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 0 0 48px;
+  color: var(--qs-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .quality-sessions-v2 {
+  --qs-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --qs-ink: #f8f4ef;
+  --qs-muted: #c0b8ad;
+  --qs-faint: #a69e93;
+  --qs-line: rgba(255, 248, 238, 0.12);
+  --qs-fill: rgba(255, 255, 255, 0.06);
+  --qs-accent: #ffb4a7;
+  --qs-on-accent: #1c1917;
+  --qs-error: #ff9b87;
+}
+
+#root .quality-sessions-v2 :is(h1, h2, h3, p, dl, dd, ol, ul) { margin: 0; }
+#root .quality-sessions-v2 :is(ol, ul) { padding: 0; list-style: none; }
+
+/* Heading */
+#root .quality-sessions-v2__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+#root .quality-sessions-v2__head h2 {
+  color: var(--qs-ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+#root .quality-sessions-v2__head p { max-width: 62ch; margin-top: 6px; color: var(--qs-muted); font-size: 0.9rem; line-height: 1.5; text-wrap: pretty; }
+#root .quality-sessions-v2__links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+#root .quality-sessions-v2__links a { color: var(--qs-accent); font-size: 0.85rem; font-weight: 700; text-decoration: none; }
+#root .quality-sessions-v2__links a:hover { text-decoration: underline; }
+#root .quality-sessions-v2 :is(a, button):focus-visible { outline: 2px solid var(--qs-accent); outline-offset: 2px; border-radius: 6px; }
+
+/* The choices: which types count, and the period */
+#root .quality-sessions-v2__card { display: flex; flex-direction: column; gap: 12px; padding: 20px 22px; border-radius: 24px; background: var(--qs-card); }
+#root .quality-sessions-v2__choices { gap: 14px; }
+@media (min-width: 901px) {
+  #root .quality-sessions-v2__choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; }
+}
+#root .quality-sessions-v2__choice { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+#root .quality-sessions-v2__choice-label { color: var(--qs-muted); font-size: 0.75rem; font-weight: 700; }
+#root .quality-sessions-v2__chips { display: flex; flex-wrap: wrap; max-width: 100%; gap: 2px; padding: 3px; border-radius: 11px; background: var(--qs-fill); }
+#root .quality-sessions-v2__chips button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--qs-muted); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+#root .quality-sessions-v2__chips button[aria-pressed="true"] { background: var(--qs-card); color: var(--qs-ink); box-shadow: 0 0 0 1px var(--qs-line); }
+#root .quality-sessions-v2__hint { max-width: 78ch; color: var(--qs-faint); font-size: 0.75rem; line-height: 1.45; }
+
+/* Four readings */
+#root .quality-sessions-v2__reads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+#root .quality-sessions-v2__reads > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 16px 18px; border-radius: 18px; background: var(--qs-card); }
+#root .quality-sessions-v2__reads span { color: var(--qs-muted); font-size: 0.75rem; font-weight: 700; }
+#root .quality-sessions-v2__reads strong { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#root .quality-sessions-v2__reads small { color: var(--qs-faint); font-size: 0.72rem; line-height: 1.45; }
+
+/* The sessions as a table */
+#root .quality-sessions-v2__sessions { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+#root .quality-sessions-v2__sessions h2 { color: var(--qs-ink); font-size: 1.1rem; }
+#root .quality-sessions-v2__table-wrap { align-self: stretch; overflow-x: auto; border-radius: 24px; background: var(--qs-card); }
+#root .quality-sessions-v2__table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+#root .quality-sessions-v2__table th,
+#root .quality-sessions-v2__table td { padding: 12px 16px; border-bottom: 1px solid var(--qs-line); text-align: left; white-space: nowrap; }
+#root .quality-sessions-v2__table thead th { color: var(--qs-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+#root .quality-sessions-v2__table tbody th { font-weight: 700; }
+#root .quality-sessions-v2__table tbody tr:last-child :is(th, td) { border-bottom: 0; }
+#root .quality-sessions-v2__run { max-width: 26ch; overflow: hidden; text-overflow: ellipsis; }
+#root .quality-sessions-v2__table a { color: var(--qs-accent); font-weight: 700; text-decoration: none; }
+#root .quality-sessions-v2__table a:hover { text-decoration: underline; }
+
+/* Notes, states */
+#root .quality-sessions-v2__note { max-width: 78ch; color: var(--qs-muted); font-size: 0.85rem; line-height: 1.55; text-wrap: pretty; }
+#root .quality-sessions-v2__note.is-faint { color: var(--qs-faint); font-size: 0.75rem; }
+#root .quality-sessions-v2__note.is-error { color: var(--qs-error); }
+#root .quality-sessions-v2__note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+#root .quality-sessions-v2__empty { align-items: flex-start; gap: 8px; padding: 28px; }
+#root .quality-sessions-v2__empty h2 { font-size: 1.1rem; }
+#root .quality-sessions-v2__empty p { max-width: 62ch; color: var(--qs-muted); font-size: 0.88rem; line-height: 1.5; }
+#root .quality-sessions-v2__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; margin-top: 4px; }
+#root .quality-sessions-v2__link { color: var(--qs-accent); font-size: 0.85rem; font-weight: 700; text-decoration: none; }
+#root .quality-sessions-v2__link:hover { text-decoration: underline; }
+#root .quality-sessions-v2__state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+#root .quality-sessions-v2__button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--qs-accent);
+  color: var(--qs-on-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+#root .quality-sessions-v2__skeleton { display: flex; flex-direction: column; gap: 12px; }
+#root .quality-sessions-v2__skeleton-choices { height: 120px; border-radius: 24px; }
+#root .quality-sessions-v2__skeleton-tiles { height: 100px; border-radius: 18px; }
+#root .quality-sessions-v2__skeleton-table { height: 280px; border-radius: 24px; }
+
+@media (max-width: 900px) {
+  #root .quality-sessions-v2__reads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  #root .quality-sessions-v2__card { padding: 16px; }
+  /* The four readings are the rows of one card, a name on the left and its number on the right of a line, and when the two do not fit on a line (the text made larger)
+     the number goes under the name and not over it. */
+  #root .quality-sessions-v2__reads { grid-template-columns: minmax(0, 1fr); gap: 0; overflow: hidden; border-radius: 18px; background: var(--qs-card); }
+  #root .quality-sessions-v2__reads > div { display: flex; flex-flow: row wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; padding: 12px 16px; border-radius: 0; background: transparent; }
+  #root .quality-sessions-v2__reads > div + div { border-top: 1px solid var(--qs-line); }
+  #root .quality-sessions-v2__reads span { flex: 0 1 auto; }
+  #root .quality-sessions-v2__reads strong { flex: 0 1 auto; min-width: 0; max-width: 100%; margin-left: auto; font-size: 1.3rem; text-align: right; overflow-wrap: anywhere; }
+  #root .quality-sessions-v2__reads small { flex: 1 1 100%; }
+  #root .quality-sessions-v2__table :is(th, td) { padding: 10px 12px; }
+  #root .quality-sessions-v2__skeleton-table { height: 220px; }
+}

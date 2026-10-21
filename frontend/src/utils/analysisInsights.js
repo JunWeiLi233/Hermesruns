@@ -1,4 +1,6 @@
+import { addDaysToKey, runDayKey, runnersTodayFromDays } from './calendarDays.js';
 import { formatDuration, formatPaceSeconds } from './format.js';
+import { addCalendarDays, getAccountDate } from './timeZone.js';
 import {
   buildOrderedRacePredictions,
   collectAllVdotEntries,
@@ -107,21 +109,18 @@ export function buildTrainingLoad(runs, bestVdot) {
     if (Number.isNaN(started.getTime()) || durationMin <= 0 || distanceKm <= 0) return;
 
     const vo2Fraction = resolveRunVo2Fraction(run, bestVdot, hrMax) || 0.65;
-    const key = started.toISOString().slice(0, 10);
+    const key = runDayKey(run);
+    if (!key) return;
     daily[key] = (daily[key] || 0) + effortScore(vo2Fraction, durationMin);
   });
 
   const keys = Object.keys(daily).sort();
   if (!keys.length) return null;
 
-  const start = new Date(keys[0]);
-  const end = new Date();
-  start.setHours(0, 0, 0, 0);
-  end.setHours(0, 0, 0, 0);
-
+  const end = runnersTodayFromDays(keys);
   const days = [];
-  for (const cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
-    days.push(cursor.toISOString().slice(0, 10));
+  for (let cursor = keys[0]; cursor <= end; cursor = addDaysToKey(cursor, 1)) {
+    days.push(cursor);
   }
   if (days.length < 7) return null;
 
@@ -157,13 +156,44 @@ export function buildTrainingLoad(runs, bestVdot) {
   };
 }
 
+function recordedInstant(run) {
+  // Offset-free legacy wall time is not an elapsed-time instant.
+  for (const value of [run.activityInstant, run.startTime, run.startDate]) {
+    if (typeof value === 'string' && /(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value))) {
+      return Date.parse(value);
+    }
+  }
+  return null;
+}
+
+function legacyCalendarDate(run) {
+  for (const value of [run.accountLocalDate, run.startTime, run.startDate]) {
+    const date = typeof value === 'string' ? value.slice(0, 10) : '';
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const parsed = new Date(`${date}T00:00:00Z`);
+    if (Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date) return date;
+  }
+  return null;
+}
+
+function isHistoricalActivity(run, now) {
+  const instant = recordedInstant(run);
+  if (instant != null) return instant <= now;
+  const date = legacyCalendarDate(run);
+  const today = getAccountDate(run.accountTimeZone, new Date(now));
+  // Legacy wall times without an account zone may already be tomorrow on the runner's clock.
+  // An actual instant above, or a known account zone, still determines whether a run is historical.
+  return date != null && (date <= today || (!run.accountTimeZone && date <= addCalendarDays(today, 2)));
+}
+
 export function buildPolarized(runs, bestVdot) {
   if (!runs.length || !bestVdot) return null;
 
   const now = Date.now();
   const lookback = 28 * 24 * 60 * 60 * 1000;
+  const historical = runs.filter(run => isHistoricalActivity(run, now));
   let hrMax = 0;
-  runs.forEach((run) => {
+  historical.forEach((run) => {
     hrMax = Math.max(hrMax, Number(run.maxHeartRate || 0));
   });
 
@@ -171,11 +201,15 @@ export function buildPolarized(runs, bestVdot) {
   let moderate = 0;
   let hard = 0;
 
-  runs.forEach((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
+  historical.forEach((run) => {
+    const instant = recordedInstant(run);
+    const calendarDate = instant == null ? legacyCalendarDate(run) : null;
     const duration = Number(run.movingTimeSeconds || 0);
     const distanceKm = kmOf(run);
-    if (Number.isNaN(started) || now - started > lookback || duration <= 0 || distanceKm <= 0) return;
+    const today = getAccountDate(run.accountTimeZone, new Date(now));
+    const inWindow = instant != null ? now - instant <= lookback
+      : calendarDate != null && calendarDate >= addCalendarDays(today, -27) && calendarDate <= today;
+    if (!inWindow || duration <= 0 || distanceKm <= 0) return;
 
     const zone = classifyZone(resolveRunVo2Fraction(run, bestVdot, hrMax) || 0.65);
     if (zone.key === 'recovery' || zone.key === 'easy') easy += duration;
@@ -584,7 +618,17 @@ export function buildTrainingZones(bestVdot, lang, unit) {
   });
 }
 
+export function prepareAnalysisRuns(runs, now = Date.now()) {
+  // Adapt only model inputs, never persisted activities. Known UTC instants must not
+  // be parsed as browser-local clocks, and future history cannot describe current fitness.
+  return runs.filter(run => isHistoricalActivity(run, now)).map(run => {
+    const instant = recordedInstant(run);
+    return instant != null ? { ...run, startTime: new Date(instant).toISOString() } : run;
+  });
+}
+
 export function buildAnalysisSnapshot(runs, lang, unit) {
+  runs = prepareAnalysisRuns(runs);
   const bestEstimate = estimateCurrentVdot(runs);
   const bestVdot = bestEstimate.representativeVdot;
   const entries = normalizeAnalysisList(collectAllVdotEntries(runs));

@@ -42,8 +42,29 @@ assert.ok(stats.monotony > 0.9 && stats.monotony < 1.1);
 assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: Array(7).fill(10) }, []).monotony, Infinity);
 assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: Array(7).fill(0) }, []).monotony, null);
 assert.equal(getLoadBalanceWeekStats(null, []).volumeKm, null);
+assert.equal(getLoadBalanceWeekStats(null, []).strain, null);
+
+// Strain: the week's load times its monotony, from the same seven days as the monotony (the worked example of the methods doc).
+assert.equal(stats.weekLoad, 375);
+assert.ok(Math.abs(stats.strain - 370.9015) < 0.001, 'Strain is the week load times the monotony.');
+assert.ok(Math.abs(stats.strain - stats.weekLoad * stats.monotony) < 1e-9);
+assert.equal(stats.previousStrain, null, 'Seven days of history have no week before them.');
+assert.equal(stats.strainDelta, null);
+const twoWeeks = getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: [30, 0, 80, 0, 80, 40, 0, 0, 100, 50, 0, 150, 75, 0] }, []);
+assert.ok(Math.abs(twoWeeks.previousStrain - 227.225) < 0.001);
+assert.equal(twoWeeks.strainDelta, 63, 'The change is on the week before, as a whole percent.');
+assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: Array(7).fill(0) }, []).strain, null);
+assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: Array(7).fill(10) }, []).strain, Infinity);
+assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: Array(7).fill(12.3) }, []).monotony, Infinity, 'Seven equal loads are equal even when the arithmetic leaves a speck of spread.');
 assert.deepEqual(getLoadBalanceRecentRuns([
   { trainingDate: '2026-09-30', loadScore: 999 }, { trainingDate: '2026-10-01', loadScore: 40 },
   { trainingDate: '2026-10-07', loadScore: 100 }, { trainingDate: '2026-10-08', loadScore: 999 },
 ], '2026-10-07').map((row) => row.loadScore), [100, 40]);
-console.log('[PASS] Seven independent EWMA load budgets, weekly volume, monotony, and current-week contributors.');
+console.log('[PASS] Seven independent EWMA load budgets, weekly volume, monotony, strain, and current-week contributors.');
+
+// BUG-044: the cards need to know whether a week before exists (14 days of history), apart from whether it has anything to compare with.
+assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: Array(14).fill(0).map((_, index) => index % 3) }, []).hasPriorWeek, true);
+assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: [30, 0, 80, 0, 80, 40, 0] }, []).hasPriorWeek, false);
+assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, days: [] }, []).hasPriorWeek, false);
+assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: [0, 0, 0, 0, 0, 0, 0, 30, 0, 80, 0, 80, 40, 0] }, []).previousStrain, null, 'a rest week before has no strain');
+assert.equal(getLoadBalanceWeekStats({ ...trainingLoad, dailyLoads: [0, 0, 0, 0, 0, 0, 0, 30, 0, 80, 0, 80, 40, 0] }, []).hasPriorWeek, true);

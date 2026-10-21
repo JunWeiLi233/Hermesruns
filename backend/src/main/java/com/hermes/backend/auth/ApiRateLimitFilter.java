@@ -12,16 +12,18 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 /**
  * Global abuse protection for /api endpoints (scraping + bot mitigation).
- * This is an in-memory limiter designed for single-instance deployments.
+ * Uses the shared rate-limit store (Redis when configured, local memory otherwise).
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 20)
@@ -30,6 +32,15 @@ public class ApiRateLimitFilter implements Filter {
 
     private final ApiRateLimiter limiter;
     private final AuthService authService;
+
+    @Value("${app.api.rate-limit.global-ip-per-minute:600}")
+    private int globalIpLimit = 600;
+    @Value("${app.api.rate-limit.global-user-per-minute:900}")
+    private int globalUserLimit = 900;
+    @Value("${app.api.rate-limit.checkout-ip-per-minute:5}")
+    private int checkoutIpLimit = 5;
+    @Value("${app.api.rate-limit.checkout-user-per-minute:5}")
+    private int checkoutUserLimit = 5;
 
     public ApiRateLimitFilter(ApiRateLimiter limiter, AuthService authService) {
         this.limiter = limiter;
@@ -51,13 +62,13 @@ public class ApiRateLimitFilter implements Filter {
         }
 
         // Avoid breaking Stripe/Strava webhooks with global throttling.
-        if (path.startsWith("/api/billing/webhook") || path.startsWith("/api/strava/webhook")) {
+        if ("/api/billing/webhook".equals(path) || "/api/strava/webhook".equals(path)) {
             chain.doFilter(request, response);
             return;
         }
 
         String ip = RequestIpResolver.clientIp(req);
-        String method = req.getMethod() == null ? "" : req.getMethod().toUpperCase();
+        String method = req.getMethod() == null ? "" : req.getMethod().toUpperCase(Locale.ROOT);
 
         // Default: allow moderate scraping resistance.
         int max = 300;
@@ -84,9 +95,18 @@ public class ApiRateLimitFilter implements Filter {
         if (path.startsWith("/api/shoes/scan-image")) {
             max = 20; // /min
         }
+        if ("/api/shoes/query-normalization".equals(path)) max = 20;
+        if ("/api/billing/checkout".equals(path)) max = checkoutIpLimit;
+
+        // A shared ceiling also covers requests that rotate paths, IDs, and HTTP methods.
+        if (!limiter.allow("ip|" + ip + "|all", globalIpLimit, windowSec)) {
+            writeTooManyRequests(resp, windowSec, "Too many requests from this network. Please slow down and try again.");
+            return;
+        }
 
         String bucket = bucketPath(path);
-        String ipKey = "ip|" + ip + "|" + method + "|" + bucket;
+        String methodBucket = "GET".equals(method) || "HEAD".equals(method) ? "READ" : "WRITE";
+        String ipKey = "ip|" + ip + "|" + methodBucket + "|" + bucket;
         if (!limiter.allow(ipKey, max, windowSec)) {
             log.warn("API rate limit hit scope=ip ip={} method={} path={} maxPerWindow={} windowSeconds={}",
                     ip, method, path, max, windowSec);
@@ -96,8 +116,12 @@ public class ApiRateLimitFilter implements Filter {
 
         Optional<Runner> authenticatedRunner = authService.findByAuthorizationHeader(req.getHeader("Authorization"));
         if (authenticatedRunner.isPresent()) {
-            int userMax = authenticatedLimit(max, method);
-            String userKey = "user|" + authenticatedRunner.get().getId() + "|" + method + "|" + bucket;
+            if (!limiter.allow("user|" + authenticatedRunner.get().getId() + "|all", globalUserLimit, windowSec)) {
+                writeTooManyRequests(resp, windowSec, "Too many requests for this account. Please wait a moment and try again.");
+                return;
+            }
+            int userMax = "/api/billing/checkout".equals(path) ? checkoutUserLimit : authenticatedLimit(max, method);
+            String userKey = "user|" + authenticatedRunner.get().getId() + "|" + methodBucket + "|" + bucket;
             if (!limiter.allow(userKey, userMax, windowSec)) {
                 log.warn("API rate limit hit scope=user runnerId={} method={} path={} maxPerWindow={} windowSeconds={}",
                         authenticatedRunner.get().getId(), method, path, userMax, windowSec);
@@ -129,10 +153,16 @@ public class ApiRateLimitFilter implements Filter {
     private static String bucketPath(String path) {
         // Coarse bucketing keeps memory bounded and avoids per-id bypasses.
         if (path == null) return "";
+        if ("/api/billing/checkout".equals(path) || "/api/shoes/scan-image".equals(path)
+                || "/api/shoes/query-normalization".equals(path)) return path;
         if (path.startsWith("/api/activities/") && path.contains("/points")) return "/api/activities/:id/points";
+        if (path.equals("/api/activities") || path.startsWith("/api/activities/")) return "/api/activities/*";
         if (path.startsWith("/api/shoes/")) return "/api/shoes/*";
         if (path.startsWith("/api/profile/")) return "/api/profile/*";
         if (path.startsWith("/api/races/")) return "/api/races/*";
-        return path;
+        if (path.startsWith("/api/billing/")) return "/api/billing/*";
+        if (path.startsWith("/api/auth/")) return "/api/auth/*";
+        // Unknown resources must not allocate a bucket per caller-controlled path.
+        return "/api/*";
     }
 }

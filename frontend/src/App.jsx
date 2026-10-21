@@ -8,7 +8,12 @@ import { UnitProvider } from './contexts/UnitContext';
 import AppErrorBoundary from './components/ErrorBoundary';
 import PageSkeleton from './components/PageSkeleton';
 import SeoHead from './components/SeoHead';
+import AnalysisFeatureRedirect from './components/AnalysisFeatureRedirect';
 import { routeParamPreloaders, routePreloaders } from './utils/routePreload';
+import {LegacyFeatureRedirect,ExistingRunsRoute,ExistingRunDetailRoute,ExistingScheduleRoute} from './features/training/integrated/ExistingPageRoutes';
+import TrainingUnitsSync from './features/training/integrated/TrainingUnitsSync';
+import LegacyCoachingRedirect from './pages/team/LegacyCoachingRedirect';
+import { isPublicHeatmapPath } from './api';
 
 // Route chunks are loaded through the shared routePreloaders map so
 // hover/focus prefetching (utils/routePreload.js) triggers the exact same
@@ -19,10 +24,17 @@ const Signup = React.lazy(routePreloaders['/signup']);
 const ForgotPassword = React.lazy(routePreloaders['/forgot-password']);
 const Dashboard = React.lazy(routePreloaders['/dashboard']);
 const Profile = React.lazy(routePreloaders['/profile']);
+const Team = React.lazy(routePreloaders['/profile/team']);
 const Runs = React.lazy(routePreloaders['/runs']);
 const RunDetail = React.lazy(routeParamPreloaders['/runs/:id']);
 const Analysis = React.lazy(routePreloaders['/analysis']);
 const Heatmap = React.lazy(routePreloaders['/heatmap']);
+const HeatmapPublic = React.lazy(() => import('./pages/heatmap/HeatmapPublicPage.jsx'));
+function HeatmapEntry() {
+  const {pathname}=useLocation();
+  const capability=isPublicHeatmapPath(pathname);
+  return capability ? <HeatmapPublic/> : <UserOnlyRoute><Heatmap/></UserOnlyRoute>;
+}
 const WeatherEngine = React.lazy(routePreloaders['/weather']);
 const AnalysisInsightDetail = React.lazy(routeParamPreloaders['/analysis/:insightKey']);
 const AddShoes = React.lazy(routePreloaders['/shoes/add']);
@@ -44,7 +56,7 @@ const SKELETON_PREVIEW_VARIANTS = new Set([
   'runner', 'profile', 'runs', 'run-detail', 'analysis', 'analysis-insight', 'prediction',
   'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'import-data',
   'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule',
-  'muscle-training', 'analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'admin', 'landing', 'auth', 'login', 'signup', 'forgot-password', 'legal',
+  'muscle-training', 'analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'admin', 'landing', 'auth', 'login', 'signup', 'forgot-password', 'legal', 'garmin', 'admin-login',
 ]);
 
 const ADMIN_SKELETON_ROUTE_TABS = {
@@ -114,7 +126,7 @@ function RouteLoading() {
   else if (pathname === '/analysis/coach-insight') variant = 'analysis-coach';
   else if (pathname.startsWith('/analysis/')) variant = 'analysis-insight';
   else if (pathname.startsWith('/prediction/')) variant = 'prediction';
-  else if (pathname === '/heatmap') variant = 'heatmap';
+  else if (pathname.startsWith('/heatmap')) variant = 'heatmap';
   else if (pathname === '/weather' || pathname === '/weather-engine') variant = 'weather';
   else if (pathname === '/today-run') variant = 'today-run';
   else if (pathname === '/rewards') variant = 'rewards';
@@ -194,7 +206,7 @@ function RouteStyleGate({ children }) {
     // auth cascade after it could override feature styles on a later login.
     const isProfileRoute = pathname === '/profile' && !appStylesPromise;
     const isAuthRoute = authStyleRoutes.has(pathname) && !appStylesPromise && !profileStylesPromise;
-    if (pathname === '/' || appStylesLoaded || (isAuthRoute && authStylesLoaded) || (isProfileRoute && profileStylesLoaded)) return undefined;
+    if (pathname === '/') return undefined;
 
     let active = true;
     if (isProfileRoute && !profileStylesPromise) {
@@ -230,8 +242,9 @@ function RouteStyleGate({ children }) {
 
 function UserOnlyRoute({ children }) {
   const { isAuthenticated, isAdmin, authHydrated } = useAuth();
+  const location = useLocation();
 
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to={`/login?returnTo=${encodeURIComponent(location.pathname + location.search)}`} replace />;
   if (!authHydrated) return <RouteLoading />;
   if (isAdmin) return <Navigate to="/dashboard" replace />;
   return <>{children}<Suspense fallback={null}><MobileRunnerNavigation /></Suspense></>;
@@ -253,6 +266,7 @@ function App() {
         <ThemeProvider>
           <UnitProvider>
             <AuthProvider>
+              <TrainingUnitsSync />
               <Suspense fallback={<RouteLoading />}>
                 <ScrollToTop />
                 <SeoHead />
@@ -268,16 +282,24 @@ function App() {
                   <Route path="/dashboard/*" element={<AdminOnlyRoute><Dashboard /></AdminOnlyRoute>} />
                   <Route path="/workflows" element={<Navigate to="/dashboard/workflows" replace />} />
                   <Route path="/profile" element={<UserOnlyRoute><Profile /></UserOnlyRoute>} />
-                  <Route path="/runs" element={<UserOnlyRoute><Runs /></UserOnlyRoute>} />
-                  <Route path="/runs/:id" element={<UserOnlyRoute><RunDetail /></UserOnlyRoute>} />
+                  <Route path="/profile/team" element={<UserOnlyRoute><Team /></UserOnlyRoute>} />
+                  <Route path="/runs" element={<UserOnlyRoute><ExistingRunsRoute><Runs /></ExistingRunsRoute></UserOnlyRoute>} />
+                  <Route path="/runs/:id" element={<UserOnlyRoute><ExistingRunDetailRoute><RunDetail /></ExistingRunDetailRoute></UserOnlyRoute>} />
                   <Route path="/analysis" element={<UserOnlyRoute><Analysis /></UserOnlyRoute>} />
-                  <Route path="/heatmap" element={<UserOnlyRoute><Heatmap /></UserOnlyRoute>} />
+                  <Route path="/heatmap/*" element={<HeatmapEntry />} />
                   <Route path="/weather" element={<UserOnlyRoute><WeatherEngine /></UserOnlyRoute>} />
                   <Route path="/weather-engine" element={<Navigate to="/weather" replace />} />
                   <Route path="/analysis/vo2max" element={<Navigate to="/analysis" replace />} />
+                  <Route path="/training-log" element={<UserOnlyRoute><AnalysisFeatureRedirect pathname="/runs" anchor="training-log" /></UserOnlyRoute>} />
+                  <Route path="/analysis/pace-curve" element={<UserOnlyRoute><AnalysisFeatureRedirect pathname="/analysis" anchor="pace-curve" /></UserOnlyRoute>} />
+                  <Route path="/analysis/vo2max-estimates" element={<UserOnlyRoute><AnalysisFeatureRedirect pathname="/analysis" anchor="vo2max-estimates" /></UserOnlyRoute>} />
+                  <Route path="/analysis/trends" element={<UserOnlyRoute><AnalysisFeatureRedirect pathname="/analysis" anchor="analysis-trends" /></UserOnlyRoute>} />
+                  <Route path="/analysis/quality-sessions" element={<UserOnlyRoute><AnalysisFeatureRedirect pathname="/analysis/intensity" anchor="quality-sessions" /></UserOnlyRoute>} />
                   <Route path="/analysis/:insightKey" element={<UserOnlyRoute><AnalysisInsightDetail /></UserOnlyRoute>} />
                   <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
-                  <Route path="/today-run" element={<UserOnlyRoute><TodayRun /></UserOnlyRoute>} />
+                  <Route path="/today-run" element={<UserOnlyRoute><LegacyCoachingRedirect><TodayRun /></LegacyCoachingRedirect></UserOnlyRoute>} />
+                  <Route path="/training-plan/*" element={<UserOnlyRoute><LegacyFeatureRedirect plan /></UserOnlyRoute>} />
+                  <Route path="/training/*" element={<UserOnlyRoute><LegacyFeatureRedirect /></UserOnlyRoute>} />
                   <Route path="/rewards" element={<UserOnlyRoute><Rewards /></UserOnlyRoute>} />
                   <Route path="/settings" element={<UserOnlyRoute><Settings /></UserOnlyRoute>} />
                   <Route path="/settings/import-data" element={<UserOnlyRoute><ImportDataSettings /></UserOnlyRoute>} />
@@ -287,7 +309,7 @@ function App() {
                   <Route path="/shoe-catalog" element={<UserOnlyRoute><ShoeCatalog /></UserOnlyRoute>} />
                   <Route path="/races" element={<UserOnlyRoute><Races /></UserOnlyRoute>} />
                   <Route path="/races/details/:raceId" element={<UserOnlyRoute><RacesDetail /></UserOnlyRoute>} />
-                  <Route path="/schedule" element={<UserOnlyRoute><Schedule /></UserOnlyRoute>} />
+                  <Route path="/schedule" element={<UserOnlyRoute><ExistingScheduleRoute><Schedule /></ExistingScheduleRoute></UserOnlyRoute>} />
                   <Route path="/muscle-training" element={<UserOnlyRoute><MuscleTraining /></UserOnlyRoute>} />
 
                   <Route path="*" element={<Navigate to="/" replace />} />

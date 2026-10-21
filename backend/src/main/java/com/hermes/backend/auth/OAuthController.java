@@ -6,6 +6,7 @@ import com.hermes.backend.auth.mfa.AdminMfaChallengeCookie;
 import com.hermes.backend.auth.mfa.AdminMfaException;
 import com.hermes.backend.auth.mfa.AdminMfaService;
 import com.hermes.backend.billing.AiUsageService;
+import com.hermes.backend.imports.StravaAccountService;
 import com.hermes.backend.imports.StravaSyncService;
 import com.hermes.backend.imports.StravaTokenService;
 import com.hermes.backend.infrastructure.config.SystemConfigService;
@@ -29,6 +30,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -91,6 +93,9 @@ public class OAuthController {
     private final StravaSyncService stravaSyncService;
     private final AdminMfaService adminMfaService;
     private final AdminAccessGateway adminAccessGateway;
+
+    // Optional collaborator, injected by Spring; unset in tests that build this controller by hand.
+    private StravaAccountService stravaAccountService;
 
     @Value("${google.client.id:}")
     private String googleClientId;
@@ -167,6 +172,11 @@ public class OAuthController {
         this.stravaSyncService = stravaSyncService;
         this.adminMfaService = adminMfaService;
         this.adminAccessGateway = adminAccessGateway;
+    }
+
+    @Autowired(required = false)
+    void setStravaAccountService(StravaAccountService stravaAccountService) {
+        this.stravaAccountService = stravaAccountService;
     }
 
     // ── Auth providers ──────────────────────────────────────────────
@@ -676,6 +686,32 @@ public class OAuthController {
         };
     }
 
+    /**
+     * Disconnects Strava. Revokes the token at Strava, stops any sync in progress and deletes the runs
+     * that came from the Strava API (Strava's API Policy requires deleting that data when a runner
+     * disconnects). Runs the runner imported from their own files are kept. Safe to repeat.
+     */
+    @DeleteMapping("/auth/strava/unlink")
+    public ResponseEntity<?> unlinkStrava(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid or expired session token.", "code", "UNAUTHORIZED"));
+        }
+        if (stravaAccountService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "Strava disconnect is unavailable right now.", "code", "UNAVAILABLE"));
+        }
+        StravaAccountService.UnlinkResult result = stravaAccountService.unlink(runnerOptional.get());
+        Map<String, Object> body = new HashMap<>();
+        body.put("unlinked", true);
+        body.put("revokedAtStrava", result.revokedAtStrava());
+        body.put("removedActivities", result.removedActivities());
+        return ResponseEntity.ok(body);
+    }
+
     @GetMapping("/auth/strava/sync-status")
     public ResponseEntity<?> getStravaSyncStatus(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader
@@ -730,7 +766,7 @@ public class OAuthController {
         if (runnerOptional.isEmpty()) {
             return errorRedirectCode(
                     "STRAVA_LINK_SESSION_EXPIRED",
-                    "Your Strava linking session expired. Please start from your Hermes profile again.",
+                    "Your Strava linking session expired. Please start from your HermesRuns profile again.",
                     "profile-link"
             );
         }
@@ -739,14 +775,14 @@ public class OAuthController {
         if (!Objects.equals(currentRunner.getSessionToken(), pendingLinkRequest.sessionFingerprint())) {
             return errorRedirectCode(
                     "STRAVA_LINK_SESSION_EXPIRED",
-                    "Your Strava linking session expired. Please start from your Hermes profile again.",
+                    "Your Strava linking session expired. Please start from your HermesRuns profile again.",
                     "profile-link"
             );
         }
         if (linkedRunner.isPresent() && !Objects.equals(linkedRunner.get().getId(), currentRunner.getId())) {
             return errorRedirectCode(
                     "STRAVA_LINK_CONFLICT",
-                    "This Strava account is already linked to another Hermes runner.",
+                    "This Strava account is already linked to another HermesRuns runner.",
                     "profile-link"
             );
         }
@@ -805,7 +841,7 @@ public class OAuthController {
                 + "?error=" + urlEncode("STRAVA_LINK_CONFIRMATION_REQUIRED")
                 + "&source=strava"
                 + "&linking=confirmation_required";
-        String details = "Hermes found your Strava athlete but needs manual confirmation before linking it to a Hermes account.";
+        String details = "HermesRuns found your Strava athlete but needs manual confirmation before linking it to a HermesRuns account.";
         String athleteLabel = resolveStravaDisplayName(athlete, athleteId);
         if (athleteLabel != null && !athleteLabel.isBlank()) {
             details += " Athlete: " + athleteLabel + ".";

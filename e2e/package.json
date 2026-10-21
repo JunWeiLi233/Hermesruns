@@ -1,0 +1,14 @@
+{
+  "name": "hermes-local-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:runna": "playwright test --config playwright.config.mjs",
+    "test:analysis": "playwright test --config playwright.config.ts",
+    "test:analysis:integrated": "playwright test --config playwright.config.ts specs/61-analysis-existing-pages.spec.ts"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.64.1"
+  }
+}

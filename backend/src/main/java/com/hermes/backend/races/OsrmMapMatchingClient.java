@@ -9,10 +9,13 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class OsrmMapMatchingClient {
+    // OSRM defaults to 100 locations; hosted servers may configure a lower limit.
+    private static final int MAX_MATCH_LOCATIONS = 100;
     private final RestTemplate restTemplate;
 
     @Value("${app.route-matching.osrm.base-url:${APP_ROUTE_MATCHING_OSRM_BASE_URL:https://router.project-osrm.org}}")
@@ -28,13 +31,33 @@ public class OsrmMapMatchingClient {
     public List<MatchedBreadcrumbPointDTO> matchOrderedBreadcrumbs(List<RawBreadcrumbPointDTO> rawBreadcrumbs) {
         validateRawBreadcrumbs(rawBreadcrumbs);
 
-        ResponseEntity<Map> response = restTemplate.exchange(
-                buildMatchUrl(rawBreadcrumbs),
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                Map.class
-        );
-        return parseMatchedBreadcrumbs(rawBreadcrumbs, response.getBody());
+        List<MatchedBreadcrumbPointDTO> matched = new ArrayList<>(rawBreadcrumbs.size());
+        int batchLimit = MAX_MATCH_LOCATIONS;
+        int start = 0;
+        while (start < rawBreadcrumbs.size() - 1) {
+            List<RawBreadcrumbPointDTO> batch = rawBreadcrumbs.subList(
+                    start, Math.min(start + batchLimit, rawBreadcrumbs.size()));
+            ResponseEntity<Map> response;
+            try {
+                response = restTemplate.exchange(buildMatchUrl(batch), HttpMethod.GET, HttpEntity.EMPTY, Map.class);
+            } catch (HttpClientErrorException error) {
+                boolean tooLarge = error.getStatusCode().value() == 414
+                        || (error.getStatusCode().value() == 400
+                        && error.getResponseBodyAsString().matches("(?s).*\"code\"\\s*:\\s*\"TooBig\".*"));
+                if (tooLarge && batch.size() > 2) {
+                    batchLimit = Math.max(2, Math.min(batchLimit / 2, batch.size() - 1));
+                    continue;
+                }
+                // Do not expose long coordinate URLs or upstream HTML in dashboard errors.
+                throw new IllegalStateException("OSRM map matching request failed (HTTP "
+                        + error.getStatusCode().value() + "). Check route alignment and server limits.", error);
+            }
+            List<MatchedBreadcrumbPointDTO> batchMatched = parseMatchedBreadcrumbs(batch, response.getBody());
+            // Share a boundary point for matching context, then keep it only once.
+            matched.addAll(batchMatched.subList(start == 0 ? 0 : 1, batchMatched.size()));
+            start += batch.size() - 1;
+        }
+        return List.copyOf(matched);
     }
 
     String matchingSemanticsNote() {

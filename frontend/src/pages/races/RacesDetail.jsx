@@ -6,6 +6,7 @@ import { normalizeOverlayBounds } from '../../utils/races/courseMapGeometry.js';
 import { useI18n } from '../../contexts/I18nContext';
 import { apiJson, getBackendBaseUrl } from '../../api';
 import AppIcon from '../../components/AppIcon';
+import PageSkeleton from '../../components/PageSkeleton';
 import CoachIdentityBadge from '../../components/CoachIdentityBadge';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import HermesLogo from '../../components/HermesLogo';
@@ -1148,6 +1149,8 @@ export default function RacesDetail() {
       }
     };
   }, [courseMapData.imageUrl, courseMapData.overlayImageUrl, courseMapData.previewImageUrl, courseMapData.viewportBounds, courseMapImageOverlayBounds, courseMapRequestSettled, fallbackTileUrl, hasAlignedRoute, hasTransparentCourseMapOverlay, loadState, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
+
+  if (loadState === 'loading') return <PageSkeleton variant="race-detail" />;
 
   if (loadState !== 'ready') {
     return (

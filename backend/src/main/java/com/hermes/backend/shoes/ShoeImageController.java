@@ -3,6 +3,7 @@ package com.hermes.backend.shoes;
 import com.hermes.backend.auth.ApiRateLimiter;
 import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.billing.AiUsageService;
+import com.hermes.backend.billing.AiBudgetExceededException;
 import com.hermes.backend.billing.QuotaService;
 import com.hermes.backend.infrastructure.config.SystemConfigService;
 import com.hermes.backend.infrastructure.web.InputSanitizer;
@@ -309,7 +310,7 @@ public class ShoeImageController {
         // Feature-gating quota check: Pro users skip all quota checks entirely.
         if (!quotaService.isPro(runner)) {
             // Step 1: Check feature quota (premium feature gating for free users)
-            if (!quotaService.canUseFeature(runner, "shoe-scan")) {
+            if (!quotaService.tryConsumeFeature(runner, "shoe-scan")) {
                 Map<String, Object> errorBody = new LinkedHashMap<>(quotaService.quotaExceededError(runner, "shoe-scan"));
                 errorBody.putAll(shoeScanUsageStatusService.buildStatus(runner));
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
@@ -318,14 +319,13 @@ public class ShoeImageController {
             // Step 2: Check and atomically reserve AI daily usage quota
             String aiQuotaError = aiUsageService.tryConsumeQuota(runner);
             if (aiQuotaError != null) {
+                quotaService.rollbackConsumedFeature(runner, "shoe-scan");
                 Map<String, Object> errorBody = new LinkedHashMap<>();
                 errorBody.put("error", aiQuotaError);
                 errorBody.putAll(shoeScanUsageStatusService.buildStatus(runner));
                 return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(errorBody);
             }
 
-            // Consume the feature quota now that we know the scan will proceed
-            quotaService.consumeFeature(runner, "shoe-scan");
         }
 
         try {
@@ -356,8 +356,15 @@ public class ShoeImageController {
             result.putAll(shoeScanUsageStatusService.buildStatus(runner));
             return ResponseEntity.ok(result);
 
+        } catch (AiBudgetExceededException e) {
+            if (!quotaService.isPro(runner)) {
+                aiUsageService.rollbackConsumedQuota(runner);
+                quotaService.rollbackConsumedFeature(runner, "shoe-scan");
+            }
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "3600")
+                    .body(Map.of("error", "AI_BUDGET_EXCEEDED", "code", "AI_BUDGET_EXCEEDED"));
         } catch (HttpStatusCodeException e) {
-            logger.error("AI API error {}: {}", e.getStatusCode(), e.getResponseBodyAsString(), e);
+            logger.warn("AI API request failed status={}", e.getStatusCode());
             if (!quotaService.isPro(runner)) {
                 aiUsageService.rollbackConsumedQuota(runner);
                 quotaService.rollbackConsumedFeature(runner, "shoe-scan");
@@ -365,7 +372,7 @@ public class ShoeImageController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "AI service temporarily unavailable. Please try again later."));
         } catch (Exception e) {
-            logger.error("Shoe image scan failed: {}", e.getMessage(), e);
+            logger.warn("Shoe image scan failed type={}", e.getClass().getSimpleName());
             if (!quotaService.isPro(runner)) {
                 aiUsageService.rollbackConsumedQuota(runner);
                 quotaService.rollbackConsumedFeature(runner, "shoe-scan");

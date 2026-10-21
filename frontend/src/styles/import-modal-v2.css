@@ -1,5 +1,9 @@
 /* Shared import modal v2 (design 13a). Load last in app.css. */
 
+.import-v2-result { padding: 16px; border: 1px solid var(--im-line); border-radius: 12px; background: var(--im-warm); color: var(--im-ink); font-size: 0.85rem; line-height: 1.5; overflow-wrap: anywhere; }
+.import-v2-result-counts, .import-v2-rejections { margin: 10px 0; padding-left: 20px; }
+.import-v2-result p { color: var(--im-muted); }
+
 .modal-shell.import-v2-shell { padding: 16px; background: rgba(18, 22, 28, 0.42); backdrop-filter: blur(8px); }
 
 .modal-card.import-v2-card {
@@ -225,6 +229,7 @@ body:is(.theme-midnight, .theme-high-contrast) .import-v2-file-tag.is-huawei { c
 .import-v2-file-remove:hover { background: var(--im-fill); color: var(--im-ink); }
 .import-v2-file-remove svg { width: 14px; height: 14px; }
 .import-v2-error { color: #d70015; font-size: 0.8rem; }
+.import-v2-error .import-v2-text-btn { display: block; margin-top: 0.5rem; }
 body:is(.theme-midnight, .theme-high-contrast) .import-v2-error { color: #ffb4a7; }
 
 .import-v2 :is(button, .import-v2-drop):focus-visible,

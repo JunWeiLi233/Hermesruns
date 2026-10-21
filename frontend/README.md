@@ -58,6 +58,19 @@ before changing a selector. Do not edit frozen `style.css` or generated
 Update the same translation key in both `src/i18n/locales/en/` and `zh-CN/`.
 `src/i18n/translations.js` is a tooling/test shim, not the runtime copy owner.
 
+## Logo
+
+The logo is the hermes:runs kit (2026): ink `#1a1714`, coral `#ff5a3c`, paper `#f5f1ea`. The colon is always coral;
+never recolour it or set the name in another font. `HermesWordmarkSvg`, `HermesMarkSvg` and `HermesLogo` in
+`src/components/` hold the kit's drawings. The lockup proportions and the dark-surface rules sit at the top of
+`src/styles/_split/shared.css`: size a `HermesLogo` with `--hermes-logo-tile`, and let `tone="auto"` follow the theme
+(`light` and `dark` force a version). Use `HermesMarkSvg variant="colon"` where the symbol would be under 32 px.
+
+`public/` holds the copies we serve: `favicon.svg` and `hermes-tab-icon.svg` (the kit favicon under both names),
+`images/hermesruns-logo.svg` (the kit lockup), `apple-touch-icon.png` (the kit's 180 px icon), `favicon.ico` (16, 32 and
+48 px renders of the favicon) and the social card (`og-image.png`, `images/og-image.webp`). They are served without the
+provenance data embedded in the kit's own files, which adds 5 to 8 KB to each one.
+
 ## Structure Check
 
 From the repository root, run `npm run check:architecture`. It catches unresolved
@@ -82,3 +95,9 @@ The [Strava linking checklist](STRAVA_LINKING_QA.md) remains useful for auth cha
 This cleanup passes typecheck, 80 unit tests, 330 contracts, lint (two existing
 warnings), architecture checks and a fresh production build. The active CSS bundle
 is byte-for-byte unchanged. Build verification is not proof of a live-site update.
+
+## Training and coaching workspace
+
+The authenticated product includes `/training/calendar` and the Training & coaching navigation entry on desktop and mobile. Source lives in `src/features/training`; the normal frontend build includes its route chunks. It reuses Hermes login, canonical Runner/activity/plan data, and a same-origin HttpOnly cookie handoff for training requests. Team administration, athlete consent and coaching grants remain separate permissions.
+
+Use the normal Hermes origin, with no preview port or query flag. See `../replica/intervals-icu/product-integration.md` for verification, current limits and the PostgreSQL release-migration requirement. H2 development can migrate automatically; PostgreSQL does not migrate automatically by default. No remote database was changed during integration.

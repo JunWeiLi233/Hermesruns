@@ -15,6 +15,8 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.crypto.Mac;
@@ -56,9 +58,13 @@ public class StravaWebhookController {
 
     private static final Logger log = LoggerFactory.getLogger(StravaWebhookController.class);
 
+    private static final long DEAUTHORIZATION_CHECK_MIN_GAP_MS = 60_000L;
+
     private final RunnerRepository runnerRepository;
     private final StravaSyncService stravaSyncService;
+    private final StravaAccountService stravaAccountService;
     private final ExecutorService webhookExecutor;
+    private final ConcurrentMap<Long, Long> lastDeauthorizationCheckMs = new ConcurrentHashMap<>();
 
     @Value("${hermes.environment:development}")
     private String environment;
@@ -71,9 +77,12 @@ public class StravaWebhookController {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    public StravaWebhookController(RunnerRepository runnerRepository, StravaSyncService stravaSyncService) {
+    public StravaWebhookController(RunnerRepository runnerRepository,
+                                   StravaSyncService stravaSyncService,
+                                   StravaAccountService stravaAccountService) {
         this.runnerRepository = runnerRepository;
         this.stravaSyncService = stravaSyncService;
+        this.stravaAccountService = stravaAccountService;
         // Bound concurrency to reduce memory pressure on small-RAM servers.
         this.webhookExecutor = Executors.newFixedThreadPool(4, r -> {
             Thread t = new Thread(r, "strava-webhook-worker");
@@ -118,12 +127,13 @@ public class StravaWebhookController {
      * Strava event callback — receives activity create/update/delete/deauthorize events.
      * Must return 200 within 2 seconds (Strava requirement), so processing is async.
      *
-     * <p>Strava does not send a verify_token on POST event callbacks (only on GET
-     * subscription validation). Instead, we validate the event payload structure and
-     * only process events for known athletes (checked via owner_id lookup in
-     * runnerRepository). The {@link WebhookRateLimitFilter} provides per-IP flood
-     * protection, and the runner lookup ensures only events for registered athletes
-     * trigger activity processing.</p>
+     * <p>Strava does not sign event deliveries and sends no verify_token on POST (only the one-time
+     * subscription GET carries one), and athlete ids are public. An event is therefore only a hint:
+     * a sync event makes Hermes fetch the activity from Strava itself, and a delete or deauthorize
+     * event changes data only after Strava confirms it (the activity is gone, or the refresh token is
+     * invalid). A signature header is checked if one is present, for example from a proxy. The
+     * {@link WebhookRateLimitFilter} provides per-IP flood protection and the runner lookup limits
+     * activity processing to registered athletes.</p>
      */
     @PostMapping
     public ResponseEntity<String> handleEvent(
@@ -131,10 +141,12 @@ public class StravaWebhookController {
             @RequestHeader(value = "X-Hub-Signature-256", required = false) String signature,
             HttpServletRequest request) {
 
-        boolean isProd = isProduction();
-        if (isProd && (stravaClientSecret == null || stravaClientSecret.isBlank()
+        // Strava does not send X-Hub-Signature-256, so requiring it in production would reject every real
+        // event. Verify it only when a sender did provide one.
+        if (signature != null && !signature.isBlank()
+                && (stravaClientSecret == null || stravaClientSecret.isBlank()
                 || !verifyStravaSignature(body, signature))) {
-            log.warn("Strava webhook rejected: HMAC signature mismatch or missing secret");
+            log.warn("Strava webhook rejected: signature present but invalid");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid signature");
         }
 
@@ -163,9 +175,10 @@ public class StravaWebhookController {
         // acknowledge them before spending a repository lookup on owner validation.
         if ("athlete".equals(objectType) && "update".equals(aspectType)) {
             Map<String, Object> updates = map(event.get("updates"));
-            if (updates != null && "true".equals(str(updates.get("authorized"))) == false) {
-                log.info("Strava deauthorization for athlete {}", ownerId);
-                // Don't delete data - just log it. User can re-connect.
+            if (updates != null && "false".equalsIgnoreCase(str(updates.get("authorized")))) {
+                log.info("Strava reports deauthorization for athlete {}; confirming with Strava", ownerId);
+                Long athleteId = ownerId;
+                CompletableFuture.runAsync(() -> confirmDeauthorization(athleteId), webhookExecutor);
             }
             return ResponseEntity.ok("EVENT_RECEIVED");
         }
@@ -206,13 +219,30 @@ public class StravaWebhookController {
                                 stravaActivityId, runner.getId(), aspectType);
                         retryWebhookSyncBurst(runner, stravaActivityId);
                     } else if ("delete".equals(aspectType)) {
-                        log.info("Strava webhook: deleting activity {} for runner {}",
+                        log.info("Strava webhook: delete hint for activity {} (runner {}); confirming with Strava",
                                 stravaActivityId, runner.getId());
-                        stravaSyncService.deleteStravaActivity(runner, stravaActivityId);
+                        stravaSyncService.deleteStravaActivityIfGone(runner, stravaActivityId);
                     }
                 },
                 () -> log.warn("Strava webhook: no runner found for athlete {}", stravaAthleteId)
         );
+    }
+
+    /**
+     * A deauthorization event is unauthenticated, so it is never acted on directly: Hermes asks Strava
+     * whether the runner's authorization still stands and purges only on a clear "revoked" answer. At most
+     * one check per runner per minute, so forged events cannot turn Hermes into a request generator.
+     */
+    private void confirmDeauthorization(Long stravaAthleteId) {
+        runnerRepository.findByStravaAthleteId(stravaAthleteId).ifPresent(runner -> {
+            long now = System.currentTimeMillis();
+            Long previous = lastDeauthorizationCheckMs.put(runner.getId(), now);
+            if (previous != null && now - previous < DEAUTHORIZATION_CHECK_MIN_GAP_MS) {
+                return;
+            }
+            StravaAccountService.RevocationOutcome outcome = stravaAccountService.confirmRevocationAndPurge(runner.getId());
+            log.info("Strava deauthorization check for runner {}: {}", runner.getId(), outcome);
+        });
     }
 
     private void retryWebhookSyncBurst(Runner runner, long stravaActivityId) {

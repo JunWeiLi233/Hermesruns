@@ -68,17 +68,17 @@ assert.ok(
 );
 assert.equal(
   (runDetailSource.match(/run-detail-page run-detail-profile-cockpit/g) || []).length,
-  3,
-  'Loading, empty, and loaded states should all retain the profile cockpit shell.',
+  2,
+  'Empty and loaded states should retain the profile cockpit shell; loading uses the shared map-first skeleton.',
 );
 assert.ok(
   runDetailSource.includes('<Link to="/runs">')
     && runDetailSource.includes("t('run_detail.no_run_selected')")
-    && runDetailSource.includes('className="run-detail-loading-card" aria-live="polite"'),
+    && runDetailSource.includes('<PageSkeleton variant="run-detail" />'),
   'Loading and empty states should remain recoverable through localized status and back navigation.',
 );
 
-assert.match(rule('#root .run-detail-v2 .run-detail-v2__hero'), /display:\s*grid;[\s\S]*grid-template-columns:\s*minmax\(0, 1\.45fr\) minmax\(360px, 1fr\);/, 'The desktop hero should pair a contained route card with the activity summary.');
+assert.match(rule('#root .run-detail-v2 .run-detail-v2__hero'), /display:\s*grid;[\s\S]*grid-template-columns:\s*minmax\(0, \.965fr\) minmax\(0, 1\.035fr\);/, 'The desktop hero should pair a contained route card with the activity summary.');
 assert.match(rule('#root .run-detail-v2 .run-detail-v2__summary'), /min-width:\s*0;[\s\S]*background:\s*var\(--v2-card\);/, 'The hero summary should remain a distinct card that can shrink.');
 assert.match(hero, /run-detail-v2__map[\s\S]*run-detail-v2__summary[\s\S]*<h1>\{run\.name \|\| t\('run_detail\.detail_title'\)\}/, 'Route and no-route activities should share the same localized activity heading and summary.');
 assert.ok(
@@ -102,7 +102,7 @@ assert.ok(
   'Comparison should not reverse the meaning of faster and slower with signed badges.',
 );
 assert.match(coach, /analytics\.debrief\.readinessScore[\s\S]*analytics\.debrief\.interpretation[\s\S]*analytics\.debrief\.nextDayGuidance/, 'The separate coach strip should retain readiness, review, and next-day guidance.');
-assert.match(rule('#root .run-detail-v2 .run-detail-v2__coach'), /grid-template-columns:\s*150px minmax\(0, 1\.3fr\) minmax\(0, 1fr\);[\s\S]*background:\s*var\(--v2-card\);/, 'Coach evidence should use the v2 card surface.');
+assert.match(rule('#root .run-detail-v2 .run-detail-v2__coach'), /grid-template-columns:\s*180px minmax\(0, 1fr\) minmax\(220px, 300px\);[\s\S]*background:\s*var\(--v2-card\);/, 'Coach evidence should use the v2 card surface.');
 assert.match(rule('#root .run-detail-v2 .run-detail-v2__coach-score strong'), /color:\s*var\(--v2-ink\);/, 'Readiness should remain readable on the coach card.');
 
 assert.ok(
@@ -112,8 +112,8 @@ assert.ok(
 );
 assert.match(telemetry, /className="run-detail-v2__card-head">\s*<h2>\{t\('run_detail\.telemetry_title'\)\}<\/h2>\s*<div className="run-detail-v2__tabs" role="tablist" aria-label=\{t\('run_detail\.telemetry_title'\)\}/, 'The localized telemetry heading and tablist should belong to one card.');
 assert.match(telemetry, /type="button"[\s\S]*onClick=\{\(\) => setActiveTelemetryKey\(definition\.key\)\}[\s\S]*role="tab"\s*aria-selected=\{isActive\}/, 'Telemetry controls should switch their stream and expose the selected state.');
-assert.match(telemetry, /formatTelemetryValue\(displaySample\.value, definition\.key\)[\s\S]*<em>\{definition\.unit\}<\/em>/, 'Telemetry tabs should retain measured values and units.');
-assert.match(telemetry, /telemetryChartData \? \(\s*<Line data=\{telemetryChartData\} options=\{telemetryChartOptions\} \/>[\s\S]*run-detail-chart-empty.*telemetry_no_stream/, 'Available streams should render the chart and missing streams should show a localized fallback.');
+assert.match(telemetry, /telemetry_average[\s\S]*formatTelemetryValue\(selectedTelemetrySample\?\.value \?\? telemetryAverage,[\s\S]*<em>\{activeTelemetryDefinition\.unit\}<\/em>/, 'The telemetry readout should distinguish the sample average from a selected point and retain units.');
+assert.match(telemetry, /telemetryChartData \? \(\s*<Line data=\{telemetryChartData\} options=\{telemetryChartOptions\}[^>]*\/>[\s\S]*run-detail-chart-empty.*telemetry_no_stream/, 'Available streams should render the chart and missing streams should show a localized fallback.');
 assert.match(telemetry, /telemetryBounds \? \([\s\S]*telemetryBounds\.min[\s\S]*telemetryBounds\.max/, 'Telemetry should retain minimum and maximum readouts.');
 
 assert.ok(
@@ -158,8 +158,8 @@ assert.ok(
 );
 assert.match(telemetry, /elevationStatus\?\.flagged && \([\s\S]*elevationStatus\?\.canRecalibrate && \([\s\S]*disabled=\{recalibratingElevation\} onClick=\{handleElevationRecalibration\}/, 'Flagged elevation should retain the supported recalibration control and busy state.');
 
-assert.match(splits, /run-detail-v2__card-head[\s\S]*t\('run_detail\.splits'\)[\s\S]*lapRows\.length > 5 && \([\s\S]*onClick=\{\(\) => setShowAllSplits\(\(prev\) => !prev\)\}[\s\S]*showAllSplits \? t\('run_detail\.show_less'\) : t\('run_detail\.view_all'\)[\s\S]*<table className="run-detail-splits-table run-detail-v2__splits-table">/, 'The split heading, expand/collapse control, and table should remain in one card.');
-assert.match(runDetailSource, /const visibleLapRows = showAllSplits \? lapRows : lapRows\.slice\(0, 5\)/, 'Splits should show five rows until the runner requests all laps.');
+assert.match(splits, /run-detail-v2__card-head[\s\S]*t\('run_detail\.splits'\)[\s\S]*lapRows\.length > 6 && \([\s\S]*onClick=\{\(\) => setShowAllSplits\(\(prev\) => !prev\)\}[\s\S]*showAllSplits \? t\('run_detail\.show_less'\) :[\s\S]*t\(\x27run_detail\.view_all\x27\)[\s\S]*<table className="run-detail-splits-table run-detail-v2__splits-table">/, 'The split heading, expand/collapse control, and table should remain in one card.');
+assert.match(runDetailSource, /const visibleLapRows = showAllSplits \? lapRows : lapRows\.slice\(0, 6\)/, 'Splits should show six rows until the runner requests all laps.');
 assert.match(splits, /visibleLapRows\.map[\s\S]*fastestVisibleLapIndex[\s\S]*lapBarWidth\(visibleLapPaces\[index\]\)[\s\S]*lap\.pace \|\| '--'[\s\S]*lapGain != null[\s\S]*lap\.averageHeartRate \? Math\.round\(lap\.averageHeartRate\) : '--'/, 'Split rows should preserve pace bars, fastest-lap emphasis, elevation, and missing-heart-rate fallback.');
 assert.match(splits, /colSpan="5" className="is-empty">\{t\('run_detail\.no_lap_data'\)\}/, 'Missing splits should retain a localized table fallback.');
 assert.ok(!runDetailSource.includes('lap.averageHeartRate || 0'), 'Missing split heart rate should not become a false zero.');
@@ -167,9 +167,9 @@ assert.match(rule('#root .run-detail-runner-page .run-detail-v2 .run-detail-v2__
 assert.match(rule('#root .run-detail-runner-page .run-detail-v2 tr.is-highlight .run-detail-v2__pace'), /color:\s*var\(--v2-accent\) !important;/, 'The fastest split should remain visually identifiable.');
 
 assert.ok(
-  /apiJson\(\x60\/api\/shoes\/\$\{normalizedShoeId\}\/assign\/\$\{run\.id\}\x60, \{ method: 'PATCH' \}\)/.test(runDetailSource)
-    && !/apiFetch\(\x60\/api\/shoes\/\$\{normalizedShoeId\}\/assign\/\$\{run\.id\}\x60, \{ method: 'PATCH' \}\)/.test(runDetailSource)
-    && runDetailSource.includes('response?.activityId != null && String(response.activityId) !== String(run.id)')
+  /apiJson\(\x60\/api\/shoes\/\$\{normalizedShoeId\}\/assign\/\$\{activityId\}\x60, \{ method: 'PATCH' \}\)/.test(runDetailSource)
+    && !/apiFetch\(\x60\/api\/shoes\/\$\{normalizedShoeId\}\/assign\/\$\{activityId\}\x60, \{ method: 'PATCH' \}\)/.test(runDetailSource)
+    && runDetailSource.includes('response?.activityId != null && String(response.activityId) !== String(activityId)')
     && runDetailSource.includes("setShoeActionMessage(t('run_detail.shoe_assign_failed'))")
     && runDetailSource.includes('setShoeDropdownOpen(false);'),
   'Shoe assignment should validate the API response, expose failure, and close the picker after success.',
@@ -178,7 +178,7 @@ assert.match(gear, /t\('run_detail\.gear_linked'\)[\s\S]*disabled=\{assigningSho
 assert.match(gear, /run\.shoeId && \([\s\S]*disabled=\{assigningShoeId != null\} onClick=\{\(\) => assignShoe\(0\)\}/, 'Linked shoes should retain the unlink control.');
 assert.match(gear, /shoeDropdownOpen && \([\s\S]*role="menu"[\s\S]*activeShoes\.length > 0 \? activeShoes\.map[\s\S]*onClick=\{\(\) => assignShoe\(shoe\.id\)\}[\s\S]*t\('run_detail\.no_active_shoes'\)/, 'The picker should assign the selected active shoe and retain its empty state.');
 assert.match(gear, /linkedShoeName \|\| t\('run_detail\.no_shoe'\)[\s\S]*linkedShoeMileage[\s\S]*linkedShoeUsage[\s\S]*shoeActionMessage[\s\S]*aria-live="polite"/, 'Gear should retain shoe identity, mileage, usage, and live assignment feedback.');
-assert.match(rule('#root .run-detail-runner-page .run-detail-v2 .run-detail-v2__gear .run-detail-gear-row'), /grid-template-columns:\s*72px minmax\(0, 1fr\) !important;/, 'The gear card should keep a compact image and readable shoe information.');
+assert.match(rule('#root .run-detail-runner-page .run-detail-v2 .run-detail-v2__gear .run-detail-gear-row'), /grid-template-columns:\s*52px minmax\(0, 1fr\) !important;/, 'The gear card should keep a compact image and readable shoe information.');
 assert.match(runDetailSource, /trainingEffectAvailable \? value\.toFixed\(1\) : '--'[\s\S]*training_effect_unavailable[\s\S]*latestGroundContact[\s\S]*not_captured[\s\S]*latestVerticalOscillation[\s\S]*not_captured/, 'Training effect and running form should retain honest unavailable-device fallbacks.');
 assert.ok(
   !runDetailSource.includes("t('run_detail.route_intelligence')")
@@ -195,10 +195,10 @@ assert.match(rule('body:is(.theme-midnight, .theme-high-contrast) #root .run-det
 assert.match(rule('.run-detail-profile-minimal :is(button, a):focus-visible', minimalStyleSource), /outline:\s*2px solid var\(--run-detail-accent\);/, 'All v2 buttons and links should inherit visible keyboard focus.');
 assert.match(minimalStyleSource, /@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.run-detail-profile-minimal\s*\{\s*animation: none;\s*\}\s*\.run-detail-profile-minimal :is\(button, a\)\s*\{\s*transition: none;/, 'The v2 page and controls should retain reduced-motion support.');
 
-assert.match(media('max-width: 1200px'), /\.run-detail-v2__hero,\s*#root \.run-detail-v2 \.run-detail-v2__lower\s*\{\s*grid-template-columns: minmax\(0, 1fr\);/, 'The hero and lower grid should stack at tablet widths.');
+assert.match(media('max-width: 960px'), /\.run-detail-v2__hero,\s*#root \.run-detail-v2 \.run-detail-v2__lower\s*\{\s*grid-template-columns: minmax\(0, 1fr\);/, 'The hero and lower grid should stack at tablet widths.');
 assert.match(media('max-width: 860px'), /\.run-detail-v2__telemetry-stage\s*\{\s*grid-template-columns: minmax\(0, 1fr\);/, 'Narrow-screen telemetry should stack its readout and chart.');
 assert.match(media('max-width: 860px'), /\.run-detail-v2__coach\s*\{\s*grid-template-columns: minmax\(0, 1fr\);/, 'Narrow-screen coach evidence should stack.');
 assert.match(media('max-width: 860px'), /\.run-detail-v2__secondary\s*\{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/, 'Secondary metrics should use two columns on narrow screens.');
-assert.match(media('max-width: 520px'), /\.run-detail-v2__primary\s*\{\s*grid-template-columns: minmax\(0, 1fr\);/, 'Primary metrics should stack on small phones.');
+assert.match(media('max-width: 520px'), /\.run-detail-v2__primary\s*\{\s*gap: 10px;/, 'Primary metrics should retain a compact three-column row on small phones.');
 
 console.log('[PASS] Run Detail v2 profile cockpit guardrails passed.');

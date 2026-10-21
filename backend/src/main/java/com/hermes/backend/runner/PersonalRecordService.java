@@ -17,6 +17,9 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PersonalRecordService {
+    /** Cache namespace of the per-runner personal-records response; evicted when runs change. */
+    public static final String CACHE_NAMESPACE = "personal-records";
+
     private static final Duration PERSONAL_RECORD_CACHE_TTL = Duration.ofMinutes(10);
 
     private static final List<DistanceDefinition> DISTANCE_DEFINITIONS = List.of(
@@ -53,7 +56,7 @@ public class PersonalRecordService {
 
     public PersonalRecordsResponse buildForRunner(Runner runner) {
         String cacheKey = String.valueOf(runner.getId());
-        PersonalRecordsResponse cached = cacheStore.get("personal-records", cacheKey, PersonalRecordsResponse.class).orElse(null);
+        PersonalRecordsResponse cached = cacheStore.get(CACHE_NAMESPACE, cacheKey, PersonalRecordsResponse.class).orElse(null);
         if (cached != null) {
             return cached;
         }
@@ -134,7 +137,7 @@ public class PersonalRecordService {
                 fastestPace,
                 mostElevation
         );
-        cacheStore.put("personal-records", cacheKey, response, PERSONAL_RECORD_CACHE_TTL);
+        cacheStore.put(CACHE_NAMESPACE, cacheKey, response, PERSONAL_RECORD_CACHE_TTL);
         return response;
     }
 

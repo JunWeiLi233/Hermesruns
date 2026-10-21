@@ -9,10 +9,13 @@ import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.runner.Runner;
+import com.hermes.backend.runner.RunnerRepository;
 import com.hermes.backend.weather.AcclimatizationService;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
@@ -20,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.zip.GZIPInputStream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipException;
 import java.util.zip.ZipInputStream;
@@ -34,14 +38,16 @@ import org.springframework.web.multipart.MultipartFile;
 public class ActivityImportService {
     private static final Logger logger = LoggerFactory.getLogger(ActivityImportService.class);
     private final ActivityRepository activityRepository;
+    private final RunnerRepository runnerRepository;
     private final List<ActivityFileParser> fileParsers;
     private final ActivityPointRepository activityPointRepository;
     private final ActivityDataAccess activityDataAccess;
     private final ApplicationEventPublisher applicationEventPublisher;
     private final AcclimatizationService acclimatizationService;
 
+    private static final String GZIP_SUFFIX = ".gz";
     private static final int MAX_ZIP_ENTRIES = 200;
-    private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry
+    private static final int MAX_ZIP_ENTRY_BYTES = 10 * 1024 * 1024; // 10MB per entry, and per file once a .gz is expanded
     private static final long MAX_ZIP_TOTAL_BYTES = 50L * 1024L * 1024L; // 50MB total extracted
 
     private static final int POINTS_BATCH_SIZE = 500;
@@ -49,6 +55,7 @@ public class ActivityImportService {
 
     public ActivityImportService(
             ActivityRepository activityRepository,
+            RunnerRepository runnerRepository,
             List<ActivityFileParser> fileParsers,
             ActivityPointRepository activityPointRepository,
             ActivityDataAccess activityDataAccess,
@@ -56,6 +63,7 @@ public class ActivityImportService {
             AcclimatizationService acclimatizationService
     ) {
         this.activityRepository = activityRepository;
+        this.runnerRepository = runnerRepository;
         this.fileParsers = fileParsers;
         this.activityPointRepository = activityPointRepository;
         this.activityDataAccess = activityDataAccess;
@@ -73,6 +81,13 @@ public class ActivityImportService {
             throw new IllegalArgumentException("Please choose a GPX, TCX, FIT, or ZIP workout file to import.");
         }
 
+        // The existing duplicate contract spans file providers and re-exported bytes. Lock the
+        // owner before checking either fingerprint, and hold it through insertion, archive
+        // rollback and BEFORE_COMMIT coaching aggregation. A JVM mutex or catching a unique-key
+        // failure after insert cannot make this decision safe across application instances.
+        runner = runnerRepository.findByIdForUpdate(runner.getId())
+                .orElseThrow(() -> new IllegalArgumentException("The importing runner no longer exists."));
+
         try {
             String fileName = file.getOriginalFilename();
             byte[] fileBytes = file.getBytes();
@@ -80,6 +95,9 @@ public class ActivityImportService {
 
             if ("ZIP".equalsIgnoreCase(extension)) {
                 return importZipArchive(runner, provider, fileName, fileBytes);
+            }
+            if (isGzipName(fileName)) {
+                return importGzippedWorkout(runner, provider, fileName, fileBytes);
             }
 
             return importWorkoutBytes(runner, provider, fileName, fileBytes);
@@ -104,8 +122,9 @@ public class ActivityImportService {
                 if (entryName.contains("..") || entryName.contains("/..") || entryName.contains("..\\")) {
                     continue;
                 }
-                String entryExtension = fileExtension(entryName);
-                if (!supportsImportExtension(entryExtension)) {
+                boolean gzipped = isGzipName(entryName);
+                String workoutName = gzipped ? withoutGzipSuffix(entryName) : entryName;
+                if (!supportsImportExtension(fileExtension(workoutName))) {
                     continue;
                 }
 
@@ -117,11 +136,14 @@ public class ActivityImportService {
                 supportedEntries++;
 
                 byte[] entryBytes = readEntryBytesWithLimits(zipInputStream, MAX_ZIP_ENTRY_BYTES);
+                if (gzipped) {
+                    entryBytes = gunzipWithLimits(entryBytes, MAX_ZIP_ENTRY_BYTES);
+                }
                 extractedTotalBytes += entryBytes.length;
                 if (extractedTotalBytes > MAX_ZIP_TOTAL_BYTES) {
                     throw new IllegalArgumentException("ZIP archive is too large to import (extracted data limit).");
                 }
-                aggregate = aggregate.merge(importWorkoutBytes(runner, provider, entryName, entryBytes));
+                aggregate = aggregate.merge(importWorkoutBytes(runner, provider, workoutName, entryBytes));
             }
         } catch (ZipException exception) {
             throw new IllegalArgumentException("Invalid ZIP archive.", exception);
@@ -148,12 +170,60 @@ public class ActivityImportService {
         );
     }
 
+    /**
+     * A single {@code .fit.gz}, {@code .gpx.gz} or {@code .tcx.gz}: the form Strava's account export gives
+     * activity files in. It is expanded and imported as the file it holds, so its checksum, name and
+     * duplicate checks are those of the plain file: the same run imported both ways is one run.
+     */
+    private ImportResult importGzippedWorkout(Runner runner, ImportProvider provider, String fileName, byte[] gzipBytes) {
+        String workoutName = withoutGzipSuffix(fileName);
+        if (!supportsImportExtension(fileExtension(workoutName))) {
+            throw new IllegalArgumentException(
+                    "A .gz file must hold a GPX, TCX, or FIT workout file (for example run.fit.gz).");
+        }
+        return importWorkoutBytes(runner, provider, workoutName, gunzipWithLimits(gzipBytes, MAX_ZIP_ENTRY_BYTES));
+    }
+
+    private static boolean isGzipName(String fileName) {
+        return fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(GZIP_SUFFIX);
+    }
+
+    private static String withoutGzipSuffix(String fileName) {
+        return fileName.substring(0, fileName.length() - GZIP_SUFFIX.length());
+    }
+
+    /**
+     * Expands gzip data, refusing to produce more than {@code maxBytes}. A few kilobytes of gzip can
+     * expand to gigabytes, so the output is counted as it is written and the expansion stops at the limit.
+     */
+    private static byte[] gunzipWithLimits(byte[] gzipBytes, int maxBytes) {
+        try (InputStream in = new GZIPInputStream(new ByteArrayInputStream(gzipBytes))) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream(Math.min(1024 * 1024, maxBytes));
+            byte[] buffer = new byte[8 * 1024];
+            int read;
+            int total = 0;
+            while ((read = in.read(buffer)) >= 0) {
+                total += read;
+                if (total > maxBytes) {
+                    throw new IllegalArgumentException(
+                            "The .gz file is too large to import (max " + (maxBytes / (1024 * 1024)) + "MB once expanded).");
+                }
+                out.write(buffer, 0, read);
+            }
+            return out.toByteArray();
+        } catch (ZipException | EOFException exception) {
+            throw new IllegalArgumentException("Invalid or corrupt .gz file.", exception);
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("Unable to read the .gz file.", exception);
+        }
+    }
+
     private ImportResult importWorkoutBytes(Runner runner, ImportProvider provider, String fileName, byte[] fileBytes) {
         String extension = fileExtension(fileName);
         ActivityFileParser parser = fileParsers.stream()
                 .filter(candidate -> candidate.supports(extension))
                 .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("Unsupported file type. Please upload GPX, TCX, FIT, or ZIP."));
+                .orElseThrow(() -> new IllegalArgumentException("Unsupported file type. Please upload GPX, TCX, FIT, ZIP, or a .gz of one workout file."));
 
         String checksum = sha256(fileBytes);
         if (activityRepository.existsByRunnerAndProviderAndSourceChecksum(runner, provider, checksum)) {
@@ -189,6 +259,27 @@ public class ActivityImportService {
             }
         }
 
+        int total = parsedActivity.points() == null ? 0 : parsedActivity.points().size();
+        int stride = Math.max(1, (int) Math.ceil(total / (double) MAX_POINTS_PER_ACTIVITY));
+        int count = (int) Math.ceil(total / (double) stride);
+        persistParsedActivity(runner, provider, fileName, checksum, parsedActivity, false);
+        return new ImportResult(provider.name(), 1, count, 0, 0, "Import completed successfully.", List.of());
+    }
+
+    /** Canonical writer with an explicit lossless multisport policy, called only after Explorer validation. */
+    @Transactional
+    public Activity importIndependentActivity(Runner owner, String fileName, String checksum, ParsedActivityData parsed) {
+        Runner runner = runnerRepository.findByIdForUpdate(owner.getId())
+                .filter(candidate -> !candidate.isDeleted())
+                .orElseThrow(() -> new IllegalArgumentException("The importing account is unavailable."));
+        if (parsed.source() == null || parsed.startTime() == null || parsed.points().size() > 200_000) {
+            throw new IllegalArgumentException("A complete supported source is required.");
+        }
+        return persistParsedActivity(runner, ImportProvider.MANUAL, fileName, checksum, parsed, true);
+    }
+
+    private Activity persistParsedActivity(Runner runner, ImportProvider provider, String fileName, String checksum,
+            ParsedActivityData parsedActivity, boolean lossless) {
         Activity activity = new Activity();
         activity.setRunner(runner);
         activity.setProvider(provider);
@@ -205,9 +296,10 @@ public class ActivityImportService {
         activity.setCreatedAt(LocalDateTime.now());
         activity.setAverageHeartRate(parsedActivity.averageHeartRate());
         activity.setMaxHeartRate(parsedActivity.maxHeartRate());
+        activity.setSourceImportedLapsJson(com.hermes.backend.activity.analysis.SessionAnalysisSources.encode(parsedActivity.sourceLaps()));
 
         // Weather adjustment
-        try {
+        if (parsedActivity.activityType() == ActivityType.RUN) try {
             Integer penalty = acclimatizationService.calculatePenaltyForActivity(activity);
             activity.setPacePenaltySecPerKm(penalty);
             activity.setWeatherAdjusted(penalty != null && penalty > 0);
@@ -218,12 +310,11 @@ public class ActivityImportService {
         // Persist the Activity first so we can bulk-insert ActivityPoint rows
         // without keeping the entire points list inside the Activity's JPA collection.
         Activity savedActivity = activityRepository.save(activity);
-        applicationEventPublisher.publishEvent(new ActivityIngestedEvent(runner.getId(), savedActivity.getId()));
 
         List<ActivityPoint> batch = new ArrayList<>(POINTS_BATCH_SIZE);
         List<ParsedTrackPoint> allPoints = parsedActivity.points();
         int totalPoints = allPoints != null ? allPoints.size() : 0;
-        int stride = totalPoints > MAX_POINTS_PER_ACTIVITY
+        int stride = !lossless && totalPoints > MAX_POINTS_PER_ACTIVITY
                 ? Math.max(1, (int) Math.ceil(totalPoints / (double) MAX_POINTS_PER_ACTIVITY))
                 : 1;
 
@@ -258,19 +349,14 @@ public class ActivityImportService {
             activityDataAccess.savePoints(batch);
         }
         // Help GC earlier on small-RAM servers.
-        if (allPoints != null) {
+        if (allPoints != null && !lossless) {
             try { allPoints.clear(); } catch (Exception ignored) { logger.trace("GC helper: allPoints.clear() failed", ignored); }
         }
 
-        return new ImportResult(
-                provider.name(),
-                1,
-                keptPoints,
-                0,
-                0,
-                "Import completed successfully.",
-                List.of()
-        );
+        if (parsedActivity.activityType() == ActivityType.RUN) {
+            applicationEventPublisher.publishEvent(new ActivityIngestedEvent(runner.getId(), savedActivity.getId()));
+        }
+        return savedActivity;
     }
 
     private String resolveActivityName(ParsedActivityData parsedActivity, String fileName) {

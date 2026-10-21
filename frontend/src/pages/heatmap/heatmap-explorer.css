@@ -1,0 +1,209 @@
+/* Map workbench: scoped to /heatmap, above the existing GPS renderer. */
+.heatmap-page--explorer {
+  --hm-surface: #fff;
+  --hm-ink: #282823;
+  --hm-muted: #706f68;
+  --hm-border: #e5e4df;
+  --hm-soft: #f5f4f0;
+  --hm-accent: #a0392a;
+  color: var(--hm-ink);
+}
+html body .heatmap-page--explorer .heatmap-page-topbar {
+  inset: 0 0 auto;
+  height: 68px;
+  padding: 10px 22px;
+  gap: 24px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  background: var(--hm-surface);
+  border-bottom: 1px solid var(--hm-border);
+  box-sizing: border-box;
+  z-index: 650;
+}
+html body .heatmap-page--explorer .heatmap-page-brand-pill,
+html body .heatmap-page--explorer .heatmap-page-search-pill {
+  min-height: 42px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0;
+  color: var(--hm-ink);
+}
+html body .heatmap-page--explorer .heatmap-page-brand-pill { gap: 14px; }
+html body .heatmap-page--explorer .heatmap-page-brand-pill > span:not(.hermes-logo) { color: var(--hm-muted); border-left: 1px solid var(--hm-border); padding-left: 14px; font-size: 11px; }
+html body .heatmap-page--explorer .heatmap-page-search-pill { justify-self: center; gap: 10px; width: auto; }
+html body .heatmap-page--explorer .heatmap-page-search-copy strong { color: var(--hm-ink); font-size: 12px; letter-spacing: 0; }
+html body .heatmap-page--explorer .heatmap-page-search-copy span { color: var(--hm-muted); font-size: 10px; }
+html body .heatmap-page--explorer .heatmap-page-action-strip { width: auto; }
+html body .heatmap-page--explorer .heatmap-page-action-strip > .runner-shell-topbar-profile-actions { display: flex; width: auto; }
+html body .heatmap-page--explorer .heatmap-page-action-strip .is-overlay { display: none; }
+html body .heatmap-page--explorer .heatmap-page-map-vignette { opacity: 0.1; pointer-events: none; }
+html body .heatmap-page--explorer[data-map-style="streets"] .heatmap-page-map-vignette { display: none; }
+html body .heatmap-page--explorer .heatmap-page-street-tile-layer img { filter: saturate(0.45); }
+html body .heatmap-page--explorer .leaflet-control-attribution { display: block; max-width: 100%; font-size: 10px; background: #ffffffe8; color: #333; }
+html body .heatmap-page--explorer .leaflet-control-attribution a { color: #394d62; }
+html body .heatmap-page--explorer .heatmap-page-utility-rail { top: 88px; left: 18px; width: 46px; padding: 5px; gap: 2px; max-height: calc(100dvh - 116px); background: var(--hm-surface); border: 1px solid var(--hm-border); border-radius: 10px; box-shadow: 0 3px 14px #00000014; backdrop-filter: none; }
+html body .heatmap-page--explorer .heatmap-page-utility-btn { width: 36px; height: 36px; min-height: 36px; border-radius: 6px; color: var(--hm-muted); background: transparent; border: 0; box-shadow: none; }
+html body .heatmap-page--explorer .heatmap-page-utility-btn:hover,
+html body .heatmap-page--explorer .heatmap-page-utility-btn.is-active { background: var(--hm-soft); color: var(--hm-accent); }
+html body .heatmap-page--explorer .heatmap-page-utility-divider { background: var(--hm-border); }
+html body .heatmap-page--explorer .heatmap-page-legend-card { inset: auto auto 24px 82px; width: 260px; padding: 14px 16px; border-radius: 10px; background: var(--hm-surface); border: 1px solid var(--hm-border); box-shadow: 0 3px 14px #00000014; backdrop-filter: none; }
+html body .heatmap-page--explorer .heatmap-page-legend-card .heatmap-page-card-kicker,
+html body .heatmap-page--explorer .heatmap-page-legend-band-label { color: var(--hm-muted); font-size: 10px; letter-spacing: 0.02em; }
+html body .heatmap-page--explorer .heatmap-page-legend-band-swatch { height: 5px; }
+.hm-explorer-toolbar,
+.hm-explorer-summary,
+.hm-explorer-panel,
+.hm-explorer-tile-stats,
+.hm-explorer-no-points { position: absolute; z-index: 620; background: var(--hm-surface); color: var(--hm-ink); border: 1px solid var(--hm-border); box-shadow: 0 3px 14px #00000014; border-radius: 10px; box-sizing: border-box; }
+.hm-explorer-toolbar { top: 88px; right: 20px; display: flex; padding: 4px; gap: 2px; }
+.hm-explorer-toolbar button { min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 13px; border: 0; border-radius: 6px; color: var(--hm-ink); background: transparent; font: inherit; font-size: 12px; cursor: pointer; }
+.hm-explorer-toolbar button:hover { background: var(--hm-soft); }
+.hm-explorer-toolbar button.is-active { color: var(--hm-accent); background: var(--hm-soft); }
+.hm-explorer-toolbar svg,
+.hm-explorer-list-summary svg,
+.hm-explorer-activity-metrics svg { width: 16px; height: 16px; flex: none; }
+.hm-explorer-toolbar b { background: var(--hm-accent); color: #fff; border-radius: 4px; min-width: 17px; font-size: 10px; padding: 1px 3px; }
+.hm-explorer-summary { top: 88px; left: 82px; min-width: 320px; padding: 15px 20px; }
+.hm-explorer-summary-label { display: flex; gap: 7px; align-items: center; color: var(--hm-muted); font-size: 10px; }
+.hm-explorer-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #50856c; display: inline-block; flex: none; }
+.hm-explorer-sport { margin-left: auto; padding-left: 18px; }
+.hm-explorer-totals { display: flex; gap: 28px; margin-top: 12px; }
+.hm-explorer-totals > div { display: grid; gap: 3px; }
+.hm-explorer-totals strong { font-size: 23px; font-weight: 650; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.hm-explorer-totals span { color: var(--hm-muted); font-size: 10px; }
+.hm-explorer-clear { margin-top: 10px; border: 0; padding: 0; color: var(--hm-accent); background: transparent; font: inherit; font-size: 11px; cursor: pointer; }
+.hm-explorer-panel { top: 146px; right: 20px; bottom: 28px; width: 344px; display: flex; flex-direction: column; overflow: hidden; z-index: 640; }
+.hm-explorer-panel > header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid var(--hm-border); flex: none; }
+.hm-explorer-eyebrow { display: block; text-transform: uppercase; color: var(--hm-muted); font-size: 9px; font-weight: 650; letter-spacing: 0.12em; }
+.hm-explorer-panel h2 { margin: 4px 0 0; font-size: 21px; font-weight: 600; letter-spacing: -0.035em; color: var(--hm-ink); }
+.hm-explorer-icon-btn { min-width: 36px; min-height: 36px; background: var(--hm-soft); color: var(--hm-ink); border: 0; border-radius: 50%; font-size: 23px; cursor: pointer; }
+.hm-explorer-panel-body { padding: 18px 20px; overflow-y: auto; overscroll-behavior: contain; min-height: 0; flex: 1; scrollbar-width: thin; }
+.hm-explorer-panel fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
+.hm-explorer-panel h3 { margin: 23px 0 10px; font-size: 12px; font-weight: 650; color: var(--hm-ink); }
+.hm-explorer-panel-body > h3:first-child { margin-top: 0; }
+.hm-explorer-panel label { font-size: 11px; color: var(--hm-muted); display: grid; gap: 7px; min-width: 0; }
+.hm-explorer-panel input:not([type="checkbox"]):not([type="range"]),
+.hm-explorer-panel select { min-width: 0; width: 100%; min-height: 38px; box-sizing: border-box; background: var(--hm-soft); border: 1px solid var(--hm-border); border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 12px; color: var(--hm-ink); color-scheme: light; }
+.hm-explorer-field-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.hm-explorer-panel button:disabled,
+.hm-explorer-panel input:disabled { opacity: 0.45; cursor: default; }
+.hm-explorer-panel .hm-explorer-toggle { display: flex; justify-content: space-between; align-items: center; gap: 14px; min-height: 44px; border-bottom: 1px solid var(--hm-border); color: var(--hm-ink); font-size: 12px; cursor: pointer; }
+.hm-explorer-toggle input { width: 17px; height: 17px; accent-color: var(--hm-accent); flex: none; }
+.hm-explorer-segmented { display: flex; border-radius: 7px; background: var(--hm-soft); padding: 3px; gap: 3px; }
+.hm-explorer-segmented button { flex: 1; min-height: 36px; background: transparent; border: 1px solid transparent; color: var(--hm-muted); border-radius: 5px; font: inherit; font-size: 12px; cursor: pointer; }
+.hm-explorer-segmented button[aria-pressed="true"] { background: var(--hm-surface); color: var(--hm-ink); border-color: var(--hm-border); box-shadow: 0 1px 2px #00000008; }
+.hm-explorer-panel .hm-explorer-range { margin: 24px 0 14px; grid-template-columns: 1fr auto; }
+.hm-explorer-range input { grid-column: 1 / -1; width: 100%; accent-color: var(--hm-accent); }
+.hm-explorer-text-btn,
+.hm-explorer-more { min-height: 38px; padding: 8px 0; background: transparent; border: 0; color: var(--hm-accent); font: inherit; font-size: 12px; cursor: pointer; }
+.hm-explorer-panel p { font-size: 11px; line-height: 1.65; }
+.hm-explorer-help { color: var(--hm-muted); margin: 15px 0; }
+.hm-explorer-error { color: #b7322d; }
+.hm-explorer-presets { border-top: 1px solid var(--hm-border); margin-top: 10px; }
+.hm-explorer-presets form { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 8px; margin-top: 15px; }
+.hm-explorer-presets form button { min-height: 38px; padding: 8px 12px; background: var(--hm-accent); color: #fff; border: 0; border-radius: 6px; cursor: pointer; font: inherit; font-size: 11px; }
+.hm-explorer-preset { display: flex; border-bottom: 1px solid var(--hm-border); }
+.hm-explorer-preset button { min-height: 38px; padding: 8px 0; border: 0; background: transparent; color: var(--hm-ink); cursor: pointer; text-align: left; overflow-wrap: anywhere; }
+.hm-explorer-preset button:first-child { flex: 1; }
+.hm-explorer-preset button:last-child { min-width: 32px; text-align: right; font-size: 18px; }
+.hm-explorer-panel > footer { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--hm-border); color: var(--hm-muted); font-size: 10px; flex: none; }
+.hm-explorer-list-summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--hm-muted); font-size: 10px; margin: 14px 0; }
+.hm-explorer-list-summary button { display: flex; align-items: center; gap: 5px; background: transparent; color: var(--hm-accent); border: 0; padding: 8px 0; font: inherit; cursor: pointer; }
+.hm-explorer-activity-list { display: grid; }
+.hm-explorer-activity-list > button { display: grid; gap: 9px; background: transparent; color: var(--hm-ink); border: 0; border-bottom: 1px solid var(--hm-border); padding: 16px 0; text-align: left; font: inherit; cursor: pointer; }
+.hm-explorer-activity-list > button:hover,
+.hm-explorer-activity-list > button[aria-pressed="true"] { background: var(--hm-soft); }
+.hm-explorer-activity-list strong { font-size: 13px; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; }
+.hm-explorer-activity-date,
+.hm-explorer-activity-metrics { display: flex; align-items: center; gap: 15px; font-size: 10px; color: var(--hm-muted); font-variant-numeric: tabular-nums; }
+.hm-explorer-activity-date span,
+.hm-explorer-activity-metrics svg { margin-left: auto; }
+.hm-explorer-activity-metrics { color: var(--hm-ink); font-size: 12px; }
+.hm-explorer-selection { background: var(--hm-soft); padding: 12px; border-left: 2px solid var(--hm-accent); font-size: 12px; margin: 10px 0; }
+.hm-explorer-selection > div { display: flex; flex-wrap: wrap; gap: 12px; }
+.hm-explorer-selection button,
+.hm-explorer-inline-status button { border: 0; background: transparent; padding: 7px 0; color: var(--hm-accent); font: inherit; font-size: 11px; cursor: pointer; }
+.hm-explorer-inline-status { font-size: 11px; max-width: 330px; margin-top: 10px; }
+.hm-explorer-tile-stats { left: 82px; bottom: 136px; width: 260px; padding: 16px; }
+.hm-explorer-tile-stats > div { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; margin-top: 12px; }
+.hm-explorer-tile-stats p { font-size: 10px; line-height: 1.6; color: var(--hm-muted); margin: 14px 0 0; }
+.hm-explorer-key { width: 7px; height: 7px; display: inline-block; margin-right: 6px; border: 1px solid #25825c; background: #25825c35; }
+.hm-explorer-key.is-square { border-color: #7850bf; background: #7850bf35; }
+.hm-explorer-no-points { left: 50%; bottom: 28px; transform: translateX(-50%); padding: 12px 16px; max-width: 360px; font-size: 12px; }
+.hm-explorer-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.heatmap-page--explorer :is(button, input, select):focus-visible { outline: 3px solid #d78950; outline-offset: 3px; }
+.heatmap-page--explorer .hm-explorer-panel:focus { outline: none; }
+
+/* Earlier glass-theme rules use !important; keep this page's controls legible. */
+html body #root .heatmap-page.heatmap-page--explorer .heatmap-page-topbar {
+  background: var(--hm-surface) !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--hm-border) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+html body #root .heatmap-page.heatmap-page--explorer :is(.heatmap-page-brand-pill, .heatmap-page-search-pill) {
+  background: transparent !important;
+  color: var(--hm-ink) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+html body #root .heatmap-page.heatmap-page--explorer :is(.heatmap-page-utility-rail, .heatmap-page-legend-card) {
+  background: var(--hm-surface) !important;
+  color: var(--hm-ink) !important;
+  border: 1px solid var(--hm-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 14px #00000014 !important;
+  backdrop-filter: none !important;
+}
+html body #root .heatmap-page.heatmap-page--explorer .heatmap-page-utility-btn {
+  background: transparent !important;
+  color: var(--hm-muted) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html body #root .heatmap-page.heatmap-page--explorer .heatmap-page-utility-btn.is-active {
+  background: var(--hm-soft) !important;
+  color: var(--hm-accent) !important;
+}
+html body #root .heatmap-page.heatmap-page--explorer :is(.heatmap-page-brand-pill .hermes-logo, .heatmap-page-search-copy strong) { color: var(--hm-ink) !important; }
+html body #root .heatmap-page.heatmap-page--explorer :is(.heatmap-page-brand-pill > span:not(.hermes-logo), .heatmap-page-search-copy span, .heatmap-page-legend-band-label, .heatmap-page-card-kicker) { color: var(--hm-muted) !important; }
+
+@media (max-width: 1100px) {
+  .hm-explorer-summary { min-width: 280px; }
+  .hm-explorer-totals { gap: 20px; }
+  .hm-explorer-toolbar button { padding-inline: 10px; }
+  .hm-explorer-sport { display: none; }
+}
+@media (max-width: 720px) {
+  html body .heatmap-page--explorer .heatmap-page-topbar { height: 62px; padding: 8px 12px; gap: 12px; grid-template-columns: auto 1fr auto; }
+  html body .heatmap-page--explorer .heatmap-page-brand-pill .hermes-logo { width: 104px; }
+  html body .heatmap-page--explorer .heatmap-page-brand-pill > span:not(.hermes-logo) { display: none; }
+  html body .heatmap-page--explorer .heatmap-page-search-copy { display: none; }
+  html body .heatmap-page--explorer .heatmap-page-search-pill { justify-self: end; min-width: 40px; min-height: 40px; justify-content: center; }
+  html body .heatmap-page--explorer .heatmap-page-avatar { width: 38px; height: 38px; }
+  .hm-explorer-toolbar { inset: 74px 12px auto; justify-content: stretch; }
+  .hm-explorer-toolbar button { flex: 1; padding: 8px 4px; min-height: 38px; font-size: 11px; gap: 5px; }
+  .hm-explorer-summary { inset: 132px 12px auto; min-width: 0; padding: 12px 16px; }
+  .hm-explorer-totals { justify-content: space-between; margin-top: 8px; gap: 12px; }
+  .hm-explorer-totals strong { font-size: 21px; }
+  .hm-explorer-panel { inset: 132px 12px 88px; width: auto; }
+  .hm-explorer-panel > header { padding: 14px 18px; }
+  .hm-explorer-panel-body { padding: 16px 18px; }
+  html body .heatmap-page--explorer .heatmap-page-utility-rail { inset: auto 12px 24px; width: auto; max-height: 48px; max-width: calc(100% - 24px); grid-auto-flow: column; grid-auto-columns: 38px; overflow-x: auto; overflow-y: hidden; }
+  html body .heatmap-page--explorer .heatmap-page-legend-card { inset: auto 12px 88px auto; width: 210px; max-height: none; padding: 11px 14px; }
+  .hm-explorer-tile-stats { inset: auto 12px 170px auto; width: 240px; padding: 14px; }
+  .heatmap-page--explorer:has(.hm-explorer-panel) :is(.hm-explorer-tile-stats, .heatmap-page-legend-card) { display: none; }
+  .hm-explorer-no-points { bottom: 180px; width: calc(100% - 40px); }
+  .hm-explorer-panel input:not([type="checkbox"]):not([type="range"]), .hm-explorer-panel select { font-size: 16px; }
+}
+[data-theme="midnight"] .heatmap-page--explorer {
+  --hm-surface: #202322; --hm-ink: #f3f2ed; --hm-muted: #b6b8b1; --hm-border: #3b403c; --hm-soft: #2b302c; --hm-accent: #f0a28c;
+}
+[data-theme="midnight"] .heatmap-page--explorer .hm-explorer-panel input:not([type="checkbox"]):not([type="range"]),
+[data-theme="midnight"] .heatmap-page--explorer .hm-explorer-panel select { color-scheme: dark; }

@@ -1,9 +1,11 @@
-export function calculateStreaks(runs) {
+import { calendarDate, getAccountDate, getActivityDateKey } from './timeZone.js';
+
+export function calculateStreaks(runs, timeZone, todayKey = getAccountDate(timeZone)) {
   const sortedDays = [...new Set(
     runs
-      .map((run) => new Date(run.startTime || run.startDate || 0))
+      .map((run) => calendarDate(getActivityDateKey(run, timeZone)))
       .filter((date) => !Number.isNaN(date.getTime()))
-      .map((date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()),
+      .map((date) => date.getTime()),
   )].sort((a, b) => a - b);
 
   if (sortedDays.length === 0) return { current: 0, best: 0 };
@@ -24,8 +26,7 @@ export function calculateStreaks(runs) {
   bestStreak = Math.max(bestStreak, runningStreak);
 
   // Current streak (only if most recent run was today or yesterday)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = calendarDate(todayKey);
   const lastRunDate = new Date(sortedDays[sortedDays.length - 1]);
   const diffFromToday = Math.round((today.getTime() - lastRunDate.getTime()) / 86400000);
 
@@ -44,19 +45,18 @@ export function calculateStreaks(runs) {
   return { current: currentStreak, best: bestStreak };
 }
 
-export function getDaysSinceLastRun(runs) {
+export function getDaysSinceLastRun(runs, timeZone, todayKey = getAccountDate(timeZone)) {
   if (!runs || runs.length === 0) return null;
   
   const sortedDays = runs
-    .map((run) => new Date(run.startTime || run.startDate || 0))
+    .map((run) => calendarDate(getActivityDateKey(run, timeZone)))
     .filter((date) => !Number.isNaN(date.getTime()))
-    .map((date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime())
+    .map((date) => date.getTime())
     .sort((a, b) => b - a);
 
   if (sortedDays.length === 0) return null;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = calendarDate(todayKey);
   const lastRunDate = new Date(sortedDays[0]);
   return Math.round((today.getTime() - lastRunDate.getTime()) / 86400000);
 }

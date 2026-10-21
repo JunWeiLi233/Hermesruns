@@ -10,6 +10,7 @@ import { estimateCurrentVdot, predictRaceTimeCalibrated, RACE_DISTANCES } from '
 const state = vi.hoisted(() => ({ lang: 'en', chartData: null }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: true, email: 'runner@example.test' }) }));
 vi.mock('../../../contexts/ThemeContext', () => ({ useTheme: () => ({ isDark: false }) }));
+vi.mock('../../../contexts/UnitContext', () => ({ useUnit: () => ({ unit: 'km', isMile: false }) }));
 vi.mock('../../../contexts/I18nContext', () => ({ useI18n: () => ({ lang: state.lang, t: (key, values = {}) => {
   const dictionary = state.lang === 'zh-CN' ? zh : en;
   const copy = key.split('.').reduce((value, part) => value?.[part], dictionary) || key;
@@ -70,7 +71,21 @@ it.each(RACE_DISTANCES)('uses the real forecast for $key and preserves the shell
   expect(container.querySelectorAll('.prediction-v2-ladder li')).toHaveLength(4);
   expect(state.chartData.datasets).toHaveLength(1);
   expect(state.chartData.datasets[0].data.every((value) => Number.isFinite(value) && value > 0)).toBe(true);
-  expect(apiJson).toHaveBeenCalledWith('/api/activities', {});
+  expect(apiJson).toHaveBeenCalledWith('/api/activities/analysis', {});
+});
+
+it('shows the long-run check under the time, and leaves the time as the forecast has it', async () => {
+  const { container } = await openPage('marathon');
+  const check = screen.getByRole('region', { name: en.endurance_check.title });
+  const expectedTime = predictRaceTimeCalibrated(estimateCurrentVdot(activities).representativeVdot, 42195, activities) * 60;
+
+  expect(check).toHaveTextContent('Your longest run in the last 8 weeks was 10.0 km. The check looks for 31.6 km');
+  expect(check).toHaveTextContent('Runs in the last 8 weeks: 35. Average per week: 43.8 km.');
+  expect(container.querySelector('.prediction-forecast-time')).toHaveTextContent(displayedTime(expectedTime));
+
+  cleanup();
+  await openPage('5k');
+  expect(screen.getByRole('region', { name: en.endurance_check.title })).toHaveTextContent('which reaches the 3.8 km the check looks for');
 });
 
 it('updates the forecast and chart when the route distance changes', async () => {
@@ -82,6 +97,14 @@ it('updates the forecast and chart when the route distance changes', async () =>
   expect(container.querySelector('.prediction-v2-kicker')).toHaveTextContent('Marathon');
   expect(container.querySelector('.prediction-forecast-time').textContent).not.toBe(priorTime);
   expect(state.chartData.datasets[0].data.at(-1)).toBeGreaterThan(priorTrend);
+});
+
+it('limits the advertised prediction history to 90 days while retaining older VDOT evidence', async () => {
+  const old = { ...activities[0], id: 999, startTime: '2025-08-01T12:00:00Z' };
+  activities.push(old);
+  await openPage('5k');
+  expect(state.chartData.labels).toHaveLength(35);
+  expect(state.chartData.labels).not.toContain('Aug 1');
 });
 
 it.each([

@@ -1,0 +1,33 @@
+/* Long run check: under the time on a prediction page, whether the longest run of the last eight weeks reached three quarters of
+   the distance. Sits in the prediction hero, so it takes the page's own muted and ink colours (--pv-*); the one colour of its
+   own is the amber of the weather box, for a run that is under the rule. Every colour below is a token. */
+
+#root .endurance-check {
+  --ec-fill: var(--pv-fill, rgba(28, 25, 23, 0.05));
+  --ec-ink: var(--pv-ink, #1c1917);
+  --ec-muted: var(--pv-muted, #625c56);
+  --ec-faint: var(--pv-faint, #766d64);
+  --ec-watch-fill: rgba(255, 149, 0, 0.08);
+  --ec-watch: #a15c00;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--ec-fill);
+  color: var(--ec-muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .endurance-check { --ec-watch: #f6c887; }
+
+#root .endurance-check.is-short { background: var(--ec-watch-fill); }
+#root .endurance-check :is(h2, p) { margin: 0; }
+#root .endurance-check__title { color: var(--ec-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .endurance-check.is-short .endurance-check__title { color: var(--ec-watch); }
+#root .endurance-check__result { max-width: 70ch; color: var(--ec-ink); text-wrap: pretty; }
+#root .endurance-check__facts { color: var(--ec-muted); font-variant-numeric: tabular-nums; }
+#root .endurance-check__basis { max-width: 70ch; color: var(--ec-faint); font-size: 0.75rem; text-wrap: pretty; }
+#root .endurance-check__basis a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+#root .endurance-check a:focus-visible { outline: 2px solid var(--pv-accent, #a0392a); outline-offset: 2px; border-radius: 4px; }

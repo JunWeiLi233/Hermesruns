@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dashboardSource = readDashboardSources();
 const previewSource = readFileSync(path.join(here, "../../../components/AdminCourseMapPreview.jsx"), 'utf8');
+const courseMapsSource = readFileSync(path.join(here, '../CourseMapsSection.jsx'), 'utf8');
+const catalogRailSource = courseMapsSource.match(/<section\s+className="admin-ref-card admin-ref-review-rail"[\s\S]*?<\/section>/)?.[0];
 
 assert.match(
   dashboardSource,
@@ -15,21 +17,21 @@ assert.match(
 );
 
 assert.match(
-  dashboardSource,
-  /<List[\s\S]*rowComponent=\{CourseMapQueueRowComponent\}[\s\S]*rowHeight=\{160\}[\s\S]*rowProps=\{courseMapQueueRowProps\}/,
-  'Dashboard course-map rail should virtualize the catalog-sized queue instead of mounting every race card at once.'
+  catalogRailSource || '',
+  /courseMapQueueItems\.map\(\(item\)[\s\S]*<button[\s\S]*aria-pressed=[\s\S]*onClick=\{\(\) => courseMapQueueRowProps\.onSelect\(item\)\}/,
+  'The catalog rail should offer selectable race rows and identify the current selection.'
+);
+
+assert.doesNotMatch(
+  catalogRailSource || '',
+  /AdminCourseMapPreview/,
+  'Catalog rows should reserve Leaflet rendering for the selected workspace rather than mounting a map for every race.'
 );
 
 assert.match(
-  dashboardSource,
-  /function CourseMapQueueRowComponent[\s\S]*admin-coursemap-rail__preview[\s\S]*renderMap=\{false\}/,
-  'Dashboard rail cards should use lightweight static previews and reserve interactive Leaflet rendering for the selected workspace.'
-);
-
-assert.match(
-  dashboardSource,
-  /admin-track-hub-map-panel--live[\s\S]*forceLiveMap=\{true\}[\s\S]*fallbackCenter=\{getCourseMapViewportFallback\(selectedCourseMapItem\)\}/,
-  'Dashboard selected course-map workspace should keep live Leaflet rendering and a race-level fallback center.'
+  courseMapsSource,
+  /<AdminCourseMapPreview[\s\S]*preview=\{preview\}[\s\S]*forceLiveMap\s+fallbackCenter=\{getCourseMapViewportFallback\(\s*selectedCourseMapItem,?\s*\)\}/,
+  'The selected pending/live preview should keep geographic Leaflet rendering and the race-level fallback center.'
 );
 
 assert.match(
@@ -46,7 +48,7 @@ assert.match(
 
 assert.match(
   previewSource,
-  /const hasRenderableAlignment = hasAlignedOverlay \|\| hasAlignedRoute;[\s\S]*const hasFallbackCenter = Boolean\(fallbackLatLng\);[\s\S]*const shouldRenderMap = renderMap && !mapFailed && \(hasRenderableAlignment \|\| \(forceLiveMap && hasFallbackCenter\)\)/,
+  /const hasFallbackCenter = Boolean\(fallbackLatLng\);[\s\S]*const shouldRenderMap = renderMap && !mapFailed && \(hasAlignedRoute \|\| \(forceLiveMap && hasFallbackCenter\)\)/,
   'AdminCourseMapPreview should allow callers to opt out of Leaflet mounting while preserving live fallback behavior for workspace panels.'
 );
 

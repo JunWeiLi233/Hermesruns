@@ -1,0 +1,264 @@
+/* Landing — photo-led public landing (design handoff "Landing v3"). Scoped to .landing-v3; the `/` route loads no other page CSS. */
+@font-face { font-family: "Hermes Manrope"; font-style: normal; font-weight: 200 800; font-display: swap; src: url("../assets/fonts/manrope-latin-wght.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+.landing-v3 {
+  --lv3-ink: #1a1714;
+  --lv3-body: #4a443d;
+  --lv3-muted: #6b645c;
+  --lv3-paper: #f5f1ea;
+  --lv3-white: #ffffff;
+  --lv3-coral: #ff5a3c;
+  --lv3-coral-hover: #ff7a60;
+  --lv3-brick: #c2401f;
+  --lv3-good: #187a41;
+  --lv3-font: "Hermes Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+  --lv3-width: 1240px;
+  --hermes-logo-accent: #a0392a;
+  font-family: var(--lv3-font);
+  background: var(--lv3-paper);
+  color: var(--lv3-ink);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+.landing-v3 *, .landing-v3 *::before, .landing-v3 *::after { box-sizing: border-box; }
+/* Base element rules use :where() so they never outrank a component class (a bare `.landing-v3 a` would beat `.lv3-btn--light`). */
+:where(.landing-v3) a { color: inherit; text-decoration: none; }
+:where(.landing-v3) :is(h1, h2, h3, p, ul) { margin: 0; }
+:where(.landing-v3) :is(h1, h2, h3) { font-weight: 800; text-wrap: balance; }
+:where(.landing-v3) p { text-wrap: pretty; }
+:where(.landing-v3) main { display: block; }
+.landing-v3 :focus-visible { outline: 3px solid var(--lv3-coral); outline-offset: 3px; border-radius: 6px; }
+
+.lv3-width { width: 100%; max-width: var(--lv3-width); margin: 0 auto; padding-left: 32px; padding-right: 32px; }
+.lv3-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.lv3-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.lv3-section { padding-top: 112px; padding-bottom: 112px; display: flex; flex-direction: column; gap: 48px; }
+.lv3-band--white { background: var(--lv3-white); }
+.lv3-band--ink { background: var(--lv3-ink); color: var(--lv3-paper); }
+.lv3-head { display: flex; flex-direction: column; gap: 16px; }
+.lv3-head--center { align-items: center; text-align: center; }
+.lv3-head h2, .lv3-title-center { font-size: clamp(40px, 5vw, 60px); line-height: 1.02; letter-spacing: -0.035em; }
+.lv3-title-center { text-align: center; }
+.lv3-head p { max-width: 46ch; font-size: 19px; line-height: 1.5; color: var(--lv3-body); }
+.lv3-eyebrow { font-size: 16px; font-weight: 600; color: var(--lv3-brick); }
+.lv3-eyebrow--coral { color: #ff8a70; }
+
+/* Accessibility helpers */
+.lv3-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.landing-v3 .lv3-skip { position: fixed; z-index: 100; left: 16px; top: 12px; padding: 14px 20px; border-radius: 999px; background: var(--lv3-ink); color: #fff; font-weight: 700; transform: translateY(-200%); }
+.landing-v3 .lv3-skip:focus { transform: none; }
+
+/* Buttons */
+.lv3-btn { height: 44px; padding: 0 22px; border-radius: 999px; display: inline-grid; place-items: center; font-weight: 700; font-size: 15px; white-space: nowrap; transition: background-color .15s, color .15s; }
+.lv3-btn--xl { height: 60px; padding: 0 32px; font-size: 17px; }
+.lv3-btn--primary { background: var(--lv3-coral); color: var(--lv3-ink); font-weight: 800; }
+.lv3-btn--primary:hover { background: var(--lv3-coral-hover); }
+.lv3-btn--light { background: #fff; color: var(--lv3-ink); }
+.lv3-btn--light:hover { background: var(--lv3-coral); }
+.lv3-btn--dark { height: 54px; padding: 0 28px; background: var(--lv3-ink); color: #fff; font-size: 16px; }
+.lv3-btn--dark:hover { background: var(--lv3-coral); color: var(--lv3-ink); }
+.lv3-btn--ghost-dark { color: #fff; padding: 0 18px; }
+.lv3-btn--outline-dark { color: #fff; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.6); }
+.lv3-btn--outline-dark:hover { background: rgba(255,255,255,.12); }
+.lv3-btn--outline { box-shadow: inset 0 0 0 1.5px rgba(26,23,20,.25); }
+.lv3-btn--outline:hover { background: #fff; }
+
+/* Logo */
+.lv3-logo { display: inline-flex; align-items: center; gap: 10px; color: #10203d; }
+.lv3-logo-mark { height: 26px; width: auto; }
+.lv3-logo-word { height: 22px; width: auto; }
+.lv3-logo--dark { color: #fff; --hermes-logo-accent: #f07561; }
+
+/* Navigation: laid over the top of the hero */
+.lv3-nav { position: absolute; z-index: 3; top: 0; left: 0; right: 0; color: #fff; }
+.lv3-nav-inner { height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.lv3-nav-links { display: flex; gap: 32px; font-size: 15px; font-weight: 600; }
+.lv3-nav-links a:hover { opacity: .7; }
+.lv3-nav-actions { display: flex; gap: 10px; align-items: center; }
+.lv3-methods-link { width: fit-content; text-decoration: underline; text-underline-offset: 3px; font-weight: 700; }
+.lv3-sync-note { flex-basis: 100%; text-align: center; font-size: 14px; line-height: 1.6; font-weight: 500; }
+.lv3-methods-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.lv3-methods-card, .lv3-methods-example { padding: 32px; border-radius: 24px; background: #fff; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.lv3-methods-card h3, .lv3-methods-example h3 { font-size: 26px; line-height: 1.2; letter-spacing: -.02em; }
+.lv3-methods-card p, .lv3-methods-example p, .lv3-methods-provenance { font-size: 16.5px; line-height: 1.7; color: var(--lv3-body); }
+.lv3-methods-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 8px 0; }
+.lv3-methods-values dt { font-size: 14px; line-height: 1.5; color: var(--lv3-muted); }
+.lv3-methods-values dd { margin: 8px 0 0; font-size: 30px; line-height: 1.2; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* Hero */
+.lv3-hero { position: relative; min-height: 860px; padding-top: 84px; display: flex; flex-direction: column; color: #fff; background: #2a2420; }
+.lv3-hero-scrim { position: absolute; inset: 0; pointer-events: none; background:
+  linear-gradient(180deg, rgba(20,16,13,.6) 0, rgba(20,16,13,.55) 90px, rgba(20,16,13,0) 220px),
+  linear-gradient(90deg, rgba(20,16,13,.72) 0%, rgba(20,16,13,.35) 55%, rgba(20,16,13,0) 80%),
+  linear-gradient(0deg, rgba(20,16,13,.45) 0%, rgba(20,16,13,0) 40%); }
+.lv3-hero-body { position: relative; flex: 1; padding-top: 40px; padding-bottom: 96px; display: flex; flex-direction: column; justify-content: flex-end; gap: 28px; }
+.lv3-hero-body h1 { max-width: 11ch; font-size: clamp(56px, 7vw, 96px); line-height: .98; letter-spacing: -0.04em; white-space: pre-line; }
+.lv3-hero-body p { max-width: 40ch; font-size: 21px; line-height: 1.5; color: rgba(255,255,255,.92); }
+.lv3-hero-proof { font-size: 15px; font-weight: 500; color: rgba(255,255,255,.88); }
+
+/* Sync strip */
+.lv3-sync { padding-top: 28px; padding-bottom: 28px; display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; font-size: 18px; font-weight: 700; color: var(--lv3-muted); }
+.lv3-sync-label { font-size: 15px; font-weight: 400; }
+
+/* Goals: a row of five on desktop, a swipeable row on small screens */
+.lv3-goals { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+.lv3-goal { position: relative; height: 340px; border: 0; padding: 0; border-radius: 24px; overflow: hidden; cursor: pointer; background: #e5ddd1; text-align: left; font: inherit; }
+.lv3-goal.is-active { box-shadow: 0 0 0 4px var(--lv3-coral); }
+.lv3-goal-label { position: absolute; inset: 0 0 auto 0; padding: 22px 22px 56px; background: linear-gradient(180deg, rgba(20,16,13,.8) 0%, rgba(20,16,13,.7) 55%, rgba(20,16,13,0) 100%); color: #fff; display: flex; flex-direction: column; gap: 4px; }
+.lv3-goal-label strong { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; }
+.lv3-goal-label span { font-size: 14px; font-weight: 500; color: rgba(255,255,255,.92); }
+.lv3-goal-summary { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; padding: 28px 32px; border-radius: 24px; background: #fff; }
+.lv3-goal-summary > div { display: flex; flex-direction: column; gap: 4px; }
+.lv3-goal-summary strong { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.lv3-goal-summary span { max-width: 52ch; font-size: 16px; color: var(--lv3-body); }
+
+/* Features */
+.lv3-features { padding-top: 112px; padding-bottom: 112px; display: flex; flex-direction: column; gap: 120px; }
+.lv3-feature { display: flex; flex-wrap: wrap; gap: 72px; align-items: center; }
+.lv3-feature--reverse { flex-direction: row-reverse; }
+.lv3-feature-copy { flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.lv3-feature-copy h3 { font-size: clamp(36px, 4vw, 50px); line-height: 1.04; letter-spacing: -0.03em; }
+.lv3-feature-copy p { max-width: 42ch; font-size: 19px; line-height: 1.6; color: var(--lv3-body); }
+.lv3-feature-media { flex: 1 1 460px; min-width: 0; position: relative; height: 540px; }
+.lv3-feature-photo { position: absolute; inset: 0 60px 40px 0; border-radius: 28px; overflow: hidden; background: #e5ddd1; }
+.lv3-feature-card { position: absolute; right: 0; bottom: 0; width: 300px; padding: 22px; border-radius: 22px; background: #fff; box-shadow: 0 24px 50px rgba(60,40,20,.18); display: flex; flex-direction: column; gap: 10px; }
+.lv3-feature-card-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; color: var(--lv3-muted); }
+.lv3-feature-card-tag { padding: 2px 8px; border-radius: 999px; background: var(--lv3-paper); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.lv3-feature-card strong { font-size: 30px; line-height: 1.1; font-weight: 800; letter-spacing: -0.02em; }
+.lv3-feature-card em { font-style: normal; font-size: 15px; line-height: 1.45; font-weight: 500; color: var(--lv3-body); }
+.lv3-feature-card em.is-good { color: var(--lv3-good); }
+
+/* App band + phone */
+.lv3-app { padding-top: 112px; padding-bottom: 112px; display: flex; flex-wrap: wrap; gap: 72px; align-items: center; }
+.lv3-app-copy { flex: 1 1 440px; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+.lv3-app-copy h2 { font-size: clamp(40px, 4.6vw, 56px); line-height: 1.02; letter-spacing: -0.035em; }
+.lv3-app-copy p { max-width: 42ch; font-size: 19px; line-height: 1.6; color: #cfc7bb; }
+.lv3-app-device { flex: 0 0 310px; max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.lv3-app-caption { font-size: 13px; font-weight: 600; color: #cfc7bb; }
+.lv3-phone { position: relative; width: 310px; max-width: 100%; height: 640px; border-radius: 54px; padding: 3px; background: linear-gradient(145deg, #8a8580, #3d3a37 30%, #57534f 55%, #2b2927 80%, #6f6a65); box-shadow: 0 40px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.6); }
+.lv3-phone-btn { position: absolute; width: 3px; background: #4a4744; }
+.lv3-phone-btn--action { left: -3px; top: 118px; height: 30px; border-radius: 2px 0 0 2px; }
+.lv3-phone-btn--vol-up { left: -3px; top: 168px; height: 56px; border-radius: 2px 0 0 2px; }
+.lv3-phone-btn--vol-down { left: -3px; top: 236px; height: 56px; border-radius: 2px 0 0 2px; }
+.lv3-phone-btn--power { right: -3px; top: 190px; height: 88px; border-radius: 0 2px 2px 0; }
+.lv3-phone-bezel { width: 100%; height: 100%; border-radius: 51px; background: #000; padding: 9px; }
+.lv3-phone-screen { position: relative; width: 100%; height: 100%; border-radius: 43px; background: #fff; overflow: hidden; display: flex; flex-direction: column; }
+.lv3-phone-island { position: absolute; left: 50%; top: 11px; transform: translateX(-50%); width: 80px; height: 26px; border-radius: 20px; background: #000; z-index: 2; }
+.lv3-phone-status { height: 50px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 4px 28px 0 30px; background: #fdfbf7; color: var(--lv3-ink); font: 600 15px -apple-system, "SF Pro Text", var(--lv3-font); letter-spacing: -0.01em; }
+.lv3-phone-status-icons { display: flex; align-items: center; gap: 4px; }
+.lv3-signal { display: flex; align-items: flex-end; gap: 1.5px; height: 11px; }
+.lv3-signal i { width: 3px; border-radius: 1px; background: currentColor; }
+.lv3-signal i:nth-child(1) { height: 4px; } .lv3-signal i:nth-child(2) { height: 6px; } .lv3-signal i:nth-child(3) { height: 8.5px; } .lv3-signal i:nth-child(4) { height: 11px; }
+.lv3-wifi { width: 15px; height: 11px; background: radial-gradient(circle at 50% 100%, currentColor 0 2px, transparent 2.5px 4.5px, currentColor 5px 7px, transparent 7.5px 9.5px, currentColor 10px); clip-path: polygon(50% 100%, 0 15%, 10% 0, 90% 0, 100% 15%); }
+.lv3-battery { width: 21px; height: 11px; border-radius: 3.5px; box-shadow: inset 0 0 0 1px rgba(26,23,20,.4); padding: 2px; display: flex; position: relative; }
+.lv3-battery::after { content: ""; position: absolute; right: -2.5px; top: 3.5px; width: 1.5px; height: 4px; border-radius: 0 1px 1px 0; background: rgba(26,23,20,.4); }
+.lv3-battery i { width: 75%; border-radius: 2px; background: currentColor; }
+.lv3-phone-shot { display: block; width: 100%; flex: 1; min-height: 0; object-fit: cover; object-position: top; }
+.lv3-phone-home { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); width: 120px; height: 5px; border-radius: 3px; background: var(--lv3-ink); }
+
+/* Promises */
+.lv3-promises { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.lv3-promise { border-radius: 28px; background: #fff; overflow: hidden; display: flex; flex-direction: column; }
+.lv3-promise-photo { position: relative; height: 300px; background: #e5ddd1; }
+.lv3-promise-copy { padding: 28px 28px 32px; display: flex; flex-direction: column; gap: 12px; }
+.lv3-promise-copy h3 { font-size: 24px; line-height: 1.15; letter-spacing: -0.02em; }
+.lv3-promise-copy p { font-size: 16.5px; line-height: 1.6; color: var(--lv3-body); }
+
+/* Pricing */
+.lv3-pricing { padding-top: 112px; padding-bottom: 112px; display: flex; flex-direction: column; align-items: center; gap: 40px; }
+.lv3-plans { width: 100%; max-width: 880px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+.lv3-plan { padding: 36px; border-radius: 28px; background: var(--lv3-paper); display: flex; flex-direction: column; gap: 22px; }
+.lv3-plan--featured { background: var(--lv3-ink); color: var(--lv3-paper); }
+.lv3-plan-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.lv3-plan-head h3 { font-size: 20px; font-weight: 700; letter-spacing: 0; }
+.lv3-plan-badge { height: 28px; padding: 0 12px; border-radius: 999px; background: var(--lv3-coral); color: var(--lv3-ink); display: grid; place-items: center; font-size: 12.5px; font-weight: 700; }
+.lv3-plan-price { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.lv3-plan-price strong { font-size: 56px; font-weight: 800; letter-spacing: -0.03em; }
+.lv3-plan-price span { font-size: 15px; font-weight: 500; color: var(--lv3-muted); }
+.lv3-plan--featured .lv3-plan-price span { color: #cfc7bb; }
+.lv3-plan-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; font-size: 16.5px; color: var(--lv3-body); }
+.lv3-plan--featured .lv3-plan-list { color: #e5ddd1; }
+.lv3-plan-list li::before { content: "✓"; margin-right: 10px; }
+.lv3-plan-cta { margin-top: auto; height: 54px; width: 100%; font-size: 16px; }
+.lv3-plan-note { margin-top: -8px; text-align: center; font-size: 14px; font-weight: 600; color: #cfc7bb; }
+
+/* FAQ: native details, one open at a time where the browser supports `name` */
+.lv3-faq { max-width: 880px; margin: 0 auto; padding-left: 32px; padding-right: 32px; gap: 32px; }
+.lv3-faq .lv3-title-center { font-size: 48px; }
+.lv3-faq-list { display: flex; flex-direction: column; gap: 10px; }
+.lv3-faq-item { border-radius: 20px; background: #fff; padding: 0 26px; }
+.lv3-faq-q { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 24px 0; cursor: pointer; list-style: none; font: 700 18px var(--lv3-font); color: var(--lv3-ink); }
+.lv3-faq-q::-webkit-details-marker { display: none; }
+.lv3-faq-icon { width: 34px; height: 34px; flex: none; border-radius: 999px; background: var(--lv3-paper); display: grid; place-items: center; font-size: 20px; font-weight: 500; }
+.lv3-faq-icon::before { content: "+"; }
+.lv3-faq-item[open] .lv3-faq-icon::before { content: "−"; }
+.lv3-faq-a { padding: 0 0 24px; max-width: 60ch; font-size: 16.5px; line-height: 1.6; color: var(--lv3-body); }
+
+/* Closing CTA */
+.lv3-cta { position: relative; min-height: 520px; display: flex; align-items: center; color: #fff; background: #2a2420; }
+.lv3-cta-scrim { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(20,16,13,.62) 30%, rgba(20,16,13,.2) 100%); }
+.lv3-cta-body { position: relative; padding-top: 96px; padding-bottom: 96px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 28px; }
+.lv3-cta-body h2 { max-width: 14ch; font-size: clamp(48px, 6vw, 80px); line-height: 1; letter-spacing: -0.04em; white-space: pre-line; }
+
+/* Footer */
+.lv3-footer { padding-top: 40px; padding-bottom: 56px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; font-size: 14.5px; font-weight: 500; color: var(--lv3-muted); }
+.lv3-footer nav { display: flex; gap: 28px; flex-wrap: wrap; }
+.lv3-footer a:hover { color: var(--lv3-ink); }
+
+/* Chinese: wide glyphs, so tighter tracking and measures in em rather than ch */
+.landing-v3:lang(zh) h1, .landing-v3:lang(zh) h2, .landing-v3:lang(zh) h3 { letter-spacing: 0; }
+.landing-v3:lang(zh) .lv3-hero-body h1 { max-width: 9em; font-size: clamp(44px, 6vw, 80px); line-height: 1.14; }
+.landing-v3:lang(zh) .lv3-hero-body p, .landing-v3:lang(zh) .lv3-head p, .landing-v3:lang(zh) .lv3-feature-copy p, .landing-v3:lang(zh) .lv3-app-copy p { max-width: 26em; line-height: 1.7; }
+.landing-v3:lang(zh) .lv3-head h2, .landing-v3:lang(zh) .lv3-title-center, .landing-v3:lang(zh) .lv3-app-copy h2 { font-size: clamp(34px, 4.4vw, 52px); line-height: 1.18; }
+.landing-v3:lang(zh) .lv3-feature-copy h3 { font-size: clamp(30px, 3.6vw, 44px); line-height: 1.2; }
+.landing-v3:lang(zh) .lv3-cta-body h2 { max-width: 12em; font-size: clamp(40px, 5.2vw, 68px); line-height: 1.14; }
+.landing-v3:lang(zh) .lv3-faq .lv3-title-center { font-size: 40px; }
+.landing-v3:lang(zh) .lv3-feature-card-tag { letter-spacing: 0; }
+
+@media (max-width: 999px) {
+  .lv3-goals { display: flex; overflow-x: auto; scrollbar-width: thin; scrollbar-color: rgba(26,23,20,.3) transparent; scroll-snap-type: x proximity; padding-bottom: 10px; margin-left: -20px; margin-right: -20px; padding-left: 20px; padding-right: 20px; scroll-padding-left: 20px; }
+  .lv3-goal { flex: 0 0 min(230px, 64vw); scroll-snap-align: start; }
+  .lv3-promises { grid-template-columns: 1fr; max-width: 640px; width: 100%; margin: 0 auto; }
+}
+
+@media (max-width: 760px) {
+  .lv3-methods-grid { grid-template-columns: 1fr; }
+  .lv3-methods-card, .lv3-methods-example { padding: 24px; }
+  .lv3-methods-values { grid-template-columns: 1fr; gap: 20px; }
+  .lv3-nav-inner { gap: 8px; height: auto; min-height: 84px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+  .lv3-nav-inner > a { min-width: 0; }
+  .lv3-nav-actions { flex-wrap: wrap; margin-left: auto; }
+  .lv3-width, .lv3-faq { padding-left: 20px; padding-right: 20px; }
+  .lv3-nav-links { display: none; }
+  .lv3-nav-actions { gap: 4px; }
+  .lv3-nav-actions .lv3-btn { padding: 0 14px; }
+  .lv3-hero { min-height: 720px; }
+  .lv3-section, .lv3-features, .lv3-app, .lv3-pricing { padding-top: 72px; padding-bottom: 72px; }
+  .lv3-features { gap: 72px; }
+  .lv3-feature, .lv3-feature--reverse { flex-direction: column; gap: 32px; }
+  .lv3-feature-media { flex-basis: auto; width: 100%; height: 420px; }
+  .lv3-feature-photo { inset: 0 0 60px 0; }
+  .lv3-feature-card { width: min(300px, 90%); }
+  .lv3-goal { height: 280px; }
+  .lv3-goal-summary { padding: 22px 20px; }
+  .lv3-goal-summary .lv3-btn { width: 100%; }
+  .lv3-sync { gap: 20px 28px; font-size: 16px; }
+  .lv3-plan { padding: 28px 24px; }
+  .lv3-faq-item { padding: 0 20px; }
+  .lv3-faq-q { font-size: 17px; }
+}
+
+@media (max-width: 400px) {
+  .lv3-nav-actions .lv3-btn { padding: 0 10px; }
+  .lv3-logo-mark { height: 24px; }
+  .lv3-logo-word { height: 18px; }
+  .lv3-logo { gap: 8px; }
+  .lv3-nav-actions .lv3-btn--ghost-dark { padding: 0 10px; }
+}
+
+@media (max-width: 359px) {
+  .lv3-nav-inner { gap: 8px; }
+  .lv3-logo-mark { height: 22px; }
+  .lv3-logo-word { height: 16px; }
+  .lv3-nav-actions .lv3-btn { font-size: 14px; padding: 0 10px; }
+}

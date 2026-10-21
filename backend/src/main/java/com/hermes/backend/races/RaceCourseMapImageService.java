@@ -557,12 +557,20 @@ public class RaceCourseMapImageService {
         try (PDDocument document = Loader.loadPDF(pdfBytes)) {
             if (document.getNumberOfPages() == 0) return List.of();
             PDFRenderer renderer = new PDFRenderer(document);
+            renderer.setSubsamplingAllowed(true);
             PDFTextStripper textStripper = new PDFTextStripper();
             List<RenderedPdfPageCandidate> renderedPages = new ArrayList<>();
             int pageLimit = Math.max(1, pdfRenderPageLimit);
             for (int pageIndex = 0; pageIndex < Math.min(document.getNumberOfPages(), pageLimit); pageIndex++) {
                 PDPage page = document.getPage(pageIndex);
-                BufferedImage image = renderer.renderImageWithDPI(pageIndex, PDF_RENDER_DPI, ImageType.RGB);
+                // Allocate the preview-sized raster directly. Large-format race
+                // PDFs can otherwise allocate hundreds of megapixels at200DPI
+                // before being immediately reduced to1800px.
+                double longestPoints = Math.max(page.getCropBox().getWidth(), page.getCropBox().getHeight())
+                        * Math.max(1.0, page.getUserUnit());
+                float dpi = (float) Math.min(PDF_RENDER_DPI,
+                        MAX_INLINE_UPLOAD_PREVIEW_DIMENSION_PX * 72.0 / Math.max(1.0, longestPoints));
+                BufferedImage image = renderer.renderImageWithDPI(pageIndex, dpi, ImageType.RGB);
                 if (image == null) continue;
                 ResolvedCandidateAsset normalized = normalizeDecodedUploadPreview(image, true);
                 if (normalized == null || normalized.imageBytes().length == 0) continue;
@@ -592,7 +600,9 @@ public class RaceCourseMapImageService {
             for (COSName name : resources.getXObjectNames()) {
                 PDXObject xObject = resources.getXObject(name);
                 if (xObject instanceof PDImageXObject imageObject) {
-                    BufferedImage embeddedImage = imageObject.getImage();
+                    int subsampling = Math.max(1, (int) Math.ceil(Math.max(imageObject.getWidth(), imageObject.getHeight())
+                            / (double) MAX_INLINE_UPLOAD_PREVIEW_DIMENSION_PX));
+                    BufferedImage embeddedImage = imageObject.getImage(null, subsampling);
                     if (!isPdfEmbeddedImageCandidate(embeddedImage)) continue;
                     ResolvedCandidateAsset normalized = normalizeDecodedUploadPreview(embeddedImage, true);
                     if (normalized == null || normalized.imageBytes().length == 0) continue;
@@ -903,6 +913,14 @@ public class RaceCourseMapImageService {
     private ResolvedCandidateAsset normalizeInlineUploadPreview(String originalReference, byte[] imageBytes, boolean preferPng) {
         BufferedImage decoded = decodeImage(imageBytes);
         if (decoded == null) {
+            return new ResolvedCandidateAsset(originalReference, imageBytes);
+        }
+        // Exact source identities must survive a safe, already-sized upload.
+        // Re-encoding a recognized JPEG would discard its reviewed route binding.
+        if (imageBytes.length <= MAX_IMAGE_BYTES
+                && decoded.getWidth() >= MIN_IMAGE_DIMENSION_PX && decoded.getHeight() >= MIN_IMAGE_DIMENSION_PX
+                && Math.max(decoded.getWidth(), decoded.getHeight()) <= MAX_INLINE_UPLOAD_PREVIEW_DIMENSION_PX
+                && VerifiedCourseMapReference.isRecognizedImage(imageBytes)) {
             return new ResolvedCandidateAsset(originalReference, imageBytes);
         }
         ResolvedCandidateAsset normalized = normalizeDecodedUploadPreview(decoded, preferPng);

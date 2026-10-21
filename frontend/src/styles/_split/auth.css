@@ -9,6 +9,7 @@
 }
 
 .auth-card-kicker .hermes-logo__word {
+    height: 1em;
     color: var(--brand-ink);
 }
 
@@ -2065,6 +2066,27 @@
 
 .auth-page--forgot-password .auth-flow-brand-inner {
   background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
+}
+
+/* The HermesRuns lockup on the dark brand panel: paper letters, coral colon. */
+.auth-page--forgot-password .auth-flow-wordmark-row {
+  --hermes-logo-tile: 46px;
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--hermes-logo-tile) * 0.2292);
+  color: var(--hermes-logo-paper);
+  text-decoration: none;
+}
+
+.auth-page--forgot-password .auth-flow-wordmark-logo {
+  width: var(--hermes-logo-tile);
+  height: var(--hermes-logo-tile);
+  flex: 0 0 auto;
+}
+
+.auth-page--forgot-password .auth-flow-wordmark {
+  height: calc(var(--hermes-logo-tile) * 0.4448);
+  color: inherit;
 }
 
 /* 闁冲厜鍋撻柍鍏夊�?Password strength checker (signup form top card) 闁冲厜鍋撻柍鍏夊�?*/

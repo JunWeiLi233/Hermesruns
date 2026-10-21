@@ -7,8 +7,12 @@ const page = read('../Rewards.jsx');
 const css = read('../../../styles/rewards-v2.css');
 const appStyles = read('../../../styles/app.css');
 const skeletonStyles = read('../../../styles/loading-skeleton.css');
-assert.match(page, /apiJson\('\/api\/profile\/me'\)/);
-assert.match(page, /apiJson\('\/api\/activities'\)/);
+assert.match(page, /apiJson\('\/api\/profile\/me', \{ signal: request\.signal \}\)/);
+assert.match(page, /apiJson\('\/api\/activities', \{ signal: request\.signal \}\)/);
+assert.match(page, /<RewardsSession key=\{`\$\{token\}:\$\{email\}`\}/,
+  'Rewards profile, activities and story calendar must share the current session boundary.');
+assert.match(page, /active = false; request\.abort\(\)/,
+  'Superseded account loads must be cancelled rather than supplying the new account view.');
 assert.match(page, /buildRewardShowcase\(runs, lang\)/);
 assert.match(page, /allRewards\.filter\(\(reward\) => !reward\.earned\)/,
   'The hero must use the entire catalog, not the capped upcoming subset.');

@@ -18,6 +18,11 @@ export interface SlimRunForRunsCache {
   distanceMeters: unknown;
   movingTimeSeconds: unknown;
   provider: unknown;
+  activityInstant?: unknown;
+  accountLocalDate?: unknown;
+  accountLocalTime?: unknown;
+  accountTimeZone?: unknown;
+  timeRepresentation?: unknown;
 }
 
 export interface RunsCacheSnapshot {
@@ -86,6 +91,8 @@ export function slimRunForRunsCache(run: Record<string, unknown> | null | undefi
     distanceMeters: run?.distanceMeters,
     movingTimeSeconds: run?.movingTimeSeconds,
     provider: run?.provider,
+    ...Object.fromEntries(['activityInstant', 'accountLocalDate', 'accountLocalTime', 'accountTimeZone', 'timeRepresentation']
+      .filter(field => run?.[field] !== undefined).map(field => [field, run?.[field]])),
   };
 }
 

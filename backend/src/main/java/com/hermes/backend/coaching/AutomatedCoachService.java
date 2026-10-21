@@ -1,6 +1,7 @@
 package com.hermes.backend.coaching;
 
 import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.activity.RunMetricsProjection;
@@ -10,10 +11,14 @@ import com.hermes.backend.races.RaceRegistrationStatus;
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
 import com.hermes.backend.shoes.ShoeTrackerService;
+import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
@@ -30,6 +35,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +70,17 @@ public class AutomatedCoachService {
     private final PersonalizedRunningPlanner personalizedRunningPlanner;
     private final RaceEventRepository raceEventRepository;
     private final InjuryRiskService injuryRiskService;
+    private final Clock clock;
+
+    // Optional, so tests that build the service by hand do not need it.
+    private ApplicationEventPublisher zoneEvents;
+    @Autowired(required = false)
+    private com.hermes.backend.coaching.plan.RunPlanSelection versionedPlans;
+
+    @Autowired(required = false)
+    void setZoneEvents(ApplicationEventPublisher zoneEvents) {
+        this.zoneEvents = zoneEvents;
+    }
 
     public AutomatedCoachService(
             RunnerRepository runnerRepository,
@@ -78,6 +96,28 @@ public class AutomatedCoachService {
             RaceEventRepository raceEventRepository,
             InjuryRiskService injuryRiskService
     ) {
+        this(runnerRepository, activityRepository, coachRunnerStateRepository,
+                coachScheduledWorkoutRepository, coachTrainingBlockRepository, coachFeedbackAlertRepository,
+                shoeTrackerService, coachRouteService, readinessService, personalizedRunningPlanner,
+                raceEventRepository, injuryRiskService, Clock.systemDefaultZone());
+    }
+
+    @Autowired
+    public AutomatedCoachService(
+            RunnerRepository runnerRepository,
+            ActivityRepository activityRepository,
+            CoachRunnerStateRepository coachRunnerStateRepository,
+            CoachScheduledWorkoutRepository coachScheduledWorkoutRepository,
+            CoachTrainingBlockRepository coachTrainingBlockRepository,
+            CoachFeedbackAlertRepository coachFeedbackAlertRepository,
+            ShoeTrackerService shoeTrackerService,
+            CoachRouteService coachRouteService,
+            ReadinessService readinessService,
+            PersonalizedRunningPlanner personalizedRunningPlanner,
+            RaceEventRepository raceEventRepository,
+            InjuryRiskService injuryRiskService,
+            Clock clock
+    ) {
         this.runnerRepository = runnerRepository;
         this.activityRepository = activityRepository;
         this.coachRunnerStateRepository = coachRunnerStateRepository;
@@ -90,8 +130,10 @@ public class AutomatedCoachService {
         this.personalizedRunningPlanner = personalizedRunningPlanner;
         this.raceEventRepository = raceEventRepository;
         this.injuryRiskService = injuryRiskService;
+        this.clock = java.util.Objects.requireNonNull(clock);
     }
 
+    // The ingestion listener joins the import before commit; provider callbacks start a transaction.
     @Transactional
     public void handleActivityIngested(Long runnerId, Long activityId) {
         Optional<Runner> runnerOpt = runnerRepository.findById(runnerId);
@@ -145,8 +187,9 @@ public class AutomatedCoachService {
         }
         refreshPersonalizedPlan(runner, SCHEDULE_HORIZON_DAYS);
         CoachScheduledWorkout todayWorkout = coachScheduledWorkoutRepository
-                .findByRunnerAndScheduledDate(runner, LocalDate.now())
+                .findByRunnerAndScheduledDate(runner, LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner))))
                 .orElse(null);
+        if (versionedPlans != null && versionedPlans.selected(runner)) todayWorkout = null;
         return toStateDto(runner, state, todayWorkout);
     }
 
@@ -163,7 +206,7 @@ public class AutomatedCoachService {
             state = coachRunnerStateRepository.findByRunner(runner).orElse(state);
         }
         CoachScheduledWorkout todayWorkout = coachScheduledWorkoutRepository
-                .findByRunnerAndScheduledDate(runner, LocalDate.now())
+                .findByRunnerAndScheduledDate(runner, LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner))))
                 .orElse(null);
         return toStateDto(runner, state, todayWorkout);
     }
@@ -172,15 +215,80 @@ public class AutomatedCoachService {
     public List<CoachScheduledWorkoutDto> getSchedule(Runner runner, int days) {
         int d = Math.min(28, Math.max(1, days));
         PersonalizedRunningPlanner.PersonalizedPlan plan = refreshPersonalizedPlan(runner, Math.max(d, SCHEDULE_HORIZON_DAYS));
-        LocalDate today = LocalDate.now();
+        if (versionedPlans != null && versionedPlans.selected(runner)) {
+            LocalDate end = plan.today().date().plusDays(d - 1L);
+            return plan.sessions().stream().filter(session -> !session.date().isAfter(end)).map(session -> {
+                CoachScheduledWorkout row = new CoachScheduledWorkout(); row.setRunner(runner); applyPlannedSession(row, session);
+                return toScheduledDto(row, session);
+            }).toList();
+        }
+        LocalDate today = LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)));
         List<CoachScheduledWorkout> rows = coachScheduledWorkoutRepository
                 .findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(runner, today, today.plusDays(d - 1L));
         Map<LocalDate, PersonalizedRunningPlanner.PlannedSession> sessionsByDate = plan.sessions().stream()
                 .collect(java.util.stream.Collectors.toMap(PersonalizedRunningPlanner.PlannedSession::date, session -> session));
         return rows.stream()
-                .map(row -> toScheduledDto(row, sessionsByDate.get(row.getScheduledDate())))
+                .map(row -> toScheduledDto(recommendationRow(row, sessionsByDate.get(row.getScheduledDate())), sessionsByDate.get(row.getScheduledDate())))
                 .toList();
     }
+
+    /** Personalized library suggestions are computed on read; opening the library never schedules sessions. */
+    @Transactional(readOnly = true)
+    public CoachLibraryDto getWorkoutLibrary(Runner runner) {
+        LocalDate today = LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)));
+        var published = versionedPlans == null ? null : versionedPlans.legacy(runner, SCHEDULE_HORIZON_DAYS);
+        var publishedSessions = published == null ? Map.<LocalDate, com.hermes.backend.coaching.plan.RunPlanSelection.LibrarySession>of()
+                : versionedPlans.librarySessions(runner);
+        var preferences = versionedPlans == null ? null : versionedPlans.libraryPreferences(runner, planDate(published, today));
+        var goal = preferences != null && preferences.goal() != null ? preferences.goal() : resolvePlannerGoal(runner, today);
+        PersonalizedRunningPlanner.PersonalizedPlan plan = published;
+        var completed = completedMileage(runner, today);
+        if (plan == null) {
+            CoachRunnerState state = coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
+                CoachRunnerState empty = new CoachRunnerState(); empty.setRunner(runner); return empty;
+            });
+            var snapshot = readinessService.resolveReadinessSnapshot(runner, state, today);
+            var readiness = resolveReadiness(snapshot, state);
+            InjuryRiskService.InjuryRiskAssessment injury = null;
+            try { injury = injuryRiskService.getRiskAssessment(runner); }
+            catch (RuntimeException unavailable) { log.debug("Library injury evidence unavailable for runner {}", runner.getId()); }
+            plan = personalizedRunningPlanner.plan(new PersonalizedRunningPlanner.PlannerInput(today, SCHEDULE_HORIZON_DAYS,
+                    buildPlannerHistory(runner, state, today), readiness.score(), readiness.verdict(), snapshot != null && snapshot.hasSourceData(),
+                    injury == null ? null : injury.risk(), injury == null ? null : injury.sorenessLevel(), goal, completed,
+                    preferences == null ? null : preferences.availableRunDays()));
+        }
+        var workouts = plan.sessions().stream().filter(session -> session.workoutType() != CoachWorkoutType.REST
+                && session.workoutType() != CoachWorkoutType.CROSS_TRAIN && !session.date().isBefore(planDate(published, today))
+                && (!publishedSessions.containsKey(session.date()) || !Set.of("COMPLETED", "SKIPPED").contains(publishedSessions.get(session.date()).state()))
+                && !(session.date().equals(today) && completed.getOrDefault(today, 0d) > 0)
+                && (session.distanceKm() != null && session.distanceKm() > 0 || session.durationMinutes() != null && session.durationMinutes() > 0))
+                .map(session -> {
+                    CoachScheduledWorkout row = new CoachScheduledWorkout(); row.setRunner(runner); applyPlannedSession(row, session);
+                    var dto = toScheduledDto(row, session);
+                    var identity = publishedSessions.get(session.date());
+                    if (identity == null) return dto;
+                    String type = switch (identity.workoutType()) {
+                        case "LONG" -> "LONG_RUN"; case "INTERVAL" -> "INTERVALS"; case "STEADY" -> "TEMPO"; case "EVENT" -> "RACE";
+                        default -> identity.workoutType();
+                    };
+                    return new CoachScheduledWorkoutDto(dto.scheduledDate(), type, dto.plannedDistanceKm(), dto.plannedDurationMinutes(),
+                            dto.stridesSuggested(), dto.notes(), dto.mutatedFrom(), dto.readinessAdjusted(), dto.phase(), dto.intent(),
+                            dto.reasonCode(), dto.targetPaceMinSecondsPerKm(), dto.targetPaceMaxSecondsPerKm(), dto.originalDistanceKm());
+                }).toList();
+        var metadata = new CoachPlanDto(plan.phase(), plan.targetWeeklyKm(), plan.sessionsPerWeek(),
+                plan.preferredRunDays().stream().map(java.time.DayOfWeek::name).toList(), plan.confidence(), plan.reasonCodes(),
+                published != null ? versionedPlans.calendarZone(runner) : ActivityLocalDates.zoneOf(runner).getId(),
+                plan.historyEvidence(), plan.weeklyBudgets(), null);
+        return new CoachLibraryDto(workouts, metadata, published != null || preferences != null ? "CONFIRMED" : "HISTORY", goal,
+                published != null, preferences == null ? null : preferences.planId());
+    }
+
+    private static LocalDate planDate(PersonalizedRunningPlanner.PersonalizedPlan published, LocalDate fallback) {
+        return published == null ? fallback : published.today().date();
+    }
+
+    public record CoachLibraryDto(List<CoachScheduledWorkoutDto> workouts, CoachPlanDto plan,
+            String availabilitySource, PersonalizedRunningPlanner.Goal goal, boolean activePlan, String setupPlanId) {}
 
     /**
      * Returns the persisted schedule as-is for callers that are presenting a
@@ -189,8 +297,9 @@ public class AutomatedCoachService {
      */
     @Transactional
     public List<CoachScheduledWorkoutDto> getSchedulePreservingSchedule(Runner runner, int days) {
+        if (versionedPlans != null && versionedPlans.selected(runner)) return getSchedule(runner, days);
         int d = Math.min(28, Math.max(1, days));
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)));
         List<CoachScheduledWorkout> rows = coachScheduledWorkoutRepository
                 .findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(runner, today, today.plusDays(d - 1L));
         if (rows == null || rows.isEmpty()) {
@@ -201,24 +310,42 @@ public class AutomatedCoachService {
 
     @Transactional
     public CoachTodayDto getTodayWithReadiness(Runner runner) {
+        return getTodayWithReadiness(runner, true);
+    }
+
+    @Transactional
+    public CoachTodayDto getTodayWithReadiness(Runner runner, boolean includeRoute) {
         PersonalizedRunningPlanner.PersonalizedPlan plan = refreshPersonalizedPlan(runner, SCHEDULE_HORIZON_DAYS);
         CoachRunnerState state = getOrCreateState(runner);
-        LocalDate today = LocalDate.now();
+        LocalDate today = plan.today().date();
         LocalDate horizonEnd = today.plusDays(SCHEDULE_HORIZON_DAYS - 1L);
         List<CoachScheduledWorkout> rows = new ArrayList<>(coachScheduledWorkoutRepository
                 .findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(runner, today, horizonEnd));
-        CoachScheduledWorkout adjusted = rows.stream()
+        boolean versioned = versionedPlans != null && versionedPlans.selected(runner);
+        if (versioned) {
+            rows.clear();
+            for (var session : plan.sessions()) {
+                CoachScheduledWorkout row = new CoachScheduledWorkout();
+                row.setRunner(runner);
+                applyPlannedSession(row, session);
+                rows.add(row);
+            }
+        }
+        CoachScheduledWorkout storedToday = rows.stream()
                 .filter(existing -> today.equals(existing.getScheduledDate()))
                 .findFirst()
                 .orElseGet(() -> {
                     CoachScheduledWorkout w = new CoachScheduledWorkout();
                     w.setRunner(runner);
                     applyPlannedSession(w, plan.today());
-                    CoachScheduledWorkout saved = coachScheduledWorkoutRepository.save(w);
+                    CoachScheduledWorkout saved = versioned ? w : coachScheduledWorkoutRepository.save(w);
                     rows.add(0, saved);
                     return saved;
                 });
-        CoachRouteRecommendationDto routeRecommendation = coachRouteService.buildRouteRecommendation(runner, adjusted, rows);
+        CoachScheduledWorkout adjusted = recommendationRow(storedToday, plan.today());
+        // Analytics pages need coach data without reading the runner's GPS history.
+        CoachRouteRecommendationDto routeRecommendation = includeRoute
+                ? coachRouteService.buildRouteRecommendation(runner, adjusted, rows) : null;
         
         String preferredSurface = inferScheduledSurface(adjusted);
         CoachRecommendedShoeDto shoeRec = shoeTrackerService.recommendShoe(runner, adjusted.getWorkoutType(), preferredSurface)
@@ -232,15 +359,88 @@ public class AutomatedCoachService {
 
         String runnerState = computeRunnerState(runner, state);
         String coachMessage = buildCoachMessage(state, adjusted, runnerState, runner);
+        Map<LocalDate, PersonalizedRunningPlanner.PlannedSession> sessionsByDate = plan.sessions().stream()
+                .collect(java.util.stream.Collectors.toMap(PersonalizedRunningPlanner.PlannedSession::date, session -> session));
+        List<CoachScheduledWorkoutDto> weekSchedule;
+        if (versioned) {
+            weekSchedule = versionedPlans.weekSessions(runner).stream().map(session -> {
+                CoachScheduledWorkout row = new CoachScheduledWorkout();
+                row.setRunner(runner);
+                applyPlannedSession(row, session);
+                return toScheduledDto(row, session);
+            }).toList();
+        } else if (!plan.weeklySessions().isEmpty()) {
+            weekSchedule = plan.weeklySessions().stream().map(session -> {
+                CoachScheduledWorkout row = new CoachScheduledWorkout();
+                row.setRunner(runner);
+                applyPlannedSession(row, session);
+                return toScheduledDto(row, session);
+            }).toList();
+        } else {
+            LocalDate weekStart = WeeklyMileageBudget.monday(today);
+            // Retain the saved target for past/completed days; today's recommendation may be rest after completion.
+            weekSchedule = findScheduleRange(runner, weekStart, weekStart.plusDays(6)).stream()
+                    .map(AutomatedCoachService::toScheduledDto).toList();
+        }
+        var todayDto = toScheduledDto(adjusted, plan.today());
+        var schedule = rows.stream().sorted(Comparator.comparing(CoachScheduledWorkout::getScheduledDate))
+                .map(row -> today.equals(row.getScheduledDate()) ? todayDto
+                        : toScheduledDto(recommendationRow(row, sessionsByDate.get(row.getScheduledDate())), sessionsByDate.get(row.getScheduledDate())))
+                .toList();
+        Map<LocalDate, CoachScheduledWorkoutDto> currentByDate = new HashMap<>();
+        schedule.forEach(day -> currentByDate.put(day.scheduledDate(), day));
+        currentByDate.put(today, todayDto);
+        // Historical comparison targets stay visible; today and future days use the same adjusted prescriptions as the schedule.
+        weekSchedule = weekSchedule.stream().map(day -> {
+            if (day.scheduledDate().isBefore(today)) return day;
+            var current = currentByDate.get(day.scheduledDate());
+            if (current != null) return current;
+            var session = sessionsByDate.get(day.scheduledDate());
+            if (session == null) return day;
+            CoachScheduledWorkout row = new CoachScheduledWorkout();
+            row.setRunner(runner);
+            applyPlannedSession(row, session);
+            return toScheduledDto(row, session);
+        }).toList();
         return new CoachTodayDto(
-                toScheduledDto(adjusted, plan.today()),
+                todayDto,
                 toStateDto(runner, state, adjusted),
                 routeRecommendation,
                 shoeRec,
                 runnerState,
                 coachMessage,
-                toPlanDto(plan)
+                toPlanDto(plan, runner),
+                schedule,
+                weekSchedule
         );
+    }
+
+    @Transactional
+    public CoachTodayDto setEasierToday(Runner runner, boolean enabled) {
+        if (versionedPlans != null && versionedPlans.selected(runner)) {
+            throw new IllegalArgumentException("Change a published workout through its training plan.");
+        }
+        CoachTodayDto current = getTodayWithReadiness(runner);
+        LocalDate date = current.today().scheduledDate();
+        if (findCompletedRunDates(runner, date, date).contains(date)) {
+            throw new IllegalArgumentException("A completed session cannot be replanned.");
+        }
+        Double distance = current.today().plannedDistanceKm();
+        if (enabled && (distance == null || !Double.isFinite(distance) || distance <= 0)) {
+            throw new IllegalArgumentException("No running distance is available to reduce.");
+        }
+        CoachScheduledWorkout row = coachScheduledWorkoutRepository.findByRunnerAndScheduledDate(runner, date)
+                .orElseThrow(() -> new IllegalArgumentException("Today's prescription is unavailable."));
+        String notes = row.getNotes() == null ? "" : row.getNotes().replace(CoachPlanAdjustment.MARKER, "").strip();
+        if (enabled) {
+            if (notes.length() + CoachPlanAdjustment.MARKER.length() + 1 > 600) {
+                throw new IllegalArgumentException("The workout note is too long to save this adjustment.");
+            }
+            notes = CoachPlanAdjustment.MARKER + "\n" + notes;
+        }
+        row.setNotes(notes);
+        coachScheduledWorkoutRepository.save(row);
+        return getTodayWithReadiness(runner);
     }
 
     /**
@@ -254,9 +454,7 @@ public class AutomatedCoachService {
         if (totalRuns < 3) {
             return "new";
         }
-        LocalDateTime now = LocalDateTime.now();
-        List<RunMetricsProjection> last14 = activityRepository.findRunMetricsBetween(
-                runner, ActivityType.RUN, now.minusDays(14), now);
+        List<RunMetricsProjection> last14 = findRecentRuns(runner, 14);
         if (last14.isEmpty() || state.getVolumeKm28d() <= 0.05) {
             return "comeback";
         }
@@ -297,7 +495,7 @@ public class AutomatedCoachService {
         Integer readiness = state.getReadinessScore();
         String verdict = state.getReadinessVerdict();
 
-        if (type == CoachWorkoutType.REST || type == CoachWorkoutType.RECOVERY) {
+        if (type == CoachWorkoutType.REST) {
             return String.format(Locale.ROOT,
                     "Rest day%s — recovery is training. %.0f km in the last 7 days is solid work.",
                     acwrClause, vol7);
@@ -316,12 +514,11 @@ public class AutomatedCoachService {
     }
 
     private long daysSinceLastRun(Runner runner) {
-        LocalDateTime now = LocalDateTime.now();
-        List<RunMetricsProjection> recent = activityRepository.findRunMetricsBetween(
-                runner, ActivityType.RUN, now.minusDays(365), now);
-        LocalDateTime latest = null;
+        Instant now = clock.instant();
+        List<RunMetricsProjection> recent = findRecentRuns(runner, 365);
+        Instant latest = null;
         for (RunMetricsProjection r : recent) {
-            LocalDateTime ts = r.getEffectiveStartTime();
+            Instant ts = runInstant(r, runner);
             if (ts != null && (latest == null || ts.isAfter(latest))) {
                 latest = ts;
             }
@@ -352,9 +549,7 @@ public class AutomatedCoachService {
         if (type == CoachWorkoutType.INTERVALS || type == CoachWorkoutType.THRESHOLD || type == CoachWorkoutType.TEMPO) {
             return ""; // quality sessions carry their own pace guidance elsewhere
         }
-        LocalDateTime now = LocalDateTime.now();
-        List<RunMetricsProjection> last28 = activityRepository.findRunMetricsBetween(
-                runner, ActivityType.RUN, now.minusDays(28), now);
+        List<RunMetricsProjection> last28 = findRecentRuns(runner, 28);
         double totalKm = 0, totalSec = 0;
         for (RunMetricsProjection r : last28) {
             double km = (r.getDistanceKm() > 0) ? r.getDistanceKm() : (r.getDistanceMeters() / 1000.0);
@@ -377,7 +572,7 @@ public class AutomatedCoachService {
 
     @Transactional
     public void logRecoveryMetrics(Runner runner, Integer restingHr, Integer sleepScore, Integer hrvMs, Integer stressScore) {
-        readinessService.recordManualRecovery(runner, LocalDate.now(),
+        readinessService.recordManualRecovery(runner, LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner))),
                 restingHr != null && restingHr > 30 && restingHr < 120 ? restingHr : null,
                 sleepScore != null && sleepScore >= 0 && sleepScore <= 100 ? sleepScore : null,
                 hrvMs != null && hrvMs > 0 && hrvMs < 5000 ? hrvMs : null,
@@ -387,15 +582,17 @@ public class AutomatedCoachService {
         if (sleepScore != null && sleepScore >= 0 && sleepScore <= 100) state.setLastSleepScore(sleepScore);
         if (hrvMs != null && hrvMs >= 0 && hrvMs < 5000) state.setLastHrvMs(hrvMs);
         if (stressScore != null && stressScore >= 0 && stressScore <= 100) state.setLastStressScore(stressScore);
-        state.setLastRecoveryLoggedAt(LocalDateTime.now());
+        state.setLastRecoveryLoggedAt(LocalDateTime.now(clock));
         coachRunnerStateRepository.save(state);
         refreshPersonalizedPlan(runner, SCHEDULE_HORIZON_DAYS);
     }
 
     @Transactional
     public void updateCoachProfile(Runner runner, Integer maxHr, Integer restingHr) {
+        boolean zonesChange = false;
         if (maxHr != null) {
             if (maxHr < 120 || maxHr > 230) throw new IllegalArgumentException("maxHeartRateBpm out of range.");
+            zonesChange = !maxHr.equals(runner.getMaxHeartRateBpm());
             runner.setMaxHeartRateBpm(maxHr);
         }
         if (restingHr != null) {
@@ -408,15 +605,22 @@ public class AutomatedCoachService {
             }
         }
         runnerRepository.save(runner);
+        if (zonesChange && zoneEvents != null) {
+            // The max heart rate also sets the heart-rate zones, so the runs analysed with the old one are redone.
+            zoneEvents.publishEvent(new com.hermes.backend.runner.RunnerZonesChangedEvent(runner.getId()));
+        }
     }
 
     @Transactional
     public CoachTrainingBlock startTrainingBlock(Runner runner, double raceDistanceKm, LocalDate targetRaceDate, String name) {
+        if (versionedPlans != null && versionedPlans.selected(runner)) {
+            throw new IllegalArgumentException("Review changes through the selected training plan.");
+        }
         coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).ifPresent(b -> {
             b.setActive(false);
             coachTrainingBlockRepository.save(b);
         });
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)));
         double seedLong = estimateSeedLongRunKm(runner);
         CoachTrainingBlock block = new CoachTrainingBlock();
         block.setRunner(runner);
@@ -460,20 +664,24 @@ public class AutomatedCoachService {
     }
 
     private void aggregateState(Runner runner) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime from7 = now.minusDays(7);
-        LocalDateTime from28 = now.minusDays(28);
-        LocalDateTime from90 = now.minusDays(90);
+        Instant now = clock.instant();
+        Instant from7 = now.minus(7, ChronoUnit.DAYS);
+        Instant from28 = now.minus(28, ChronoUnit.DAYS);
 
-        List<RunMetricsProjection> runs90 = activityRepository.findRunMetricsBetween(runner, ActivityType.RUN, from90, now);
+        List<RunMetricsProjection> runs90 = findRecentRuns(runner, 90);
         double hrMax = resolveHrMax(runner, runs90);
 
         int low = 0, grey = 0, high = 0, unknown = 0;
         double vol7 = 0, vol28 = 0;
         for (RunMetricsProjection a : runs90) {
-            LocalDateTime ts = a.getEffectiveStartTime();
+            Instant ts = runInstant(a, runner);
             if (ts == null) continue;
-            double dist = (a.getDistanceKm() > 0) ? a.getDistanceKm() : (a.getDistanceMeters() / 1000.0);
+            // Duration/RPE-only sessions have no measured distance. Exclude them from this
+            // distance-based legacy summary; the training workspace retains their RPE load.
+            if ((a.getDistanceKm() == null || a.getDistanceKm() <= 0)
+                    && (a.getDistanceMeters() == null || a.getDistanceMeters() <= 0)) continue;
+            double dist = (a.getDistanceKm() != null && a.getDistanceKm() > 0)
+                    ? a.getDistanceKm() : a.getDistanceMeters() / 1000.0;
             if (!ts.isBefore(from28)) vol28 += dist;
             if (!ts.isBefore(from7)) {
                 vol7 += dist;
@@ -500,7 +708,7 @@ public class AutomatedCoachService {
         int totalTracked = low + grey + high;
         state.setHighIntensityRatioLast7d(totalTracked > 0 ? (double) high / totalTracked : 0.0);
         state.setHighMileageGrinder(vol28 > HIGH_MILEAGE_KM_28D);
-        state.setLastAggregatedAt(LocalDateTime.now());
+        state.setLastAggregatedAt(LocalDateTime.now(clock));
         coachRunnerStateRepository.save(state);
     }
 
@@ -523,14 +731,18 @@ public class AutomatedCoachService {
                 alert.setRunner(runner);
                 alert.setAlertType("GREY_ZONE");
                 alert.setMessage(msg);
-                alert.setCreatedAt(LocalDateTime.now());
+                alert.setCreatedAt(LocalDateTime.now(clock));
                 coachFeedbackAlertRepository.save(alert);
             }
         }
     }
 
     private PersonalizedRunningPlanner.PersonalizedPlan refreshPersonalizedPlan(Runner runner, int days) {
-        LocalDate today = LocalDate.now();
+        if (versionedPlans != null) {
+            var selected = versionedPlans.legacy(runner, days);
+            if (selected != null) return selected;
+        }
+        LocalDate today = LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)));
         int horizonDays = Math.min(28, Math.max(1, days));
         LocalDate horizonEnd = today.plusDays(horizonDays - 1L);
         CoachRunnerState state = getOrCreateState(runner);
@@ -544,7 +756,6 @@ public class AutomatedCoachService {
         ReadinessService.ReadinessResult readiness = resolveReadiness(readinessSnapshot, state);
         state.setReadinessScore(readiness.score());
         state.setReadinessVerdict(readiness.verdict());
-        coachRunnerStateRepository.save(state);
 
         InjuryRiskService.InjuryRiskAssessment injuryAssessment = null;
         try {
@@ -553,16 +764,23 @@ public class AutomatedCoachService {
             log.debug("Personalized planner could not resolve injury risk for runner {}: {}", runner.getId(), riskFailure.getMessage());
         }
 
+        var history = buildPlannerHistory(runner, state, today);
+        state.setVolumeKm7d(history.volume7Km());
+        state.setVolumeKm28d(history.volume28Km());
+        state.setHighIntensityRatioLast7d(history.highIntensitySupported() ? history.highIntensityRatio7d() : null);
+        state.setLastAggregatedAt(LocalDateTime.now(clock));
+        coachRunnerStateRepository.save(state);
         PersonalizedRunningPlanner.PlannerInput plannerInput = new PersonalizedRunningPlanner.PlannerInput(
                 today,
                 horizonDays,
-                buildPlannerHistory(runner, state, today),
+                history,
                 readiness.score(),
                 readiness.verdict(),
                 readinessSnapshot != null && readinessSnapshot.hasSourceData(),
                 injuryAssessment == null ? null : injuryAssessment.risk(),
                 injuryAssessment == null ? null : injuryAssessment.sorenessLevel(),
-                resolvePlannerGoal(runner, today)
+                resolvePlannerGoal(runner, today),
+                completedMileage(runner, today)
         );
         PersonalizedRunningPlanner.PersonalizedPlan plan = personalizedRunningPlanner.plan(plannerInput);
 
@@ -573,6 +791,13 @@ public class AutomatedCoachService {
                 if (existing.getScheduledDate() != null) {
                     existingByDate.put(existing.getScheduledDate(), existing);
                 }
+            }
+
+            CoachScheduledWorkout currentRow = existingByDate.get(today);
+            if (currentRow != null && currentRow.getNotes() != null
+                    && currentRow.getNotes().contains(CoachPlanAdjustment.MARKER)
+                    && !completedRunDates.contains(today)) {
+                plan = CoachPlanAdjustment.easeToday(plan);
             }
 
             List<CoachScheduledWorkout> toSave = new ArrayList<>();
@@ -621,30 +846,45 @@ public class AutomatedCoachService {
         return fallback == null ? List.of() : fallback;
     }
 
+    private Map<LocalDate, Double> completedMileage(Runner runner, LocalDate today) {
+        Map<LocalDate, Double> mileage = new java.util.TreeMap<>();
+        for (var run : findRecentRuns(runner, 35)) {
+            LocalDate date = runDate(run, runner);
+            double km = distanceKm(run);
+            if (!date.isAfter(today) && Double.isFinite(km) && km > 0) mileage.merge(date, km, Double::sum);
+        }
+        return Map.copyOf(mileage);
+    }
+
+    private CoachScheduledWorkout recommendationRow(CoachScheduledWorkout row, PersonalizedRunningPlanner.PlannedSession session) {
+        if (session == null || !"run_completed".equals(session.reasonCode())) return row;
+        CoachScheduledWorkout view = new CoachScheduledWorkout();
+        view.setRunner(row.getRunner());
+        view.setNotes(row.getNotes());
+        applyPlannedSession(view, session);
+        return view;
+    }
+
     private Set<LocalDate> findCompletedRunDates(Runner runner, LocalDate start, LocalDate end) {
         List<RunMetricsProjection> completedRuns = activityRepository.findRunMetricsBetween(
                 runner,
                 ActivityType.RUN,
-                start.atStartOfDay(),
-                end.plusDays(1).atStartOfDay()
+                start.minusDays(1).atStartOfDay(),
+                end.plusDays(2).atStartOfDay()
         );
         if (completedRuns == null || completedRuns.isEmpty()) return Set.of();
         Set<LocalDate> dates = new HashSet<>();
         for (RunMetricsProjection run : completedRuns) {
-            if (run.getEffectiveStartTime() != null) dates.add(run.getEffectiveStartTime().toLocalDate());
+            if (run.getEffectiveStartTime() == null) continue;
+            LocalDate date = runDate(run, runner);
+            if (!date.isBefore(start) && !date.isAfter(end)) dates.add(date);
         }
         return dates;
     }
 
     private PersonalizedRunningPlanner.RunHistory buildPlannerHistory(Runner runner, CoachRunnerState state, LocalDate today) {
-        LocalDateTime now = LocalDateTime.now();
-        List<RunMetricsProjection> runs = activityRepository.findRunMetricsBetween(
-                runner,
-                ActivityType.RUN,
-                now.minusDays(90),
-                now.plusSeconds(1)
-        );
-        if (runs == null) runs = List.of();
+        Instant now = clock.instant();
+        List<RunMetricsProjection> runs = findRecentRuns(runner, 90);
 
         LocalDate from28 = today.minusDays(27);
         LocalDate from7 = today.minusDays(6);
@@ -653,27 +893,49 @@ public class AutomatedCoachService {
         double volume7 = 0;
         double volume28 = 0;
         double duration28Seconds = 0;
+        double timedDistance28 = 0;
+        int timedRunCount28 = 0;
+        double knownSeconds7 = 0;
+        double highSeconds7 = 0;
+        double lowSeconds7 = 0;
+        double greySeconds7 = 0;
+        double unknownSeconds7 = 0;
         double longest28 = 0;
-        LocalDateTime latestRunAt = null;
-        LocalDateTime latestHardAt = null;
+        Instant latestRunAt = null;
+        Instant latestHardAt = null;
+        LocalDate latestRunDate = null;
         int resolvedHrMax = resolveHrMax(runner, runs);
 
         for (RunMetricsProjection run : runs) {
-            LocalDateTime startedAt = run.getEffectiveStartTime();
+            Instant startedAt = runInstant(run, runner);
             if (startedAt == null) continue;
-            LocalDate runDate = startedAt.toLocalDate();
+            LocalDate runDate = runDate(run, runner);
             double distanceKm = distanceKm(run);
+            if (!Double.isFinite(distanceKm) || distanceKm <= 0) continue;
             long durationSeconds = durationSeconds(run);
-            if (latestRunAt == null || startedAt.isAfter(latestRunAt)) latestRunAt = startedAt;
+            if (latestRunAt == null || startedAt.isAfter(latestRunAt)) {
+                latestRunAt = startedAt;
+                latestRunDate = runDate;
+            }
 
             if (!runDate.isBefore(from28) && !runDate.isAfter(today)) {
                 volume28 += distanceKm;
                 longest28 = Math.max(longest28, distanceKm);
                 runDates28.add(runDate);
                 preferredDayCounts.merge(runDate.getDayOfWeek(), 1, Integer::sum);
-                if (distanceKm > 0 && durationSeconds > 0) duration28Seconds += durationSeconds;
+                timedRunCount28++;
+                if (durationSeconds > 0) { duration28Seconds += durationSeconds; timedDistance28 += distanceKm; }
             }
-            if (!runDate.isBefore(from7) && !runDate.isAfter(today)) volume7 += distanceKm;
+            if (!runDate.isBefore(from7) && !runDate.isAfter(today)) {
+                volume7 += distanceKm;
+                Double peak = run.getMaxHeartRate();
+                if (peak != null && peak > 0 && resolvedHrMax > 0) {
+                    knownSeconds7 += durationSeconds;
+                    if (peak / resolvedHrMax >= 0.88) highSeconds7 += durationSeconds;
+                    else if (peak / resolvedHrMax >= 0.80) greySeconds7 += durationSeconds;
+                    else lowSeconds7 += durationSeconds;
+                } else unknownSeconds7 += durationSeconds;
+            }
 
             Double maxHr = run.getMaxHeartRate();
             boolean highHr = maxHr != null && resolvedHrMax > 0 && maxHr / resolvedHrMax >= 0.88;
@@ -682,27 +944,27 @@ public class AutomatedCoachService {
         }
 
         long totalRuns = activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN);
-        double averageRunKm = runDates28.isEmpty() ? 0 : volume28 / Math.max(1, runs.stream()
-                .filter(run -> run.getEffectiveStartTime() != null)
-                .filter(run -> !run.getEffectiveStartTime().toLocalDate().isBefore(from28))
-                .filter(run -> !run.getEffectiveStartTime().toLocalDate().isAfter(today))
-                .count());
-        double averagePace = volume28 > 0 && duration28Seconds > 0 ? duration28Seconds / volume28 : 0;
+        double averageRunKm = timedRunCount28 == 0 ? 0 : volume28 / timedRunCount28;
+        double averagePace = timedDistance28 > 0 && duration28Seconds > 0 ? duration28Seconds / timedDistance28 : 0;
+        state.setMinutesLowZ1Z2Last7d((int) (lowSeconds7 / 60));
+        state.setMinutesGreyZ3Last7d((int) (greySeconds7 / 60));
+        state.setMinutesHighZ4Z5Last7d((int) (highSeconds7 / 60));
+        state.setMinutesUnknownHrLast7d((int) (unknownSeconds7 / 60));
         Integer hoursSinceHard = latestHardAt == null ? null : Math.max(0, (int) Duration.between(latestHardAt, now).toHours());
-        Integer daysSinceLast = latestRunAt == null ? null : Math.max(0, (int) ChronoUnit.DAYS.between(latestRunAt.toLocalDate(), today));
+        Integer daysSinceLast = latestRunDate == null ? null : Math.max(0, (int) ChronoUnit.DAYS.between(latestRunDate, today));
 
         return new PersonalizedRunningPlanner.RunHistory(
                 (int) Math.min(Integer.MAX_VALUE, totalRuns),
                 runDates28.size(),
-                round1(volume7 > 0 ? volume7 : state.getVolumeKm7d()),
-                round1(volume28 > 0 ? volume28 : state.getVolumeKm28d()),
+                round1(volume7),
+                round1(volume28),
                 round1(averageRunKm),
                 round1(longest28),
                 round1(averagePace),
-                state.getHighIntensityRatioLast7d() == null ? 0 : state.getHighIntensityRatioLast7d(),
+                knownSeconds7 > 0 ? highSeconds7 / knownSeconds7 : 0,
                 hoursSinceHard,
                 daysSinceLast,
-                Map.copyOf(preferredDayCounts)
+                Map.copyOf(preferredDayCounts), knownSeconds7 > 0
         );
     }
 
@@ -773,7 +1035,7 @@ public class AutomatedCoachService {
     }
 
     private void maybeAdvanceTrainingWeek(Runner runner, CoachTrainingBlock block) {
-        LocalDate currentWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate currentWeekStart = LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner))).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate lastWeekStart = block.getLastProgressionWeekStart();
         if (lastWeekStart == null) {
             // Recover calendar position without treating an unknown history as completed training.
@@ -805,7 +1067,7 @@ public class AutomatedCoachService {
     }
 
     private void apply8020ToTomorrow(Runner runner) {
-        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        LocalDate tomorrow = LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner))).plusDays(1);
         coachScheduledWorkoutRepository.findByRunnerAndScheduledDate(runner, tomorrow).ifPresent(w -> {
             if (w.getWorkoutType() == CoachWorkoutType.INTERVALS || w.getWorkoutType() == CoachWorkoutType.THRESHOLD) {
                 CoachRunnerState state = getOrCreateState(runner);
@@ -823,7 +1085,7 @@ public class AutomatedCoachService {
         if (workout.getWorkoutType() == CoachWorkoutType.REST || workout.isReadinessAdjusted()) return workout;
 
         Runner runner = state.getRunner() != null ? state.getRunner() : workout.getRunner();
-        LocalDate readinessDate = workout.getScheduledDate() != null ? workout.getScheduledDate() : LocalDate.now();
+        LocalDate readinessDate = workout.getScheduledDate() != null ? workout.getScheduledDate() : LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)));
         ReadinessService.ReadinessResult readiness = resolveReadiness(runner, state, readinessDate);
         state.setReadinessScore(readiness.score());
         state.setReadinessVerdict(readiness.verdict());
@@ -870,22 +1132,50 @@ public class AutomatedCoachService {
     }
 
     private CoachRunnerState getOrCreateState(Runner runner) {
+        Optional<CoachRunnerState> existing = coachRunnerStateRepository.findByRunner(runner);
+        if (existing.isPresent()) return existing.get();
+        // Serialize first-use initialization until commit, including across app instances.
+        // Retrying a unique-key failure inside the same Hibernate session cannot recover it.
+        runnerRepository.findByIdForUpdate(runner.getId());
         return coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
             CoachRunnerState s = new CoachRunnerState();
             s.setRunner(runner);
-            try {
-                return coachRunnerStateRepository.save(s);
-            } catch (DataIntegrityViolationException race) {
-                return coachRunnerStateRepository.findByRunner(runner).orElseThrow(() -> race);
-            }
+            return coachRunnerStateRepository.save(s);
         });
     }
 
     private double estimateSeedLongRunKm(Runner runner) {
-        LocalDateTime now = LocalDateTime.now();
-        List<RunMetricsProjection> recent = activityRepository.findRunMetricsBetween(runner, ActivityType.RUN, now.minusDays(30), now);
+        List<RunMetricsProjection> recent = findRecentRuns(runner, 30);
         double maxLong = recent.stream().mapToDouble(r -> (r.getDistanceKm() > 0) ? r.getDistanceKm() : (r.getDistanceMeters() / 1000.0)).max().orElse(10.0);
         return round1(Math.min(maxLong, 32));
+    }
+
+    private static LocalDate runDate(RunMetricsProjection run, Runner runner) {
+        return run.getStartTime() == null ? run.getEffectiveStartTime().toLocalDate()
+                : ActivityLocalDates.of(run.getStartTime(), Boolean.TRUE.equals(run.getStravaApiSourced()), runner);
+    }
+
+    private static Instant runInstant(RunMetricsProjection run, Runner runner) {
+        LocalDateTime timestamp = run.getEffectiveStartTime();
+        if (timestamp == null) return null;
+        ZoneId zone = run.getStartTime() == null ? ZoneId.systemDefault()
+                : Boolean.TRUE.equals(run.getStravaApiSourced()) ? ActivityLocalDates.zoneOf(runner) : ZoneOffset.UTC;
+        return timestamp.atZone(zone).toInstant();
+    }
+
+    private List<RunMetricsProjection> findRecentRuns(Runner runner, int days) {
+        Instant end = clock.instant();
+        Instant start = end.minus(days, ChronoUnit.DAYS);
+        // Stored file times are UTC; Strava clock times are local. Retrieve both, then apply
+        // the actual rolling window without assuming the server shares the account's zone.
+        List<RunMetricsProjection> rows = activityRepository.findRunMetricsBetween(runner, ActivityType.RUN,
+                LocalDateTime.ofInstant(start, ZoneOffset.UTC).minusDays(1),
+                LocalDateTime.ofInstant(end, ZoneOffset.UTC).plusDays(1));
+        if (rows == null) return List.of();
+        return rows.stream().filter(run -> {
+            Instant timestamp = runInstant(run, runner);
+            return timestamp != null && !timestamp.isBefore(start) && !timestamp.isAfter(end);
+        }).toList();
     }
 
     private static double round1(double v) {
@@ -909,32 +1199,54 @@ public class AutomatedCoachService {
             CoachScheduledWorkout w,
             PersonalizedRunningPlanner.PlannedSession session
     ) {
+        // Completed rows can be preserved while the planner produces a different session.
+        // Only attach evidence/pace belonging to the workout actually returned to the client.
+        if (session != null && (!java.util.Objects.equals(w.getScheduledDate(), session.date())
+                || w.getWorkoutType() != session.workoutType()
+                || !java.util.Objects.equals(w.getPlannedDistanceKm(), session.distanceKm())
+                || !java.util.Objects.equals(w.getPlannedDurationMinutes(), session.durationMinutes())
+                || w.isStridesSuggested() != session.stridesSuggested()
+                || w.getMutatedFrom() != session.mutatedFrom()
+                || w.isReadinessAdjusted() != session.readinessAdjusted())) {
+            session = null;
+        }
         return new CoachScheduledWorkoutDto(
                 w.getScheduledDate(), w.getWorkoutType().name(), w.getPlannedDistanceKm(),
-                w.getPlannedDurationMinutes(), w.isStridesSuggested(), w.getNotes(),
+                w.getPlannedDurationMinutes(), w.isStridesSuggested(), visibleWorkoutNotes(w.getNotes()),
                 w.getMutatedFrom() != null ? w.getMutatedFrom().name() : null, w.isReadinessAdjusted(),
                 session != null ? session.phase() : null,
                 session != null ? session.intent() : null,
                 session != null ? session.reasonCode() : null,
                 session != null ? session.targetPaceMinSecondsPerKm() : null,
-                session != null ? session.targetPaceMaxSecondsPerKm() : null
+                session != null ? session.targetPaceMaxSecondsPerKm() : null,
+                session != null ? session.originalDistanceKm() : null
         );
     }
 
-    private static CoachPlanDto toPlanDto(PersonalizedRunningPlanner.PersonalizedPlan plan) {
+    private CoachPlanDto toPlanDto(PersonalizedRunningPlanner.PersonalizedPlan plan, Runner runner) {
         return new CoachPlanDto(
                 plan.phase(),
                 plan.targetWeeklyKm(),
                 plan.sessionsPerWeek(),
                 plan.preferredRunDays().stream().map(DayOfWeek::name).toList(),
                 plan.confidence(),
-                plan.reasonCodes()
+                plan.reasonCodes(),
+                versionedPlans == null ? ActivityLocalDates.zoneOf(runner).getId() : versionedPlans.calendarZone(runner),
+                plan.historyEvidence(), plan.weeklyBudgets(),
+                ReadinessService.RecoveryEvidence.from(plan.today().date(), readinessService.resolveReadinessSnapshot(
+                        runner, getOrCreateState(runner), plan.today().date()))
         );
+    }
+
+    private static String visibleWorkoutNotes(String notes) {
+        if (notes == null) return null;
+        String visible = notes.replace(CoachPlanAdjustment.MARKER, "").strip();
+        return visible.isBlank() ? null : visible;
     }
 
     private CoachStateDto toStateDto(Runner runner, CoachRunnerState s, CoachScheduledWorkout todayWorkout) {
         ReadinessService.MultiSourceReadinessSnapshot snapshot =
-                readinessService.resolveReadinessSnapshot(runner, s, LocalDate.now());
+                readinessService.resolveReadinessSnapshot(runner, s, LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner))));
         ReadinessService.ReadinessResult readiness = resolveReadiness(snapshot, s);
         ReadinessService.MetricReadings readings = snapshot == null || snapshot.readings() == null
                 ? ReadinessService.MetricReadings.none() : snapshot.readings();
@@ -1032,8 +1344,14 @@ public class AutomatedCoachService {
             Integer plannedDurationMinutes, boolean stridesSuggested, String notes,
             String mutatedFrom, boolean readinessAdjusted,
             String phase, String intent, String reasonCode,
-            Integer targetPaceMinSecondsPerKm, Integer targetPaceMaxSecondsPerKm
+            Integer targetPaceMinSecondsPerKm, Integer targetPaceMaxSecondsPerKm, Double originalDistanceKm
     ) {
+        public CoachScheduledWorkoutDto(LocalDate scheduledDate, String workoutType, Double plannedDistanceKm,
+                Integer plannedDurationMinutes, boolean stridesSuggested, String notes, String mutatedFrom, boolean readinessAdjusted,
+                String phase, String intent, String reasonCode, Integer targetPaceMinSecondsPerKm, Integer targetPaceMaxSecondsPerKm) {
+            this(scheduledDate, workoutType, plannedDistanceKm, plannedDurationMinutes, stridesSuggested, notes, mutatedFrom,
+                    readinessAdjusted, phase, intent, reasonCode, targetPaceMinSecondsPerKm, targetPaceMaxSecondsPerKm, null);
+        }
         public CoachScheduledWorkoutDto(
                 LocalDate scheduledDate, String workoutType, Double plannedDistanceKm,
                 Integer plannedDurationMinutes, boolean stridesSuggested, String notes,
@@ -1047,8 +1365,19 @@ public class AutomatedCoachService {
 
     public record CoachPlanDto(
             String phase, double targetWeeklyKm, int sessionsPerWeek,
-            List<String> preferredRunDays, int confidence, List<String> reasonCodes
-    ) {}
+            List<String> preferredRunDays, int confidence, List<String> reasonCodes, String timeZone,
+            PersonalizedRunningPlanner.HistoryEvidence historyEvidence, List<WeeklyMileageBudget.Week> weeklyBudgets,
+            ReadinessService.RecoveryEvidence recoveryEvidence
+    ) {
+        public CoachPlanDto(String phase, double targetWeeklyKm, int sessionsPerWeek,
+                List<String> preferredRunDays, int confidence, List<String> reasonCodes, String timeZone) {
+            this(phase, targetWeeklyKm, sessionsPerWeek, preferredRunDays, confidence, reasonCodes, timeZone, null, List.of(), null);
+        }
+        public CoachPlanDto(String phase, double targetWeeklyKm, int sessionsPerWeek,
+                List<String> preferredRunDays, int confidence, List<String> reasonCodes) {
+            this(phase, targetWeeklyKm, sessionsPerWeek, preferredRunDays, confidence, reasonCodes, null);
+        }
+    }
 
     public record CoachTrainingBlockDto(double raceDistanceKm, LocalDate targetRaceDate, int weekIndex, double currentLongRunKm, String name) {}
 
@@ -1061,14 +1390,25 @@ public class AutomatedCoachService {
     public record CoachTodayDto(
             CoachScheduledWorkoutDto today, CoachStateDto state,
             CoachRouteRecommendationDto routeRecommendation, CoachRecommendedShoeDto recommendedShoe,
-            String runnerState, String coachMessage, CoachPlanDto plan
+            String runnerState, String coachMessage, CoachPlanDto plan, List<CoachScheduledWorkoutDto> schedule,
+            List<CoachScheduledWorkoutDto> weekSchedule
     ) {
+        public CoachTodayDto(CoachScheduledWorkoutDto today, CoachStateDto state,
+                CoachRouteRecommendationDto routeRecommendation, CoachRecommendedShoeDto recommendedShoe,
+                String runnerState, String coachMessage, CoachPlanDto plan, List<CoachScheduledWorkoutDto> schedule) {
+            this(today, state, routeRecommendation, recommendedShoe, runnerState, coachMessage, plan, schedule, List.of());
+        }
+        public CoachTodayDto(CoachScheduledWorkoutDto today, CoachStateDto state,
+                CoachRouteRecommendationDto routeRecommendation, CoachRecommendedShoeDto recommendedShoe,
+                String runnerState, String coachMessage, CoachPlanDto plan) {
+            this(today, state, routeRecommendation, recommendedShoe, runnerState, coachMessage, plan, List.of());
+        }
         public CoachTodayDto(
                 CoachScheduledWorkoutDto today, CoachStateDto state,
                 CoachRouteRecommendationDto routeRecommendation, CoachRecommendedShoeDto recommendedShoe,
                 String runnerState, String coachMessage
         ) {
-            this(today, state, routeRecommendation, recommendedShoe, runnerState, coachMessage, null);
+            this(today, state, routeRecommendation, recommendedShoe, runnerState, coachMessage, null, List.of());
         }
     }
 

@@ -1,5 +1,6 @@
 package com.hermes.backend.activity;
 
+import com.hermes.backend.runner.Runner;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,6 +15,10 @@ final class ActivityRoutePreviewHelper {
     }
 
     static Map<String, Object> toRunFeedItem(Activity activity) {
+        return toRunFeedItem(activity, activity.getRunner());
+    }
+
+    static Map<String, Object> toRunFeedItem(Activity activity, Runner runner) {
         Map<String, Object> body = new LinkedHashMap<>();
         ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.from(activity);
         body.put("id", activity.getId());
@@ -24,7 +29,9 @@ final class ActivityRoutePreviewHelper {
         body.put("startDate", activity.getStartDate());
         body.put("provider", activity.getProvider() == null ? null : activity.getProvider().name());
         body.put("activityType", activity.getActivityType() == null ? null : activity.getActivityType().name());
+        body.put("runType", activity.getRunType());
         body.put("startTime", activity.getStartTime());
+        body.putAll(ActivityLocalDates.responseFields(activity.getStartTime(), activity.isStravaApiSourced(), runner));
         body.put("distanceMeters", activity.getDistanceMeters());
         body.put("durationSeconds", activity.getDurationSeconds());
         body.put("sourceFileName", activity.getSourceFileName());
@@ -84,7 +91,7 @@ final class ActivityRoutePreviewHelper {
             return;
         }
         applyRoutePreview(activity, routePreview);
-        activityDataAccess.save(activity);
+        activityDataAccess.saveMetadata(activity);
     }
 
     private static boolean hasRoutePreview(Activity activity) {

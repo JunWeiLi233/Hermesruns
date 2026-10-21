@@ -3,11 +3,11 @@ package com.hermes.backend.admin;
 import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.DefaultApplicationArguments;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -44,7 +44,6 @@ class AdminBootstrapConfigurationTests {
     @Test
     void configuredAccountUsesCanonicalPasswordStorage() {
         when(authService.normalizeEmail("ADMIN@example.test")).thenReturn("admin@example.test");
-        when(repository.findByEmailIgnoreCase("admin@example.test")).thenReturn(Optional.empty());
         context.withPropertyValues(
                 "APP_BOOTSTRAP_ADMIN_EMAIL=ADMIN@example.test",
                 "APP_BOOTSTRAP_ADMIN_PASSWORD=test-only-bootstrap-password"
@@ -63,23 +62,61 @@ class AdminBootstrapConfigurationTests {
     }
 
     @Test
-    void existingAccountIsReactivatedWithoutReplacingProfileData() {
-        Runner runner = new Runner();
-        runner.setId(42L);
-        runner.setDisplayName("Existing runner");
-        runner.setDeleted(true);
+    void existingAccountIsNeverPromotedReactivatedOrGivenANewPassword() {
         when(authService.normalizeEmail("admin@example.test")).thenReturn("admin@example.test");
-        when(repository.findByEmailIgnoreCase("admin@example.test")).thenReturn(Optional.of(runner));
+        when(repository.existsByEmailIgnoreCase("admin@example.test")).thenReturn(true);
         context.withPropertyValues(
                 "APP_BOOTSTRAP_ADMIN_EMAIL=admin@example.test",
                 "APP_BOOTSTRAP_ADMIN_PASSWORD=test-only-bootstrap-password"
         ).run(application -> {
             application.getBean(ApplicationRunner.class).run(new DefaultApplicationArguments());
-            verify(repository).save(runner);
-            assertThat(runner.getId()).isEqualTo(42L);
-            assertThat(runner.getDisplayName()).isEqualTo("Existing runner");
-            assertThat(runner.isDeleted()).isFalse();
-            assertThat(runner.getRole()).isEqualTo("ADMIN");
+            verify(repository).existsByEmailIgnoreCase("admin@example.test");
+            verifyNoMoreInteractions(repository);
+            verify(authService, never()).storePassword(any(), any());
+        });
+    }
+
+    @Test
+    void anotherAdministratorPreventsBootstrapOfANewEmail() {
+        when(authService.normalizeEmail("admin@example.test")).thenReturn("admin@example.test");
+        when(repository.count(any(Specification.class))).thenReturn(1L);
+        context.withPropertyValues(
+                "APP_BOOTSTRAP_ADMIN_EMAIL=admin@example.test",
+                "APP_BOOTSTRAP_ADMIN_PASSWORD=test-only-bootstrap-password"
+        ).run(application -> {
+            application.getBean(ApplicationRunner.class).run(new DefaultApplicationArguments());
+            verify(repository, never()).save(any());
+            verify(authService, never()).storePassword(any(), any());
+        });
+    }
+
+    @Test
+    void productionNeverBootstrapsAnAdministrator() {
+        when(authService.normalizeEmail("admin@example.test")).thenReturn("admin@example.test");
+        context.withPropertyValues(
+                "hermes.environment=production",
+                "APP_BOOTSTRAP_ADMIN_EMAIL=admin@example.test",
+                "APP_BOOTSTRAP_ADMIN_PASSWORD=test-only-bootstrap-password"
+        ).run(application -> {
+            application.getBean(ApplicationRunner.class).run(new DefaultApplicationArguments());
+            verifyNoInteractions(repository);
+            verify(authService, never()).storePassword(any(), any());
+        });
+    }
+
+    @Test
+    void restartingWithTheSameCredentialsDoesNotResetTheAccount() {
+        when(authService.normalizeEmail("admin@example.test")).thenReturn("admin@example.test");
+        when(repository.existsByEmailIgnoreCase("admin@example.test")).thenReturn(false, true);
+        context.withPropertyValues(
+                "APP_BOOTSTRAP_ADMIN_EMAIL=admin@example.test",
+                "APP_BOOTSTRAP_ADMIN_PASSWORD=test-only-bootstrap-password"
+        ).run(application -> {
+            ApplicationRunner bootstrap = application.getBean(ApplicationRunner.class);
+            bootstrap.run(new DefaultApplicationArguments());
+            bootstrap.run(new DefaultApplicationArguments());
+            verify(repository, times(1)).save(any());
+            verify(authService, times(1)).storePassword(any(), any());
         });
     }
 

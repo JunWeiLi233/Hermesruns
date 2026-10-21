@@ -1,6 +1,8 @@
 import json
 import os
 import re
+import sys
+from contextlib import redirect_stdout
 from functools import lru_cache
 from pathlib import Path
 
@@ -181,3 +183,72 @@ def recover_course_map_payload(raw_text: str):
         payload["finishLabel"] = finish_label_match.group(1)
 
     return payload
+
+
+def handle_request(request):
+    operation = request.get('operation')
+    if operation not in ('alignment', 'route_parameters', 'anchor_pixels'):
+        raise ValueError(f'Unsupported Qwen operation: {operation}')
+    image_path = request['imagePath']
+    labels = None
+    if operation == 'alignment':
+        prompt = request['prompt']
+        if not isinstance(prompt, str) or not prompt.strip():
+            raise ValueError('Alignment prompt is required.')
+    elif operation == 'route_parameters':
+        from extract_route_parameters_qwen import PROMPT_TEMPLATE
+        prompt = PROMPT_TEMPLATE.format(
+            race_name=request.get('raceName', 'unknown'), city=request.get('city', 'unknown'),
+            country=request.get('country', 'unknown'), distance_km=request.get('distanceKm', 'unknown'))
+    else:
+        from PIL import Image
+        from extract_anchor_pixels_qwen import PROMPT_TEMPLATE, validate_anchor_pixels
+        labels = request.get('anchors', [])
+        if not 4 <= len(labels) <= 10:
+            raise ValueError('Between 4 and 10 anchors are required.')
+        with Image.open(image_path) as image:
+            width, height = image.size
+        prompt = PROMPT_TEMPLATE.format(width=width, height=height, count=len(labels), labels=json.dumps(labels))
+    budget = int(request.get('maxNewTokens', 2048))
+    if not 1 <= budget <= 8192:
+        raise ValueError('Qwen output budget must be between 1 and 8192 tokens.')
+    if labels is not None:
+        budget = max(budget, 64 * len(labels) + 64)
+    for attempt in range(2 if labels is not None else 1):
+        payload = invoke_qwen_json(
+            image_path=image_path, prompt=prompt, model_id=request['modelId'],
+            device_map=request.get('deviceMap', 'auto'), cache_dir=request.get('cacheDir', ''),
+            max_new_tokens=budget)
+        if labels is None:
+            return payload
+        try:
+            validate_anchor_pixels(payload, labels, width, height)
+            return payload
+        except RuntimeError as error:
+            if attempt:
+                raise
+            prompt += f'\nThe previous answer was unusable: {error} Reinspect the image and correct the coordinates.'
+
+
+def serve_stdio(source=None, output=None):
+    source = sys.stdin if source is None else source
+    output = sys.stdout if output is None else output
+    for line in source:
+        try:
+            # Libraries and model diagnostics must not enter the JSON-line protocol.
+            with redirect_stdout(sys.stderr):
+                request = json.loads(line)
+                if not isinstance(request, dict):
+                    raise ValueError('Qwen request must be an object.')
+                payload = handle_request(request)
+            response = {'ok': True, 'payload': payload}
+        except Exception as error:
+            response = {'ok': False, 'error': str(error)}
+        output.write(json.dumps(response, separators=(',', ':')) + '\n')
+        output.flush()
+
+
+if __name__ == '__main__':
+    if sys.argv[1:] != ['--stdio-worker']:
+        raise SystemExit('Use --stdio-worker for the persistent JSON-line worker.')
+    serve_stdio()

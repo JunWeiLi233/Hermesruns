@@ -1,0 +1,7 @@
+.icu-design.hermes-training-entry { min-width: 0; min-height: 0; display: block; }
+.icu-design.hermes-training { min-height: 0; display: grid; gap: var(--tw-twenty-four); padding: var(--tw-twenty-four); border-radius: var(--ds-radius-sm); }
+.hermes-training-nav { display: grid; gap: var(--tw-eight); border-block: var(--tw-one) solid var(--ds-border); padding-block: var(--tw-twelve); }
+.hermes-training-nav summary { padding-block: var(--tw-eight); font-weight: 600; }
+.hermes-training-nav a { padding: var(--tw-eight) var(--tw-twelve); text-decoration: none; border-radius: var(--ds-radius-sm); }
+.hermes-training-nav a[aria-current="page"] { background: var(--ds-accent); color: var(--ds-on-accent); }
+@media(max-width:48rem) { .icu-design.hermes-training { padding: var(--tw-sixteen); } }

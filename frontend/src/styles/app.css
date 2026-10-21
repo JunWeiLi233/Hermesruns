@@ -68,4 +68,15 @@
 @import './settings-v2.css';
 @import './rewards-v2.css';
 @import './runner-shell-chrome.css';
+@import './run-labels-v2.css';
+@import './training-log-v2.css';
+@import './training-intensity-v2.css';
+@import './pace-curve-v2.css';
+@import './endurance-check-v2.css';
+@import './vo2max-estimates-v2.css';
+@import './metric-trend-v2.css';
+@import './quality-sessions-v2.css';
+@import './goals-v2.css';
 @import './race-form-modal-v2.css';
+@import './schedule-v2.css';
+@import './profile-weekly-load.css';

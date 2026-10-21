@@ -6,7 +6,6 @@ import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.coaching.ReadinessService;
 import com.hermes.backend.imports.ActivityStravaStreamService;
 import com.hermes.backend.infrastructure.cache.TtlCacheStore;
-import com.hermes.backend.runner.HeatmapCacheKey;
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.weather.AcclimatizationService;
 import java.time.Clock;
@@ -36,7 +35,7 @@ public class ActivityController {
     private static final int MAX_ROUTE_PREVIEW_BATCH_SIZE = 50;
     private static final Duration ACTIVITY_ANALYTICS_CACHE_TTL = Duration.ofMinutes(10);
     private static final Duration ACTIVITY_READ_CACHE_TTL = Duration.ofMinutes(10);
-    private static final String ACTIVITY_HEATMAP_CACHE_NAMESPACE = "activity-heatmap";
+    private static final String ACTIVITY_HEATMAP_CACHE_NAMESPACE = ActivityCaches.ACTIVITY_HEATMAP_NAMESPACE;
 
     private final AuthService authService;
     private final ActivityDataAccess activityDataAccess;
@@ -99,7 +98,7 @@ public class ActivityController {
         // ?id= serves the same feed-item shape for a single run.
         if (id != null) {
             return activityDataAccess.findActivityForRunner(id, activeUser.get())
-                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunFeedItem(activity)))
+                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunFeedItem(activity, activeUser.get())))
                     .orElseGet(() -> err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found."));
         }
 
@@ -112,7 +111,7 @@ public class ActivityController {
         int requested = limit == null ? defaultLimit : limit;
         int bounded = Math.max(1, Math.min(requested, maxLimit));
         List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get(), bounded);
-        return ResponseEntity.ok(runs.stream().map(ActivityRoutePreviewHelper::toRunFeedItem).toList());
+        return ResponseEntity.ok(runs.stream().map(activity -> ActivityRoutePreviewHelper.toRunFeedItem(activity, activeUser.get())).toList());
     }
 
     @GetMapping("/route-previews")
@@ -247,6 +246,8 @@ public class ActivityController {
                             run.getPacePenaltySecPerKm(),
                             run.getWeatherAdjusted()
                     );
+                    Map<String, Object> time = ActivityLocalDates.responseFields(
+                            run.getStartTime(), Boolean.TRUE.equals(run.getStravaApiSourced()), activeUser.get());
                     return new AnalysisActivitySummary(
                             run.getId(),
                             run.getName(),
@@ -263,7 +264,14 @@ public class ActivityController {
                             correction.weatherAdjusted(),
                             correction.weatherAdjustedMovingTimeSeconds(),
                             correction.weatherAdjustedPaceSecPerKm(),
-                            correction.weatherCorrectionFactor()
+                            correction.weatherCorrectionFactor(),
+                            (String) time.get("activityInstant"),
+                            (String) time.get("timeRepresentation"),
+                            (String) time.get("accountLocalDate"),
+                            (String) time.get("accountLocalTime"),
+                            (String) time.get("accountTimeZone"),
+                            run.getRunType(),
+                            run.getSourceFileName()
                     );
                 })
                 .toList();
@@ -740,11 +748,10 @@ public class ActivityController {
         if (!deleted) {
             return err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found.");
         }
-        cacheStore.evict(HeatmapCacheKey.NAMESPACE, HeatmapCacheKey.forRunner(activeUser.get().getId()));
         // Year-keyed activity-heatmap entries are intentionally left to TTL expiry:
         // the all-time entry is the hot read path, and ownership 404s protect the
         // year variants from cross-runner access.
-        cacheStore.evict(ACTIVITY_HEATMAP_CACHE_NAMESPACE, activeUser.get().getId() + ":all");
+        ActivityCaches.evictForRunner(cacheStore, activeUser.get().getId());
         return ResponseEntity.ok(Map.of("deleted", true, "id", id));
     }
 
@@ -768,6 +775,13 @@ public class ActivityController {
             Boolean weatherAdjusted,
             Integer weatherAdjustedMovingTimeSeconds,
             Double weatherAdjustedPaceSecPerKm,
-            Double weatherCorrectionFactor
+            Double weatherCorrectionFactor,
+            String activityInstant,
+            String timeRepresentation,
+            String accountLocalDate,
+            String accountLocalTime,
+            String accountTimeZone,
+            String runType,
+            String sourceFileName
     ) {}
 }

@@ -10,7 +10,7 @@ body #root .analysis-insight-detail-page.is-injury-risk::before { display: none 
   --ir-card: var(--analysis-v2-card, #fff);
   --ir-ink: #1c1917;
   --ir-muted: #625c56;
-  --ir-faint: #8a837c;
+  --ir-faint: #716a63;
   --ir-line: rgba(28, 25, 23, 0.08);
   --ir-fill: rgba(28, 25, 23, 0.04);
   --ir-accent: #a0392a;
@@ -252,6 +252,7 @@ body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-runs
 body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-low { color: #85dfa2; }
 body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-moderate { color: #ffce83; }
 body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-high { color: #ffa99e; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2 .analysis-insight-empty-state { color: var(--ir-muted); }
 @media (max-width: 760px) {
   body #root .analysis-insight-detail-page.is-injury-risk .runner-shell-canvas.analysis-insight-detail-canvas { padding: 24px 16px 40px !important; }
 }

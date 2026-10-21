@@ -61,6 +61,12 @@ public class ProfileApplicationService {
         return profile(runner);
     }
 
+    public ProfileResponse updateTimeZone(Runner runner, String timeZone) {
+        runner.setTimeZone(timeZone);
+        runnerRepository.save(runner);
+        return profile(runner);
+    }
+
     public ProfilePreferencesResponse updatePreferences(Runner runner, String mantra, boolean weeklyDigestEnabled) {
         runner.setSettingsMantra(mantra);
         runner.setWeeklyDigestEnabled(weeklyDigestEnabled);
@@ -79,7 +85,8 @@ public class ProfileApplicationService {
                 runner.getDisplayName(),
                 avatarService.avatarDataUrl(runner),
                 stravaLinked,
-                showLanguageSettingsHint
+                showLanguageSettingsHint,
+                runner.getTimeZone()
         );
     }
 
@@ -99,7 +106,7 @@ public class ProfileApplicationService {
 
         return new ProfileDashboardResponse(
                 profile(runner),
-                toRunSummaryFeedItems(activitySummaries),
+                toRunSummaryFeedItems(activitySummaries, runner),
                 null,
                 null,
                 null,
@@ -114,7 +121,7 @@ public class ProfileApplicationService {
         List<ActivityRepository.AnalysisActivitySummaryProjection> activitySummaries = findRunnerRunSummaries(runner);
         return new TodayDashboardResponse(
                 profile(runner),
-                toRunSummaryFeedItems(activitySummaries),
+                toRunSummaryFeedItems(activitySummaries, runner),
                 safeValue(() -> automatedCoachService.getTodayWithReadiness(runner), null),
                 safeValue(() -> acclimatizationService.buildContext(runner), null),
                 safeValue(() -> findRunnerRaces(runner), List.of()),
@@ -147,15 +154,15 @@ public class ProfileApplicationService {
     }
 
     private List<Map<String, Object>> toRunSummaryFeedItems(
-            List<ActivityRepository.AnalysisActivitySummaryProjection> activities
+            List<ActivityRepository.AnalysisActivitySummaryProjection> activities, Runner runner
     ) {
         if (activities == null || activities.isEmpty()) {
             return List.of();
         }
-        return activities.stream().map(this::toRunSummaryFeedItem).toList();
+        return activities.stream().map(activity -> toRunSummaryFeedItem(activity, runner)).toList();
     }
 
-    private Map<String, Object> toRunSummaryFeedItem(ActivityRepository.AnalysisActivitySummaryProjection activity) {
+    private Map<String, Object> toRunSummaryFeedItem(ActivityRepository.AnalysisActivitySummaryProjection activity, Runner runner) {
         Map<String, Object> body = new HashMap<>();
         body.put("id", activity.getId());
         body.put("name", activity.getName());
@@ -163,6 +170,7 @@ public class ProfileApplicationService {
         body.put("movingTimeSeconds", activity.getMovingTimeSeconds());
         body.put("startDate", activity.getStartDate());
         body.put("startTime", activity.getStartTime());
+        body.putAll(com.hermes.backend.activity.ActivityLocalDates.responseFields(activity.getStartTime(), Boolean.TRUE.equals(activity.getStravaApiSourced()), runner));
         body.put("distanceMeters", activity.getDistanceMeters());
         body.put("durationSeconds", activity.getDurationSeconds());
         body.put("averageHeartRate", activity.getAverageHeartRate());

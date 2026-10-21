@@ -2,6 +2,8 @@ import { useMemo, useState, useCallback, useRef } from 'react';
 import { buildRunActivityCalendar } from '../utils/runActivityContribution';
 import { formatDistance } from '../utils/format';
 import { useUnit } from '../contexts/UnitContext';
+import { useAccountDate } from '../hooks/useAccountDate';
+import { getActivityDateKey } from '../utils/timeZone';
 
 function formatWeekday(date, lang) {
   return date.toLocaleDateString(lang, { weekday: 'short' });
@@ -11,12 +13,17 @@ function formatMonth(date, lang) {
   return date ? date.toLocaleDateString(lang, { month: 'short' }) : '';
 }
 
-export default function RunActivityContributionGraph({ runs, status = 'ready', lang, t, action = null, activityType = 'run', weeks = 53, compact = false, referenceDate = null }) {
+export default function RunActivityContributionGraph({ runs, status = 'ready', lang, t, action = null, activityType = 'run', weeks = 53, compact = false, referenceDate = null, timeZone }) {
   const { unit } = useUnit();
+  const accountToday = useAccountDate(timeZone);
   const calendarOptions = useMemo(() => ({
     weeks,
-    ...(referenceDate ? { now: new Date(`${referenceDate}T12:00:00`) } : {}),
-  }), [referenceDate, weeks]);
+    now: new Date(`${referenceDate || accountToday}T12:00:00`),
+    resolveDate: entry => {
+      const key = getActivityDateKey(entry, timeZone);
+      return key ? new Date(`${key}T12:00:00`) : null;
+    },
+  }), [accountToday, referenceDate, weeks, timeZone]);
   const calendar = useMemo(() => buildRunActivityCalendar(runs, calendarOptions), [calendarOptions, runs]);
   const isMuscleActivity = activityType === 'muscle';
   const activeCalendar = useMemo(() => {

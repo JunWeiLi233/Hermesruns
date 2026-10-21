@@ -26,8 +26,14 @@ assert.match(
 
 assert.match(
   todayRunSource,
-  /getTodayRunAcwrInsight\(metrics\.acwr\)/,
-  'TodayRun.jsx should build the ACWR coach-language narrative through the dedicated helper instead of inline branching'
+  /getTodayRunAcwrInsight\(metrics\.acwr,\s*metrics\.coachLoadEvidence\)/,
+  'TodayRun.jsx should give the dedicated ACWR narrative helper both the effort ratio and personalized planner basis'
+);
+
+assert.match(
+  todayRunSource,
+  /\[metrics\.acwr,\s*metrics\.coachLoadEvidence\]/,
+  'TodayRun.jsx should refresh the ACWR narrative when either metric value or planner evidence changes'
 );
 
 assert.doesNotMatch(

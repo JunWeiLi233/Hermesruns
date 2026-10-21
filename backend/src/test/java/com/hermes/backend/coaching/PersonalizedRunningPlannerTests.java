@@ -12,13 +12,12 @@ class PersonalizedRunningPlannerTests {
     private final PersonalizedRunningPlanner planner = new PersonalizedRunningPlanner();
 
     @Test
-    void newRunnerCanStartOnAPlannedRunDayInsteadOfRestartingOnboardingRestDaily() {
+    void aNewRunnerNeedsEvidenceBeforeAPlannedDistanceIsPublished() {
         var plan = planner.plan(input(LocalDate.of(2026, 9, 8),
                 history(0, 0, 0, 0, 0, 0, 0, 0, null, null, Map.of()),
                 75, "EASY", false, "LOW", null));
-        assertThat(plan.today().workoutType()).isEqualTo(CoachWorkoutType.EASY);
-        assertThat(plan.today().distanceKm()).isBetween(1.0, 5.0);
-        assertThat(plan.today().reasonCode()).isEqualTo("onboarding");
+        assertThat(plan.today().distanceKm()).isNull();
+        assertThat(plan.today().reasonCode()).isEqualTo("history_required");
     }
 
     @Test
@@ -34,13 +33,12 @@ class PersonalizedRunningPlannerTests {
         ));
 
         assertThat(plan.phase()).isEqualTo("onboarding");
-        assertThat(plan.sessionsPerWeek()).isEqualTo(3);
-        assertThat(plan.targetWeeklyKm()).isBetween(9.0, 15.0);
+        assertThat(plan.sessionsPerWeek()).isZero();
+        assertThat(plan.targetWeeklyKm()).isZero();
         assertThat(plan.sessions())
-                .filteredOn(session -> session.workoutType() != CoachWorkoutType.REST)
                 .allSatisfy(session -> {
-                    assertThat(session.workoutType()).isIn(CoachWorkoutType.EASY, CoachWorkoutType.RECOVERY);
-                    assertThat(session.distanceKm()).isLessThanOrEqualTo(5.0);
+                    assertThat(session.reasonCode()).isEqualTo("history_required");
+                    assertThat(session.distanceKm()).isNull();
                 });
     }
 

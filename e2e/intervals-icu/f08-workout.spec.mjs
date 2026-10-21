@@ -1,0 +1,5 @@
+import {test,expect,open,scan,today} from './helpers.mjs';
+test('F08-H1 author and schedule a workout from Schedule',async({page},info)=>{
+ const title='QA merged workout '+crypto.randomUUID().slice(0,8);await open(page,'/schedule?trainingTool=workout');await page.getByLabel('Workout name').fill(title);await page.getByLabel('Workout source').fill('10m @65% Warm up\n20m @80% Steady work\n10m @55% Cool down');await page.getByRole('button',{name:'Save workout version',exact:true}).click();await expect(page.getByText('Published a pinned workout version in your library.',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Schedule for selected athlete',exact:true}).click();await expect(page.getByText('Workout scheduled. Open the calendar to move or match it.',{exact:true})).toBeVisible();await scan(page,'schedule-workout',info);
+ await page.getByRole('button',{name:'Close',exact:true}).click();await expect(page.getByRole('article',{name:today(),exact:true}).getByText(title,{exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'Training & coaching',exact:true})).toHaveCount(0);
+});

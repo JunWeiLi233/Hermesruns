@@ -3,6 +3,7 @@ package com.hermes.backend.shoes;
 import com.hermes.backend.runner.Runner;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -122,6 +123,30 @@ public class ShoeImageAssetService {
         return shoeImageAssetRepository.findByIdentityKey(requireIdentityKey(brand, model))
                 .map(ShoeImageAsset::getLiveImageUrl)
                 .filter(url -> url != null && !url.isBlank());
+    }
+
+    /** Scalar batches avoid one image query per catalog model and large pending image payloads. */
+    public Map<Long, String> findLiveImageUrlsForCatalog(List<ShoeCatalogModel> models) {
+        Map<Long, String> identityByModel = new LinkedHashMap<>();
+        for (ShoeCatalogModel model : models) {
+            identityByModel.put(model.getId(), requireIdentityKey(model.getBrand().getName(), model.getName()));
+        }
+        List<String> keys = identityByModel.values().stream().distinct().toList();
+        Map<String, String> imagesByIdentity = new LinkedHashMap<>();
+        for (int from = 0; from < keys.size(); from += 500) {
+            for (ShoeImageAssetRepository.LiveImage image : shoeImageAssetRepository.findLiveImagesByIdentityKeys(
+                    keys.subList(from, Math.min(from + 500, keys.size())))) {
+                if (!image.getLiveImageUrl().isBlank()) {
+                    imagesByIdentity.put(image.getIdentityKey(), image.getLiveImageUrl());
+                }
+            }
+        }
+        Map<Long, String> result = new LinkedHashMap<>();
+        identityByModel.forEach((id, identity) -> {
+            String url = imagesByIdentity.get(identity);
+            if (url != null) result.put(id, url);
+        });
+        return result;
     }
 
     public void applyLiveAssetToShoe(Shoe shoe) {

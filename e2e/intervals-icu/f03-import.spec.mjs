@@ -1,0 +1,13 @@
+import {test,expect,open,scan,identity,api,actors} from './helpers.mjs';
+import {readFileSync} from 'node:fs';
+test('F03-H2 original file import deduplicates and malformed files cannot write activities',async({request})=>{
+ const me=await identity(request,'athlete');const headers={Authorization:`Bearer ${actors.athlete.token}`};
+ const upload=async(buffer,name)=>{const r=await request.post('/api/training/imports',{headers:{...headers,'Idempotency-Key':crypto.randomUUID()},multipart:{file:{name,mimeType:'application/gpx+xml',buffer}}});expect(r.status(),await r.text()).toBe(200);const job=await r.json();let result;await expect.poll(async()=>{result=await api(request,'athlete','GET',`/jobs/${job.id}`);return result.state;},{timeout:30000}).toMatch(/succeeded|dead/);return result;};
+ const file=readFileSync(new URL('../../replica/intervals-icu/app/fixtures/original-example.gpx',import.meta.url));const first=await upload(file,'original-example.gpx');expect(first.state).toBe('succeeded');const count=(await api(request,'athlete','GET',`/athletes/${me.id}/activities`)).items.length;await upload(file,'original-example.gpx');expect((await api(request,'athlete','GET',`/athletes/${me.id}/activities`)).items).toHaveLength(count);
+ const malformed=await request.post('/api/training/imports',{headers:{...headers,'Idempotency-Key':crypto.randomUUID()},multipart:{file:{name:'corrupt.gpx',mimeType:'application/gpx+xml',buffer:Buffer.from('not a gpx')}}});expect([200,422]).toContain(malformed.status());if(malformed.status()===200){const j=await malformed.json();await expect.poll(async()=>(await api(request,'athlete','GET',`/jobs/${j.id}`)).state,{timeout:15000}).toMatch(/retry|dead/);const failure=await api(request,'athlete','GET',`/jobs/${j.id}`);expect(failure.errorCode).toBe('IMPORT_FAILED');if(failure.state==='retry')await api(request,'athlete','DELETE',`/jobs/${j.id}`);}
+ expect((await api(request,'athlete','GET',`/athletes/${me.id}/activities`)).items).toHaveLength(count);
+});
+test('F03-H1 import checker extends the current uploader',async({page,request},info)=>{
+ await identity(request,'athlete');await open(page,'/settings/import-data');await expect(page.locator('input[type=file]')).toHaveCount(1);await page.getByText('Check an import',{exact:true}).click();await page.getByLabel('Import job ID').fill('00000000-0000-0000-0000-000000000000');
+ info.annotations.push({type:'expected-http',description:'404'});await page.getByRole('button',{name:'Check status',exact:true}).click();await expect(page.getByRole('alert').last()).toBeVisible();await scan(page,'import-status',info);
+});

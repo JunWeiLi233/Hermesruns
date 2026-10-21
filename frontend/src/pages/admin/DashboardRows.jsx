@@ -25,6 +25,7 @@ import {
   getDashboardJobTraceId,
   getDashboardJobTypeLabel,
   getDashboardJobStatusLabel,
+  getDashboardJobProgress,
 } from './operationsModels.js';
 import AppIcon from '../../components/AppIcon';
 
@@ -286,6 +287,7 @@ export function JobQueueRowComponent({ ariaAttributes, index, style, items, sele
           <small>{job.createdByEmail || t('dashboard.jobs_deck_unassigned')}</small>
         </div>
         <div className="admin-jobs-terminal__counts">
+          {String(job.status).toUpperCase() === 'RUNNING' && total > 0 && <div className="admin-ref-job-progress" role="progressbar" aria-label={getDashboardJobTypeLabel(job.jobType, t)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={getDashboardJobProgress(job)}><span style={{ width: `${getDashboardJobProgress(job)}%` }} /></div>}
           <strong>{processed.toLocaleString()}</strong>
           <small>{total > 0 ? t('dashboard.jobs_deck_processed_of_total', { processed, total }) : t('dashboard.jobs_deck_processed_only', { processed })}</small>
         </div>

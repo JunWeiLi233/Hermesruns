@@ -1,0 +1,2 @@
+import {test,expect,login,screen} from './fixtures.js';
+test('F05-H1 bounded account map requests full-selection cells',async({page},info)=>{const overlays=[];page.on('response',r=>{if(new URL(r.url()).pathname==='/api/explorer/map/query')overlays.push(r);});await login(page);await expect.poll(()=>overlays.length).toBeGreaterThan(0);const data=await overlays.at(-1).json();expect(data.cells.length).toBeGreaterThan(0);expect(data.tracks.length).toBeGreaterThan(0);expect(data.cells.length).toBeLessThanOrEqual(5000);await screen(page,info,'account-map');});

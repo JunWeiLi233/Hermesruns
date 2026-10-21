@@ -36,10 +36,7 @@
 
 .runner-shell-brand .hermes-logo {
   font-size: 1rem;
-}
-
-.runner-shell-brand .hermes-logo--light .hermes-logo__word {
-  color: #f3ede8;
+  --hermes-logo-tile: 28px;
 }
 
 .runner-shell-brand .runner-dashboard-brand-copy > span:not(.hermes-logo) {
@@ -917,7 +914,7 @@ body.theme-midnight .runner-shell-loading .rewards-load-retry:hover,
   --runner-topnav-bg: rgba(255, 250, 244, 0.74);
   --runner-topnav-line: rgba(112, 61, 46, 0.13);
   --runner-topnav-ink: #201a17;
-  --runner-topnav-muted: rgba(32, 26, 23, 0.58);
+  --runner-topnav-muted: rgba(32, 26, 23, 0.7);
   --runner-topnav-active: #a0392a;
   --runner-topnav-chip: rgba(255, 255, 255, 0.6);
   --runner-topnav-chip-hover: rgba(255, 255, 255, 0.9);

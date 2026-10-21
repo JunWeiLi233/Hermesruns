@@ -128,4 +128,23 @@ assert.equal(
   'Catalog-only course-map actions should keep the marathon distance from the queue item.',
 );
 
+const backendOnlySource = buildCourseMapWorkspaceSource({
+  queueItem: { raceId: 'big-sur-marathon', raceName: 'Big Sur Marathon' },
+  detail: {
+    raceId: 'big-sur-marathon',
+    officialWebsite: 'https://www.bigsurmarathon.org/',
+    latitude: 36.2704,
+    longitude: -121.8079,
+    distanceKm: 42.195,
+  },
+});
+assert.equal(backendOnlySource.lat, 36.2704, 'Backend-only rows must retain the stored latitude from admin detail.');
+assert.equal(backendOnlySource.lng, -121.8079, 'Backend-only rows must retain the stored longitude from admin detail.');
+assert.equal(backendOnlySource.distanceKm, 42.195);
+assert.equal(backendOnlySource.officialWebsite, 'https://www.bigsurmarathon.org/');
+
+const zeroCoordinateSource = buildCourseMapWorkspaceSource({ detail: { latitude: 0, longitude: 0 } });
+assert.equal(zeroCoordinateSource.lat, 0, 'Zero latitude is valid metadata.');
+assert.equal(zeroCoordinateSource.lng, 0, 'Zero longitude is valid metadata.');
+
 console.log('[PASS] Course-map catalog queue test passed.');

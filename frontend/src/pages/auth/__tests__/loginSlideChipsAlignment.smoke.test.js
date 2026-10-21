@@ -62,7 +62,7 @@ assert.match(
   'Brand inner should center horizontally so the slide block sits central on wide windows.',
 );
 
-// The website logo sits left of the HERMES title and the whole wordmark
+// The website logo sits left of the HERMESRUNS title and the whole wordmark
 // block is pinned to the brand panel's top-left corner.
 assert.match(
   authGlassSource,

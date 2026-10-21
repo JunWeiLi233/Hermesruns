@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
-import { useI18n } from '../contexts/I18nContext';
+import { useI18n } from '../contexts/i18nContextState';
 import { getSeoMetadata, SOCIAL_IMAGE_URL, SITE_URL } from '../utils/seoMetadata.js';
 
 function upsertMeta(attribute, key, content) {
@@ -57,7 +57,7 @@ export default function SeoHead() {
     updateCanonical(metadata.canonicalUrl);
     upsertMeta('name', 'description', metadata.description);
     upsertMeta('name', 'robots', metadata.robots);
-    upsertMeta('name', 'author', 'Hermes');
+    upsertMeta('name', 'author', 'HermesRuns');
     upsertMeta('property', 'og:type', metadata.openGraphType);
     upsertMeta('property', 'og:url', pageUrl);
     upsertMeta('property', 'og:title', metadata.title);

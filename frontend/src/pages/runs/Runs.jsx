@@ -1,4 +1,5 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import useRecommendationRevision from '../../hooks/useRecommendationRevision';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { buildRunDetailPath } from '../../utils/runRoute';
@@ -13,7 +14,9 @@ import AppIcon from '../../components/AppIcon';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
 import PageSkeleton from '../../components/PageSkeleton';
 import FooterNavLinks from '../../components/FooterNavLinks';
-import { formatDate, formatDistance, formatDuration, formatPace } from '../../utils/format';
+import { formatDistance, formatDuration, formatPace } from '../../utils/format';
+import { accountWeekStart, activityCalendarSortTime, activitySortTime, calendarDate, formatActivityTime, getAccountDate, getActivityCalendarDate, getActivityDateKey } from '../../utils/timeZone';
+import { useAccountDate } from '../../hooks/useAccountDate';
 import HermesLogo from '../../components/HermesLogo';
 import Modal from '../../components/Modal';
 import ImportActivityModal from '../../components/ImportActivityModal';
@@ -21,13 +24,22 @@ import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
 import { preloadRoute } from '../../utils/routePreload';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
-import { formatStravaSyncLabel, STRAVA_SYNC_FINISHED_EVENT } from '../../utils/stravaAutoSync';
+import { formatStravaSyncLabel } from '../../utils/stravaAutoSync';
 import { createRoutePreviewRequestCoordinator } from './runsRequestCoordinator';
 import { canonicalizeRunsCacheEmail, createRunsLoadGeneration, invalidateRunsCache, readRunsCache, writeRunsCache } from './runsCache';
 import { invalidateHeatmapCache } from '../../utils/heatmap/cache.js';
 import { captureRunsScrollPosition, getRunsLoadMoreRootMargin, restoreRunsScrollPosition } from './runsLoadMore';
+import { RunsTrainingTools } from '../../features/training/integrated/AthleteTools';
+import InlineFeatureSection from '../../components/InlineFeatureSection';
+const TrainingLog = lazy(() => import('../training-log/TrainingLog'));
 
-const runDate = (r) => new Date(r.startTime || r.startDate || 0);
+const runDate = (r) => getActivityCalendarDate(r);
+const sortRecentRuns = (runs) => {
+  // Unknown source instants must not be compared with real UTC timestamps.
+  // All-instant histories retain their true chronology, including DST folds.
+  const sortTime = runs.some((run) => !run.activityInstant) ? activityCalendarSortTime : activitySortTime;
+  return runs.sort((a, b) => sortTime(b) - sortTime(a));
+};
 
 function localizeStravaSyncMessage(message, t) {
   const raw = String(message || '').trim();
@@ -512,9 +524,9 @@ function RunRow({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onDe
   const locale = lang || 'en';
   const safeFormat = (options) => {
     if (!valid) return '';
-    try { return new Intl.DateTimeFormat(locale, options).format(started); } catch { return ''; }
+    try { return formatActivityTime(run, locale, options); } catch { return ''; }
   };
-  const dayLabel = valid ? String(started.getDate()).padStart(2, '0') : '--';
+  const dayLabel = valid ? String(started.getUTCDate()).padStart(2, '0') : '--';
   const subLabel = safeFormat(groupedByDate ? { weekday: 'short' } : { month: 'short' });
   const timeLabel = safeFormat({ hour: 'numeric', minute: '2-digit' });
   const distanceKm = Number(run.distanceKm || 0);
@@ -535,7 +547,7 @@ function RunRow({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onDe
           <strong>{runName}</strong>
           <span className="runs-ledger-row__meta">
             <span className="runs-ledger-row__source">{provider}</span>
-            {valid ? <time className="runs-ledger-row__full-date" dateTime={started.toISOString()}>{formatDate(run.startTime || run.startDate, lang)}</time> : null}
+            {valid ? <time className="runs-ledger-row__full-date" dateTime={run.activityInstant || getActivityDateKey(run)}>{safeFormat({ weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</time> : null}
             {timeLabel ? <span>{timeLabel}</span> : null}
             {badge ? <span className="runs-ledger-row__badge">{badge}</span> : null}
           </span>
@@ -563,12 +575,14 @@ const RUNS_VIEW_STORAGE_KEY = 'hermes_runs_view';
 const RUNS_WEEKLY_VOLUME_WEEKS = 12;
 
 const Runs = memo(function Runs() {
+  const recommendationRevision = useRecommendationRevision();
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
+  const accountToday = useAccountDate(profile?.timeZone);
   const [allRuns, setAllRuns] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadState, setLoadState] = useState('loading');
@@ -660,7 +674,7 @@ const Runs = memo(function Runs() {
     const cachedHit = readRunsCache(localStorage, email, Date.now());
 
     if (fromCache && cachedHit && isCurrentLoad()) {
-      const sorted = [...cachedHit.runs].sort((a, b) => runDate(b) - runDate(a));
+      const sorted = sortRecentRuns([...cachedHit.runs]);
       setAllRuns(sorted);
       setProfile(cachedHit.profile);
       setStravaStatus(cachedHit.stravaStatus);
@@ -691,7 +705,7 @@ const Runs = memo(function Runs() {
       .then((data) => {
         if (!isCurrentLoad()) return;
         const list = Array.isArray(data) ? data : [];
-        list.sort((a, b) => runDate(b) - runDate(a));
+        sortRecentRuns(list);
         latestRuns = list;
         setAllRuns(list);
         setLoadState('ready');
@@ -755,17 +769,8 @@ const Runs = memo(function Runs() {
   }, [isAuthenticated, navigate, loadRuns]);
 
   useEffect(() => {
-    if (!isAuthenticated) return undefined;
-
-    function handleStravaSyncFinished() {
-      refreshRuns();
-    }
-
-    window.addEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
-    return () => {
-      window.removeEventListener(STRAVA_SYNC_FINISHED_EVENT, handleStravaSyncFinished);
-    };
-  }, [isAuthenticated, refreshRuns]);
+    if (isAuthenticated && recommendationRevision > 0) refreshRuns();
+  }, [isAuthenticated, refreshRuns, recommendationRevision]);
 
   const pollManualStravaSyncCompletion = useCallback(async () => {
     const deadlineMs = Date.now() + RUNS_STRAVA_SYNC_POLL_DEADLINE_MS;
@@ -842,7 +847,7 @@ const Runs = memo(function Runs() {
   }
 
   const filteredRuns = useMemo(() => {
-    const now = new Date();
+    const now = calendarDate(accountToday);
     let result = [...allRuns];
 
     if (searchQuery.trim()) {
@@ -852,19 +857,18 @@ const Runs = memo(function Runs() {
 
     if (activeMode === 'year') {
       if (selectedYear != null) {
-        result = result.filter((run) => runDate(run).getFullYear() === selectedYear);
+        result = result.filter((run) => runDate(run).getUTCFullYear() === selectedYear);
       }
     } else if (activeMode === 'month') {
-      const year = selectedYear || now.getFullYear();
+      const year = selectedYear || now.getUTCFullYear();
       result = result.filter((run) => {
         const date = runDate(run);
-        if (date.getFullYear() !== year) return false;
-        return selectedMonth == null ? true : date.getMonth() === selectedMonth;
+        if (date.getUTCFullYear() !== year) return false;
+        return selectedMonth == null ? true : date.getUTCMonth() === selectedMonth;
       });
     } else if (activeMode === 'day') {
       result = result.filter((run) => {
-        const date = runDate(run);
-        return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() && date.getDate() === now.getDate();
+        return getActivityDateKey(run, profile?.timeZone) === accountToday;
       });
     }
 
@@ -877,35 +881,35 @@ const Runs = memo(function Runs() {
         return paceA - paceB;
       });
     } else {
-      result.sort((a, b) => runDate(b).getTime() - runDate(a).getTime());
+      sortRecentRuns(result);
     }
 
     return result;
-  }, [activeMode, allRuns, selectedMonth, selectedYear, searchQuery, runsSort, t]);
+  }, [activeMode, allRuns, selectedMonth, selectedYear, searchQuery, runsSort, t, profile?.timeZone, accountToday]);
 
   const distinctYears = useMemo(() => {
     const years = new Set();
     allRuns.forEach((run) => {
       const date = runDate(run);
-      if (!Number.isNaN(date.getTime())) years.add(date.getFullYear());
+      if (!Number.isNaN(date.getTime())) years.add(date.getUTCFullYear());
     });
     return [...years].sort((a, b) => b - a);
   }, [allRuns]);
 
   const monthsWithData = useMemo(() => {
-    const year = selectedYear || new Date().getFullYear();
+    const year = selectedYear || Number(getAccountDate(profile?.timeZone).slice(0, 4));
     const months = new Set();
     allRuns.forEach((run) => {
       const date = runDate(run);
-      if (!Number.isNaN(date.getTime()) && date.getFullYear() === year) months.add(date.getMonth());
+      if (!Number.isNaN(date.getTime()) && date.getUTCFullYear() === year) months.add(date.getUTCMonth());
     });
     return [...months].sort((a, b) => a - b);
-  }, [allRuns, selectedYear]);
+  }, [allRuns, selectedYear, profile?.timeZone]);
 
   useEffect(() => {
     if (activeMode === 'year' && selectedYear == null && distinctYears.length) setSelectedYear(distinctYears[0]);
-    if (activeMode === 'month' && selectedYear == null) setSelectedYear(new Date().getFullYear());
-  }, [activeMode, distinctYears, selectedYear]);
+    if (activeMode === 'month' && selectedYear == null) setSelectedYear(Number(getAccountDate(profile?.timeZone).slice(0, 4)));
+  }, [activeMode, distinctYears, selectedYear, profile?.timeZone]);
 
   useEffect(() => {
     if (activeMode === 'month' && selectedMonth == null && monthsWithData.length) setSelectedMonth(monthsWithData[monthsWithData.length - 1]);
@@ -922,7 +926,7 @@ const Runs = memo(function Runs() {
   const stravaLinked = Boolean(stravaStatus?.linked);
   const awaitingTitle = t(stravaLinked ? 'runs.awaiting_title_linked' : 'runs.awaiting_title_disconnected');
   const awaitingCopy = t(stravaLinked ? 'runs.awaiting_copy_linked' : 'runs.awaiting_copy_disconnected');
-  const awaitingStatus = integrationNotice || (stravaLinked
+  const awaitingStatus = integrationNotice || (stravaLinked || !isAwaitingData
     ? formatStravaSyncLabel(stravaStatus, t)
     : t('runs.awaiting_status_disconnected'));
   const awaitingPrimaryAction = stravaLinking ? t('profile.strava_link_connecting') : t(stravaLinked ? 'runs.awaiting_retry_sync' : 'runs.awaiting_connect_strava');
@@ -957,7 +961,7 @@ const Runs = memo(function Runs() {
     filteredRuns.forEach((run) => {
       const started = runDate(run);
       if (Number.isNaN(started.getTime())) return;
-      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
+      const key = getActivityDateKey(run).slice(0, 7);
       const totals = totalsByKey.get(key) || { count: 0, totalKm: 0, totalSeconds: 0 };
       totals.count += 1;
       totals.totalKm += Number(run.distanceKm || 0)
@@ -967,7 +971,7 @@ const Runs = memo(function Runs() {
     });
     const monthLabelFormatter = (() => {
       try {
-        return new Intl.DateTimeFormat(lang || 'en', { year: 'numeric', month: 'long' });
+        return new Intl.DateTimeFormat(lang || 'en', { year: 'numeric', month: 'long', timeZone: 'UTC' });
       } catch {
         return null;
       }
@@ -975,14 +979,14 @@ const Runs = memo(function Runs() {
     visibleRuns.forEach((run) => {
       const started = runDate(run);
       if (Number.isNaN(started.getTime())) return;
-      const key = `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`;
+      const key = getActivityDateKey(run).slice(0, 7);
       let group = groupByKey.get(key);
       if (!group) {
         group = {
           key,
           label: monthLabelFormatter
             ? monthLabelFormatter.format(started)
-            : `${started.getFullYear()}-${String(started.getMonth() + 1).padStart(2, '0')}`,
+            : key,
           runs: [],
           ...totalsByKey.get(key),
         };
@@ -1024,14 +1028,14 @@ const Runs = memo(function Runs() {
   }, [runsView]);
   const weeklyVolume = useMemo(() => {
     const weekMs = 7 * 86400000;
-    const now = new Date();
-    const mondayOffset = (now.getDay() + 6) % 7;
-    const currentWeek = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - mondayOffset);
+    const todayKey = accountToday;
+    const currentWeek = calendarDate(accountWeekStart(todayKey)).getTime();
     const buckets = Array.from({ length: RUNS_WEEKLY_VOLUME_WEEKS }, () => 0);
     allRuns.forEach((run) => {
       const started = runDate(run);
-      if (Number.isNaN(started.getTime()) || started > now) return;
-      const day = Date.UTC(started.getFullYear(), started.getMonth(), started.getDate());
+      const key = getActivityDateKey(run, profile?.timeZone);
+      if (Number.isNaN(started.getTime()) || key > todayKey) return;
+      const day = calendarDate(key).getTime();
       const index = Math.floor((currentWeek + weekMs - 1 - day) / weekMs);
       const distance = Number(run.distanceKm || 0);
       if (index >= 0 && index < RUNS_WEEKLY_VOLUME_WEEKS && Number.isFinite(distance) && distance > 0) {
@@ -1039,7 +1043,7 @@ const Runs = memo(function Runs() {
       }
     });
     return buckets;
-  }, [allRuns]);
+  }, [allRuns, profile?.timeZone, accountToday]);
   const weeklyPeakKm = Math.max(0, ...weeklyVolume);
 
   const timeFilterOptions = [
@@ -1278,6 +1282,7 @@ const Runs = memo(function Runs() {
           </header>
 
           <div className="runner-shell-canvas">
+            <RunsTrainingTools onSaved={refreshRuns} />
             <div className="integration-alert-shell runs-dashboard-shell runs-ledger-awaiting">
               <div className="runner-dashboard-hero-copy runs-dashboard-hero-copy">
                 <h1>{t('runs.heading')}</h1>
@@ -1359,6 +1364,9 @@ const Runs = memo(function Runs() {
                   </section>
                 </aside>
               </div>
+              <InlineFeatureSection id="training-log" title={t('training_log.title')} description={t('training_log.subtitle')}>
+                <TrainingLog showHeader={false} />
+              </InlineFeatureSection>
               <footer className="runner-shell-footer runner-dashboard-footer">
                 <FooterNavLinks />
               </footer>
@@ -1446,6 +1454,7 @@ const Runs = memo(function Runs() {
         </header>
 
         <div className="runner-shell-canvas">
+          <RunsTrainingTools onSaved={refreshRuns} />
           <div className="recent-runs-shell runs-dashboard-shell runs-profile-history runs-ledger-redesign runs-ledger-v2">
             <header className="runs-ledger-v2__header">
               <div className="runs-ledger-v2__heading">
@@ -1646,6 +1655,9 @@ const Runs = memo(function Runs() {
                 </>
               ) : null}
             </section>
+            <InlineFeatureSection id="training-log" title={t('training_log.title')} description={t('training_log.subtitle')}>
+              <TrainingLog showHeader={false} />
+            </InlineFeatureSection>
             <footer className="runner-shell-footer runner-dashboard-footer">
               <FooterNavLinks />
             </footer>

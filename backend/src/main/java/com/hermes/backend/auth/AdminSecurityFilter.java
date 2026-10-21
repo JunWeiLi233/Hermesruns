@@ -43,7 +43,22 @@ public class AdminSecurityFilter implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) request;
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
-        String path = httpRequest.getRequestURI();
+        // Classify on the same decoded path the container/router will dispatch, not on the
+        // raw request URI: Tomcat keeps percent-encoding in getRequestURI() while the servlet
+        // path is decoded, so a raw-URI test can miss an administrative route (e.g. /api/%61dmin).
+        String rawPath = httpRequest.getRequestURI();
+        String path = requestPath(httpRequest);
+        if (!rawPath.equals(path)
+                && (AdminPortalSessionCookie.isAdminPortalPath(path) || isAdminEndpoint(path))) {
+            // The raw and decoded forms disagree on an administrative surface; refuse rather
+            // than let this filter and the router classify the same request differently.
+            if (AdminPortalSessionCookie.isAdminPortalPath(path)) {
+                concealAdminPortal(httpResponse);
+            } else {
+                denyAdminApi(httpResponse);
+            }
+            return;
+        }
 
         if (requiresAdminAccessGateway(path) && !adminAccessGateway.isAllowed(httpRequest)) {
             if (AdminPortalSessionCookie.isAdminPortalPath(path) || isAdminAuthenticationEndpoint(path)) {
@@ -127,5 +142,23 @@ public class AdminSecurityFilter implements Filter {
 
     private boolean isPathOrChild(String path, String root) {
         return root.equals(path) || path.startsWith(root + "/");
+    }
+
+    /**
+     * The path the servlet container will use for dispatch: the decoded servlet path plus any
+     * path info. Falls back to the context-relative request URI only when the container has
+     * not populated a servlet path (for example in unit tests).
+     */
+    private String requestPath(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        String pathInfo = request.getPathInfo();
+        if (servletPath == null || servletPath.isEmpty()) {
+            String uri = request.getRequestURI();
+            String context = request.getContextPath();
+            servletPath = context != null && !context.isEmpty() && uri.startsWith(context)
+                    ? uri.substring(context.length())
+                    : uri;
+        }
+        return pathInfo == null || pathInfo.isEmpty() ? servletPath : servletPath + pathInfo;
     }
 }

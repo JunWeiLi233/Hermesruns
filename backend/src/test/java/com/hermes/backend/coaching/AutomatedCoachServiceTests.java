@@ -25,12 +25,88 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 class AutomatedCoachServiceTests {
+    @Test void personalizedLibraryUsesRealHistoryAndDoesNotWriteScheduledWorkouts() {
+        var runner = runner();
+        var states = mock(CoachRunnerStateRepository.class); var schedule = mock(CoachScheduledWorkoutRepository.class);
+        var activities = mock(ActivityRepository.class); var readiness = mock(ReadinessService.class);
+        var state = new CoachRunnerState(); state.setRunner(runner);
+        when(states.findByRunner(runner)).thenReturn(Optional.of(state));
+        var recentRuns = List.of(
+                runMetric(TODAY.minusDays(2).atTime(8,0), 7, 2100, 145),
+                runMetric(TODAY.minusDays(5).atTime(8,0), 6, 1800, 140),
+                runMetric(TODAY.minusDays(9).atTime(8,0), 8, 2400, 145));
+        when(activities.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any())).thenReturn(recentRuns);
+        var coach = service(states, schedule, mock(CoachTrainingBlockRepository.class), readiness, mock(ShoeTrackerService.class), activities);
+        var preferences = mock(com.hermes.backend.coaching.plan.RunPlanSelection.class);
+        when(preferences.libraryPreferences(eq(runner), any())).thenReturn(new com.hermes.backend.coaching.plan.RunPlanSelection.LibraryPreferences(
+                List.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY), new PersonalizedRunningPlanner.Goal(10d, TODAY.plusWeeks(8), null, "My 10K"), "my-draft"));
+        org.springframework.test.util.ReflectionTestUtils.setField(coach, "versionedPlans", preferences);
+        var result = coach.getWorkoutLibrary(runner);
+        assertThat(result.workouts()).isNotEmpty().allSatisfy(w -> assertThat(w.scheduledDate().getDayOfWeek()).isIn(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY));
+        assertThat(result.goal().name()).isEqualTo("My 10K"); assertThat(result.availabilitySource()).isEqualTo("CONFIRMED");
+        verifyNoInteractions(schedule); verify(states, never()).save(any());
+    }
+
+    @Test void activePlanLibraryPreservesPublishedTargetsAndDoesNotGenerateAlternatives() {
+        var runner = runner();var schedule = mock(CoachScheduledWorkoutRepository.class);var states = mock(CoachRunnerStateRepository.class);
+        var activities = mock(ActivityRepository.class);
+        var coach = service(states, schedule, mock(CoachTrainingBlockRepository.class), mock(ReadinessService.class), mock(ShoeTrackerService.class), activities);
+        var selection = mock(com.hermes.backend.coaching.plan.RunPlanSelection.class);
+        var session = new PersonalizedRunningPlanner.PlannedSession(TODAY.plusDays(1), CoachWorkoutType.THRESHOLD, 8.3, 47, false, "BUILD", "quality", "VERSIONED_PLAN", 300, 330, null, false);
+        when(selection.legacy(runner,14)).thenReturn(new PersonalizedRunningPlanner.PersonalizedPlan("BUILD", 30, 3, List.of(DayOfWeek.TUESDAY), 100, List.of("VERSIONED_PLAN"), List.of(session), session));
+        when(selection.calendarZone(runner)).thenReturn("America/New_York");
+        when(selection.librarySessions(runner)).thenReturn(java.util.Map.of(session.date(),
+                new com.hermes.backend.coaching.plan.RunPlanSelection.LibrarySession("RUN_WALK", "PLANNED")));
+        org.springframework.test.util.ReflectionTestUtils.setField(coach, "versionedPlans", selection);
+        var result = coach.getWorkoutLibrary(runner);
+        assertThat(result.activePlan()).isTrue();assertThat(result.workouts()).hasSize(1);
+        assertThat(result.workouts().get(0).plannedDistanceKm()).isEqualTo(8.3);
+        assertThat(result.workouts().get(0).targetPaceMinSecondsPerKm()).isEqualTo(300);
+        assertThat(result.workouts().get(0).workoutType()).isEqualTo("RUN_WALK");
+        when(selection.librarySessions(runner)).thenReturn(java.util.Map.of(session.date(),
+                new com.hermes.backend.coaching.plan.RunPlanSelection.LibrarySession("RUN_WALK", "COMPLETED")));
+        assertThat(coach.getWorkoutLibrary(runner).workouts()).isEmpty();
+        verifyNoInteractions(states, schedule);
+    }
+    private static final LocalDate TODAY = LocalDate.of(2026, 10, 12);
+    private static final java.time.Clock CLOCK = java.time.Clock.fixed(
+            TODAY.atTime(12, 0).toInstant(java.time.ZoneOffset.UTC), java.time.ZoneOffset.UTC);
+
+    @ParameterizedTest
+    @CsvSource({"RECOVERY,Recovery shakeout,3.0", "REST,Rest day,0.0",
+            "EASY,Easy run today,4.0", "LONG_RUN,Long run today,9.9"})
+    void coachMessageNamesTheActualSession(CoachWorkoutType type, String label, double distance) {
+        Runner runner = runner();
+        CoachRunnerState state = new CoachRunnerState();
+        state.setRunner(runner);
+        state.setVolumeKm7d(10.0);
+        state.setVolumeKm28d(10.0);
+        CoachScheduledWorkout workout = new CoachScheduledWorkout();
+        workout.setRunner(runner);
+        workout.setWorkoutType(type);
+        workout.setPlannedDistanceKm(distance > 0 ? distance : null);
+        AutomatedCoachService formatter = service(mock(CoachRunnerStateRepository.class),
+                mock(CoachScheduledWorkoutRepository.class), mock(CoachTrainingBlockRepository.class));
+        // Isolate existing API text formatting without introducing a test-only production method;
+        // actual session selection and this API field are also replayed in the real browser checks.
+        String message = org.springframework.test.util.ReflectionTestUtils.invokeMethod(
+                formatter, "buildCoachMessage", state, workout, "active", runner);
+        assertThat(message).startsWith(label).contains("ACWR 4.00");
+        if (type == CoachWorkoutType.REST) {
+            assertThat(message).doesNotContain(" for ");
+        } else {
+            assertThat(message).doesNotContain("Rest day").contains(" for ");
+        }
+        if (type == CoachWorkoutType.RECOVERY) {
+            assertThat(message).contains(" for 3 km");
+        }
+    }
 
     @ParameterizedTest
     @ValueSource(ints = {2, 3, 4, 9, 26000})
     void nightlyAuditCatchesUpMissedWeeksWithoutIncreasingLoadOrRepeatingProgression(int missedWeeks) {
         NightlyAuditFixture fixture = nightlyAuditFixture();
-        LocalDate currentWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate currentWeek = TODAY.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         fixture.block().setBlockStartedOn(currentWeek.minusWeeks(missedWeeks + 2L));
         fixture.block().setLastProgressionWeekStart(currentWeek.minusWeeks(missedWeeks));
 
@@ -52,7 +128,7 @@ class AutomatedCoachServiceTests {
     @CsvSource({"0,14.9", "3,9.3", "4,14.9"})
     void nightlyAuditPreservesSingleWeekIncreaseCutbackAndRounding(int previousIndex, double expectedKm) {
         NightlyAuditFixture fixture = nightlyAuditFixture();
-        LocalDate currentWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate currentWeek = TODAY.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         fixture.block().setWeekIndex(previousIndex);
         fixture.block().setBlockStartedOn(currentWeek.minusWeeks(previousIndex + 1L));
         fixture.block().setLastProgressionWeekStart(currentWeek.minusWeeks(1));
@@ -70,7 +146,7 @@ class AutomatedCoachServiceTests {
     @ValueSource(ints = {0, 1})
     void nightlyAuditDoesNotAdvanceCurrentOrFutureWatermark(int weeksAhead) {
         NightlyAuditFixture fixture = nightlyAuditFixture();
-        LocalDate watermark = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        LocalDate watermark = TODAY.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
                 .plusWeeks(weeksAhead);
         fixture.block().setLastProgressionWeekStart(watermark);
 
@@ -85,7 +161,7 @@ class AutomatedCoachServiceTests {
     @Test
     void nightlyAuditRecoversNullWatermarkFromBlockStartWithoutIncreasingLoad() {
         NightlyAuditFixture fixture = nightlyAuditFixture();
-        LocalDate currentWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate currentWeek = TODAY.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         fixture.block().setBlockStartedOn(currentWeek.minusWeeks(6).plusDays(2));
         fixture.block().setLastProgressionWeekStart(null);
 
@@ -101,7 +177,7 @@ class AutomatedCoachServiceTests {
     @Test
     void nightlyAuditInitializesMissingDatesWithoutInventingTrainingProgress() {
         NightlyAuditFixture fixture = nightlyAuditFixture();
-        LocalDate currentWeek = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate currentWeek = TODAY.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         fixture.block().setBlockStartedOn(null);
         fixture.block().setLastProgressionWeekStart(null);
 
@@ -117,7 +193,7 @@ class AutomatedCoachServiceTests {
     @Test
     void multiweekNightlyRecoveryPreservesCompletedWorkout() {
         NightlyAuditFixture fixture = nightlyAuditFixture();
-        LocalDate today = LocalDate.now();
+        LocalDate today = TODAY;
         LocalDate currentWeek = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         fixture.block().setBlockStartedOn(currentWeek.minusWeeks(5));
         fixture.block().setLastProgressionWeekStart(currentWeek.minusWeeks(3));
@@ -159,12 +235,12 @@ class AutomatedCoachServiceTests {
         Runner runner = runner();
         CoachRunnerState state = new CoachRunnerState();
         state.setRunner(runner);
-        state.setLastAggregatedAt(LocalDateTime.now());
+        state.setLastAggregatedAt(TODAY.atTime(12, 0));
         when(stateRepository.findByRunner(runner)).thenReturn(Optional.of(state));
 
         CoachScheduledWorkout completedPlan = new CoachScheduledWorkout();
         completedPlan.setRunner(runner);
-        completedPlan.setScheduledDate(LocalDate.now());
+        completedPlan.setScheduledDate(TODAY);
         completedPlan.setWorkoutType(CoachWorkoutType.THRESHOLD);
         completedPlan.setPlannedDistanceKm(9.0);
         completedPlan.setPlannedDurationMinutes(50);
@@ -173,7 +249,7 @@ class AutomatedCoachServiceTests {
                 .thenReturn(existing);
         when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(10L);
         List<RunMetricsProjection> completedRuns = List.of(
-                runMetric(LocalDate.now().atTime(7, 0), 9.0, 3_000, 170)
+                runMetric(TODAY.atTime(7, 0), 9.0, 3_000, 170)
         );
         when(activityRepository.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any()))
                 .thenReturn(completedRuns);
@@ -195,8 +271,147 @@ class AutomatedCoachServiceTests {
 
         AutomatedCoachService.CoachScheduledWorkoutDto today = service.getSchedule(runner, 1).get(0);
 
-        assertThat(today.workoutType()).isEqualTo(CoachWorkoutType.THRESHOLD.name());
-        assertThat(today.plannedDistanceKm()).isEqualTo(9.0);
+        assertThat(today.workoutType()).isEqualTo(CoachWorkoutType.REST.name());
+        assertThat(today.plannedDistanceKm()).isNull();
+        assertThat(today.reasonCode()).isEqualTo("run_completed");
+        assertThat(today.intent()).isEqualTo("rest");
+        assertThat(today.targetPaceMinSecondsPerKm()).isNull();
+        assertThat(completedPlan.getWorkoutType()).isEqualTo(CoachWorkoutType.THRESHOLD);
+        assertThat(completedPlan.getPlannedDistanceKm()).isEqualTo(9.0);
+
+        var todayResponse = service.getTodayWithReadiness(runner);
+        assertThat(todayResponse.today()).isEqualTo(today);
+        assertThat(todayResponse.schedule().get(0)).isEqualTo(today);
+    }
+
+    @Test
+    void todayWithoutRouteSkipsGpsAccessAndKeepsCoachRecommendations() {
+        Runner runner = runner();
+        var states = mock(CoachRunnerStateRepository.class);
+        var schedules = mock(CoachScheduledWorkoutRepository.class);
+        var activities = mock(ActivityRepository.class);
+        var routes = mock(CoachRouteService.class);
+        var state = new CoachRunnerState();
+        state.setRunner(runner);
+        when(states.findByRunner(runner)).thenReturn(Optional.of(state));
+        when(schedules.save(any())).thenAnswer(call -> call.getArgument(0));
+        when(activities.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(12L);
+        var history = List.of(runMetric(TODAY.minusDays(2).atTime(8, 0), 6, 2100, 140));
+        when(activities.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any()))
+                .thenReturn(history);
+        var coach = service(states, schedules, mock(CoachTrainingBlockRepository.class),
+                mock(ReadinessService.class), mock(ShoeTrackerService.class), activities);
+        org.springframework.test.util.ReflectionTestUtils.setField(coach, "coachRouteService", routes);
+
+        var withoutRoute = coach.getTodayWithReadiness(runner, false);
+
+        verifyNoInteractions(routes);
+        assertThat(withoutRoute.routeRecommendation()).isNull();
+        assertThat(withoutRoute.today()).isNotNull();
+        assertThat(withoutRoute.plan()).isNotNull();
+        assertThat(withoutRoute.schedule()).isNotEmpty();
+
+        var withRoute = coach.getTodayWithReadiness(runner);
+
+        verify(routes).buildRouteRecommendation(eq(runner), any(), any());
+        assertThat(withoutRoute.today()).isEqualTo(withRoute.today());
+        assertThat(withoutRoute.plan()).isEqualTo(withRoute.plan());
+        assertThat(withoutRoute.schedule()).isEqualTo(withRoute.schedule());
+        assertThat(withoutRoute.state()).isEqualTo(withRoute.state());
+    }
+
+    @Test void recommendationsUseFreshHistoryInsteadOfAnUndatedAggregateCache() {
+        Runner runner = runner();
+        var state = new CoachRunnerState(); state.setRunner(runner);
+        state.setLastAggregatedAt(TODAY.minusDays(1).atStartOfDay());
+        state.setVolumeKm7d(999); state.setVolumeKm28d(999); state.setHighIntensityRatioLast7d(0.9);
+        var states = mock(CoachRunnerStateRepository.class);
+        when(states.findByRunner(runner)).thenReturn(Optional.of(state));
+        var activities = mock(ActivityRepository.class);
+        var rows = List.of(runMetric(TODAY.minusDays(1).atTime(10,0), 7, 2400, 140),
+                runMetric(TODAY.minusDays(3).atTime(10,0), 5, 1800, 140));
+        when(activities.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any()))
+                .thenReturn(rows);
+        when(activities.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(12L);
+        var schedules = mock(CoachScheduledWorkoutRepository.class);
+        when(schedules.save(any())).thenAnswer(call -> call.getArgument(0));
+        var coach = service(states, schedules, mock(CoachTrainingBlockRepository.class),
+                mock(ReadinessService.class), mock(ShoeTrackerService.class), activities);
+        var response = coach.getTodayWithReadiness(runner);
+        assertThat(response.state().volumeKm7d()).isEqualTo(12);
+        assertThat(response.state().volumeKm28d()).isEqualTo(12);
+        assertThat(response.plan().historyEvidence().highIntensityRatio7d()).isZero();
+    }
+
+    @Test
+    void todayAndReadinessUseTheAccountCalendarDayAtMidnight() {
+        Runner runner = runner();
+        runner.setTimeZone("America/Los_Angeles");
+        LocalDate serverDay = LocalDate.of(2026, 10, 7);
+        LocalDate accountDay = serverDay.minusDays(1);
+        java.time.Instant instant = java.time.Instant.parse("2026-10-07T01:00:00Z");
+        CoachRunnerState state = new CoachRunnerState();
+        state.setRunner(runner);
+        state.setLastAggregatedAt(LocalDateTime.of(2026, 10, 6, 20, 0));
+        CoachRunnerStateRepository states = mock(CoachRunnerStateRepository.class);
+        when(states.findByRunner(runner)).thenReturn(Optional.of(state));
+        CoachScheduledWorkoutRepository schedules = mock(CoachScheduledWorkoutRepository.class);
+        ReadinessService readiness = mock(ReadinessService.class);
+        when(schedules.save(any())).thenAnswer(call -> call.getArgument(0));
+        AutomatedCoachService coach = new AutomatedCoachService(
+                mock(RunnerRepository.class), mock(ActivityRepository.class), states, schedules,
+                mock(CoachTrainingBlockRepository.class), mock(CoachFeedbackAlertRepository.class),
+                mock(ShoeTrackerService.class), mock(CoachRouteService.class), readiness,
+                new PersonalizedRunningPlanner(), mock(RaceEventRepository.class), mock(InjuryRiskService.class),
+                java.time.Clock.fixed(instant, java.time.ZoneOffset.UTC));
+
+        var today = coach.getTodayWithReadiness(runner);
+        assertThat(today.today().scheduledDate()).isEqualTo(accountDay);
+        verify(readiness, atLeastOnce()).resolveReadinessSnapshot(runner, state, accountDay);
+        verify(readiness, never()).resolveReadinessSnapshot(runner, state, serverDay);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void anEveningImportPreservesTheCompletedWorkoutOnTheAccountDay(boolean stravaApiSourced) {
+        Runner runner = runner();
+        runner.setTimeZone("America/Los_Angeles");
+        LocalDate accountDay = LocalDate.of(2026, 10, 6);
+        LocalDate serverDay = accountDay.plusDays(1);
+        java.time.Instant instant = java.time.Instant.parse("2026-10-07T02:00:00Z");
+        CoachRunnerState state = new CoachRunnerState();
+        state.setRunner(runner);
+        state.setLastAggregatedAt(LocalDateTime.of(2026, 10, 6, 20, 0));
+        var states = mock(CoachRunnerStateRepository.class);
+        when(states.findByRunner(runner)).thenReturn(Optional.of(state));
+        var schedules = mock(CoachScheduledWorkoutRepository.class);
+        CoachScheduledWorkout completed = new CoachScheduledWorkout();
+        completed.setRunner(runner);
+        completed.setScheduledDate(accountDay);
+        completed.setWorkoutType(CoachWorkoutType.THRESHOLD);
+        completed.setPlannedDistanceKm(9.0);
+        var activityRepository = mock(ActivityRepository.class);
+        RunMetricsProjection run = runMetric(stravaApiSourced ? LocalDateTime.of(2026, 10, 6, 18, 0)
+                : LocalDateTime.of(2026, 10, 7, 1, 0), 9, 3000, 170);
+        when(run.getStravaApiSourced()).thenReturn(stravaApiSourced);
+        List<RunMetricsProjection> imported = List.of(run);
+        when(activityRepository.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any()))
+                .thenReturn(imported);
+        when(schedules.findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(eq(runner), any(), any()))
+                .thenReturn(List.of(completed));
+        AutomatedCoachService coach = new AutomatedCoachService(
+                mock(RunnerRepository.class), activityRepository, states, schedules,
+                mock(CoachTrainingBlockRepository.class), mock(CoachFeedbackAlertRepository.class),
+                mock(ShoeTrackerService.class), mock(CoachRouteService.class), mock(ReadinessService.class),
+                new PersonalizedRunningPlanner(), mock(RaceEventRepository.class), mock(InjuryRiskService.class),
+                java.time.Clock.fixed(instant, java.time.ZoneOffset.UTC));
+        var today = coach.getSchedule(runner, 1).get(0);
+        assertThat(today.scheduledDate()).isEqualTo(accountDay);
+        assertThat(today.workoutType()).isEqualTo("REST");
+        assertThat(today.plannedDistanceKm()).isNull();
+        assertThat(today.reasonCode()).isEqualTo("run_completed");
+        assertThat(completed.getWorkoutType()).isEqualTo(CoachWorkoutType.THRESHOLD);
+        assertThat(completed.getPlannedDistanceKm()).isEqualTo(9.0);
     }
 
     @Test
@@ -209,13 +424,13 @@ class AutomatedCoachServiceTests {
 
         CoachRunnerState state = new CoachRunnerState();
         state.setRunner(runner);
-        state.setLastAggregatedAt(LocalDateTime.now());
+        state.setLastAggregatedAt(TODAY.atTime(12, 0));
         state.setVolumeKm7d(15.0);
         state.setVolumeKm28d(60.0);
         state.setHighIntensityRatioLast7d(0.08);
         when(stateRepository.findByRunner(runner)).thenReturn(Optional.of(state));
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = TODAY;
         LocalDate sunday = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
         List<CoachScheduledWorkout> existing = new ArrayList<>();
         for (int offset = 0; offset < 14; offset++) {
@@ -309,7 +524,7 @@ class AutomatedCoachServiceTests {
         workout.setRunner(runner);
         workout.setWorkoutType(CoachWorkoutType.INTERVALS);
         workout.setPlannedDistanceKm(10.0);
-        workout.setScheduledDate(LocalDate.now());
+        workout.setScheduledDate(TODAY);
 
         when(scheduleRepository.findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(eq(runner), any(), any()))
                 .thenReturn(new ArrayList<>(List.of(workout)));
@@ -319,7 +534,7 @@ class AutomatedCoachServiceTests {
         AutomatedCoachService.CoachTodayDto today = s.getTodayWithReadiness(runner);
 
         assertThat(today.today().workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.EASY.name());
-        assertThat(today.today().reasonCode()).isIn("onboarding", "scheduled_rest");
+        assertThat(today.today().reasonCode()).isEqualTo("history_required");
         assertThat(today.today().readinessAdjusted()).isFalse();
         assertThat(today.plan().phase()).isEqualTo("onboarding");
     }
@@ -340,7 +555,7 @@ class AutomatedCoachServiceTests {
         todayWorkout.setRunner(runner);
         todayWorkout.setWorkoutType(CoachWorkoutType.INTERVALS);
         todayWorkout.setPlannedDistanceKm(10.0);
-        todayWorkout.setScheduledDate(LocalDate.now());
+        todayWorkout.setScheduledDate(TODAY);
 
         when(scheduleRepository.findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(eq(runner), any(), any()))
                 .thenReturn(new ArrayList<>(List.of(todayWorkout)));
@@ -352,7 +567,7 @@ class AutomatedCoachServiceTests {
         assertThat(schedule).hasSize(1);
         AutomatedCoachService.CoachScheduledWorkoutDto today = schedule.get(0);
         assertThat(today.workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.EASY.name());
-        assertThat(today.reasonCode()).isIn("onboarding", "scheduled_rest");
+        assertThat(today.reasonCode()).isEqualTo("history_required");
         assertThat(today.readinessAdjusted()).isFalse();
     }
 
@@ -376,7 +591,7 @@ class AutomatedCoachServiceTests {
         todayWorkout.setRunner(runner);
         todayWorkout.setWorkoutType(CoachWorkoutType.THRESHOLD);
         todayWorkout.setPlannedDistanceKm(12.0);
-        todayWorkout.setScheduledDate(LocalDate.now());
+        todayWorkout.setScheduledDate(TODAY);
 
         when(scheduleRepository.findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(eq(runner), any(), any()))
                 .thenReturn(new ArrayList<>(List.of(todayWorkout)));
@@ -388,7 +603,7 @@ class AutomatedCoachServiceTests {
         assertThat(schedule).hasSize(1);
         AutomatedCoachService.CoachScheduledWorkoutDto today = schedule.get(0);
         assertThat(today.workoutType()).isIn(CoachWorkoutType.REST.name(), CoachWorkoutType.EASY.name());
-        assertThat(today.reasonCode()).isIn("onboarding", "scheduled_rest");
+        assertThat(today.reasonCode()).isEqualTo("history_required");
         assertThat(today.readinessAdjusted()).isFalse();
     }
 
@@ -416,7 +631,7 @@ class AutomatedCoachServiceTests {
         state.setLastStressScore(85);
         when(stateRepository.findByRunner(runner)).thenReturn(Optional.of(state));
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = TODAY;
         CoachScheduledWorkout todayWorkout = new CoachScheduledWorkout();
         todayWorkout.setRunner(runner);
         todayWorkout.setWorkoutType(CoachWorkoutType.INTERVALS);
@@ -463,14 +678,14 @@ class AutomatedCoachServiceTests {
         Runner runner = runner();
         CoachRunnerState state = new CoachRunnerState();
         state.setRunner(runner);
-        state.setLastAggregatedAt(LocalDateTime.now());
+        state.setLastAggregatedAt(TODAY.atTime(12, 0));
         when(stateRepository.findByRunner(runner)).thenReturn(Optional.of(state));
 
         CoachScheduledWorkout todayWorkout = new CoachScheduledWorkout();
         todayWorkout.setRunner(runner);
         todayWorkout.setWorkoutType(CoachWorkoutType.EASY);
         todayWorkout.setPlannedDistanceKm(8.0);
-        todayWorkout.setScheduledDate(LocalDate.now());
+        todayWorkout.setScheduledDate(TODAY);
         todayWorkout.setNotes("Trail route on soft surface");
 
         Shoe trailShoe = new Shoe();
@@ -489,10 +704,10 @@ class AutomatedCoachServiceTests {
         ActivityRepository activityRepository = mock(ActivityRepository.class);
         when(activityRepository.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(12L);
         List<RunMetricsProjection> recentRuns = List.of(
-                runMetric(LocalDate.now().atTime(7, 0), 8.0, 2_880, 150),
-                runMetric(LocalDate.now().minusWeeks(1).atTime(7, 0), 8.0, 2_900, 151),
-                runMetric(LocalDate.now().minusWeeks(2).atTime(7, 0), 7.5, 2_700, 149),
-                runMetric(LocalDate.now().minusWeeks(3).atTime(7, 0), 8.5, 3_060, 152)
+                runMetric(TODAY.atTime(7, 0), 8.0, 2_880, 150),
+                runMetric(TODAY.minusWeeks(1).atTime(7, 0), 8.0, 2_900, 151),
+                runMetric(TODAY.minusWeeks(2).atTime(7, 0), 7.5, 2_700, 149),
+                runMetric(TODAY.minusWeeks(3).atTime(7, 0), 8.5, 3_060, 152)
         );
         when(activityRepository.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any()))
                 .thenReturn(recentRuns);
@@ -546,7 +761,7 @@ class AutomatedCoachServiceTests {
                 mock(CoachFeedbackAlertRepository.class), mock(ShoeTrackerService.class), mock(CoachRouteService.class),
                 new ReadinessService(mock(DailySleepDataRepository.class), mock(DailyHRVDataRepository.class),
                         mock(DailyStressDataRepository.class), mock(DailyWellnessSummaryRepository.class), activities),
-                new PersonalizedRunningPlanner(), mock(RaceEventRepository.class), mock(InjuryRiskService.class));
+                new PersonalizedRunningPlanner(), mock(RaceEventRepository.class), mock(InjuryRiskService.class), CLOCK);
         return new NightlyAuditFixture(service, runner, activities, schedules, blocks, block);
     }
 
@@ -612,13 +827,15 @@ class AutomatedCoachServiceTests {
                 readinessService,
                 new PersonalizedRunningPlanner(),
                 mock(RaceEventRepository.class),
-                mock(InjuryRiskService.class)
+                mock(InjuryRiskService.class), CLOCK
         );
     }
 
     private RunMetricsProjection runMetric(LocalDateTime startedAt, double distanceKm, long durationSeconds, double maxHeartRate) {
         RunMetricsProjection projection = mock(RunMetricsProjection.class);
         when(projection.getEffectiveStartTime()).thenReturn(startedAt);
+        when(projection.getStartTime()).thenReturn(startedAt);
+        when(projection.getStravaApiSourced()).thenReturn(false);
         when(projection.getDistanceKm()).thenReturn(distanceKm);
         when(projection.getDistanceMeters()).thenReturn(distanceKm * 1000.0);
         when(projection.getDurationSeconds()).thenReturn(durationSeconds);
@@ -670,16 +887,16 @@ class AutomatedCoachServiceTests {
         Runner runner = runner();
         CoachRunnerState state = new CoachRunnerState();
         state.setRunner(runner);
-        state.setLastAggregatedAt(LocalDateTime.now());
+        state.setLastAggregatedAt(TODAY.atTime(12, 0));
         state.setLastSleepScore(35);
         state.setLastStressScore(95);
         when(states.findByRunner(runner)).thenReturn(Optional.of(state));
         when(activities.countByRunnerAndActivityType(runner, ActivityType.RUN)).thenReturn(20L);
-        var history = List.of(runMetric(LocalDate.now().minusDays(7).atTime(8, 0), 6, 2100, 140),
-                runMetric(LocalDate.now().minusDays(14).atTime(8, 0), 6, 2100, 140));
+        var history = List.of(runMetric(TODAY.minusDays(7).atTime(8, 0), 6, 2100, 140),
+                runMetric(TODAY.minusDays(14).atTime(8, 0), 6, 2100, 140));
         when(activities.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any())).thenReturn(history);
         CoachScheduledWorkout rest = new CoachScheduledWorkout();
-        rest.setRunner(runner); rest.setScheduledDate(LocalDate.now()); rest.setWorkoutType(CoachWorkoutType.REST);
+        rest.setRunner(runner); rest.setScheduledDate(TODAY); rest.setWorkoutType(CoachWorkoutType.REST);
         rest.setReadinessAdjusted(true);
         when(schedule.findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(eq(runner), any(), any()))
                 .thenReturn(new ArrayList<>(List.of(rest)));

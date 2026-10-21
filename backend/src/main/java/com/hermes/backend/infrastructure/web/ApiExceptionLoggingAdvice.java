@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
  * Logs unhandled API exceptions (5xx) without leaking details to clients.
@@ -77,6 +79,24 @@ public class ApiExceptionLoggingAdvice {
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<?> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(Map.of("error", "Method not allowed."));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<?> handleOversizedUpload(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE)
+                .body(Map.of("error", "Uploaded file exceeds the allowed size."));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<?> handleStatus(ResponseStatusException ex, HttpServletRequest request) {
+        if (ex.getStatusCode().is5xxServerError()) {
+            log.error("API failure method={} uri={} status={}",
+                    request == null ? "" : request.getMethod(),
+                    request == null ? "" : request.getRequestURI(), ex.getStatusCode().value(), ex);
+        }
+        String message = ex.getStatusCode().is5xxServerError() ? "Server error"
+                : ex.getReason() == null ? "Request rejected" : ex.getReason();
+        return ResponseEntity.status(ex.getStatusCode()).headers(ex.getHeaders()).body(Map.of("error", message));
     }
 
     @ExceptionHandler(Exception.class)

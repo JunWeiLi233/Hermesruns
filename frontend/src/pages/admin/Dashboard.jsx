@@ -10,7 +10,6 @@ import Modal from '../../components/Modal';
 import AppIcon from '../../components/AppIcon';
 import HermesLogo from '../../components/HermesLogo';
 import PageSkeleton from '../../components/PageSkeleton';
-import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import ShoeBrandLogo from '../../components/ShoeBrandLogo';
 import CatalogLongPressCard from '../../components/CatalogLongPressCard.jsx';
 
@@ -28,7 +27,6 @@ import {
   hasCourseMapBackendRecord,
   mergeCourseMapQueueItems,
 } from '../../utils/courseMapCatalogQueue.js';
-import { getDashboardTopbarTabKeys } from '../../utils/dashboardTopbarNav';
 import {
   ArcElement,
   BarController,
@@ -48,7 +46,6 @@ import {
 import {
   getDashboardSectionFromPathname,
   TAB_ROUTE_MAP,
-  TAB_ITEM_MAP,
   TAB_ITEMS,
   TAB_ICONS,
 } from './navigation.js';
@@ -66,6 +63,7 @@ import {
   getCourseMapLive,
   getCourseMapCurrentLive,
   buildCourseMapRecommendation,
+  isInteractiveCourseMapSource,
   getCourseMapPreviewConfidence,
   getCourseMapActionProgress,
   getLocalizedCourseMapSummary,
@@ -121,6 +119,9 @@ import OverviewSection from './OverviewSection.jsx';
 import UsersSection from './UsersSection.jsx';
 import CourseMapsSection from './CourseMapsSection.jsx';
 import AuditSection from './AuditSection.jsx';
+import ShoeReviewSection from './ShoeReviewSection.jsx';
+import ConsoleSettings from './ConsoleSettings.jsx';
+import '../../styles/admin-reference.css';
 
 ChartJS.register(ArcElement, BarController, BarElement, CategoryScale, DoughnutController, LinearScale, PointElement, LineElement, LineController, Title, Tooltip, Legend, Filler);
 
@@ -241,7 +242,7 @@ async function fetchMetricTrendItems(endpoint) {
 }
 
 const Dashboard = memo(function Dashboard() {
-  const { logout, login, isAuthenticated } = useAuth();
+  const { logout, login, isAuthenticated, email } = useAuth();
   const { t, lang, setLang } = useI18n();
   const { theme, setTheme } = useTheme();
   const location = useLocation();
@@ -343,12 +344,14 @@ const Dashboard = memo(function Dashboard() {
   const [courseMapDetail, setCourseMapDetail] = useState(null);
   const [courseMapLoadState, setCourseMapLoadState] = useState('idle');
   const [courseMapActions, setCourseMapActions] = useState({});
+  const [courseMapErrors, setCourseMapErrors] = useState({});
   const [courseMapScanTimeline, setCourseMapScanTimeline] = useState([]);
   const [courseMapTimelineLoadState, setCourseMapTimelineLoadState] = useState('idle');
   const [courseMapQueueCollapsed, setCourseMapQueueCollapsed] = useState(false);
   const [courseMapStageHeight, setCourseMapStageHeight] = useState(null);
   const courseMapUploadInputId = 'dashboard-course-map-upload-input';
   const courseMapDetailRequestRef = useRef(0);
+  const courseMapTimelineRequestRef = useRef(0);
   const courseMapStageContentRef = useRef(null);
   const activeTab = useMemo(() => getDashboardSectionFromPathname(location.pathname), [location.pathname]);
   const catalogOnlyShoeOverview = activeTab === 'shoes';
@@ -415,9 +418,20 @@ const Dashboard = memo(function Dashboard() {
 
   function announceCourseMapAction(raceId, nextAction) {
     if (!raceId) return;
+    setCourseMapErrors(current => current[raceId] ? { ...current, [raceId]: '' } : current);
     const action = { raceId, ...nextAction };
     setCourseMapActionForRace(raceId, action);
     setMessage(t(getCourseMapActionStatusKey(action)));
+  }
+
+  function reportCourseMapError(raceId, error, fallback) {
+    const detail = error?.message || fallback;
+    const sourceMissing = detail.includes('race_course_map_pending_missing')
+      || /No such file or directory:.*(?:local-course-map:|course-map-images)/i.test(detail);
+    const message = sourceMissing
+      ? t('dashboard.course_maps_source_missing_error') : detail;
+    setCourseMapErrors(current => ({ ...current, [raceId]: message }));
+    setMessage(message);
   }
 
   const navigateToTab = useCallback((tab, options) => {
@@ -447,18 +461,14 @@ const Dashboard = memo(function Dashboard() {
   }, [userQuery.page, userQuery.search, userQuery.role, userQuery.status, userQuery.queue]);
 
   const loadCourseMaps = useCallback(async () => {
-    const params = new URLSearchParams({
-      page: String(courseMapQuery.page || 0),
-      search: courseMapQuery.search || '',
-      status: courseMapQuery.status || '',
-    });
     try {
-      const data = await apiJson(`/api/admin/race-course-maps?${params.toString()}`);
+      // This endpoint returns the full inventory; the queue filters it locally.
+      const data = await apiJson('/api/admin/race-course-maps');
       setCourseMapsPage(normalizePage(data));
     } catch {
       setCourseMapsPage({ items: [], page: 0, totalPages: 0, totalItems: 0 });
     }
-  }, [courseMapQuery.page, courseMapQuery.search, courseMapQuery.status]);
+  }, []);
 
   const loadShoes = useCallback(async () => {
     const params = new URLSearchParams({
@@ -520,7 +530,8 @@ const Dashboard = memo(function Dashboard() {
   }, []);
 
   const loadCourseMapDetail = useCallback(async (raceId, detailOptions = null) => {
-    if (!raceId) return;
+    const requestId = ++courseMapDetailRequestRef.current;
+    if (!raceId) { setCourseMapDetail(null); setCourseMapLoadState('idle'); return; }
     const { fallbackItem = null, forceFetch = false } = detailOptions && typeof detailOptions === 'object' && (
       Object.hasOwn(detailOptions, 'fallbackItem') || Object.hasOwn(detailOptions, 'forceFetch')
     )
@@ -533,8 +544,6 @@ const Dashboard = memo(function Dashboard() {
       setCourseMapLoadState('ready');
       return;
     }
-    const requestId = courseMapDetailRequestRef.current + 1;
-    courseMapDetailRequestRef.current = requestId;
     setCourseMapLoadState('loading');
     try {
       const data = await apiJson(`/api/admin/race-course-maps/${raceId}`);
@@ -570,10 +579,8 @@ const Dashboard = memo(function Dashboard() {
         navigate('/profile');
         return;
       }
-      const bootstrapLoads = activeTab === 'shoes'
-        ? []
-        : [loadOverview(), loadQueues(), loadUsers(), loadCourseMaps(), loadShoes(), loadAudit()];
-      if (activeTab === 'overview') {
+      const bootstrapLoads = [loadOverview(), loadQueues(), loadUsers(), loadCourseMaps(), loadShoes(), loadAudit()];
+      if (activeTab === 'overview' || activeTab === 'shoes') {
         bootstrapLoads.push(loadCatalogInventory(), loadCatalogImageAssets());
       }
       await Promise.all(bootstrapLoads);
@@ -613,7 +620,8 @@ const Dashboard = memo(function Dashboard() {
       if (activeTab === 'users') {
         loadSavedFilters('users');
       } else if (activeTab === 'shoes') {
-        setShoesPage({ items: [], page: 0, totalPages: 0, totalItems: 0 });
+        loadShoes();
+        loadQueues();
         loadCatalogInventory();
         loadCatalogImageAssets();
       } else if (activeTab === 'jobs') {
@@ -637,7 +645,8 @@ const Dashboard = memo(function Dashboard() {
     } else if (activeTab === 'courseMaps') {
       loadCourseMaps();
     } else if (activeTab === 'shoes') {
-      setShoesPage({ items: [], page: 0, totalPages: 0, totalItems: 0 });
+      loadShoes();
+      loadQueues();
       loadCatalogInventory();
       loadCatalogImageAssets();
     } else if (activeTab === 'jobs') {
@@ -713,13 +722,17 @@ const Dashboard = memo(function Dashboard() {
   }, [metricTrendTab]);
 
   const loadCourseMapScanTimeline = useCallback(async (raceId) => {
+    const requestId = ++courseMapTimelineRequestRef.current;
     if (!raceId) { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
+    setCourseMapScanTimeline([]);
     setCourseMapTimelineLoadState('loading');
     try {
       const data = await apiJson(`/api/admin/race-course-maps/${raceId}/scan-timeline`);
+      if (courseMapTimelineRequestRef.current !== requestId) return;
       setCourseMapScanTimeline(Array.isArray(data) ? data : []);
       setCourseMapTimelineLoadState('ready');
     } catch {
+      if (courseMapTimelineRequestRef.current !== requestId) return;
       setCourseMapScanTimeline([]);
       setCourseMapTimelineLoadState('error');
     }
@@ -727,21 +740,21 @@ const Dashboard = memo(function Dashboard() {
 
   useEffect(() => {
     if (activeTab !== 'courseMaps') return;
-    const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapQueueItems?.[0]);
+    const nextId = courseMapQueueItems.some(item => getCourseMapRaceId(item) === selectedCourseMapId)
+      ? selectedCourseMapId : getCourseMapRaceId(courseMapQueueItems[0]);
+    if (selectedCourseMapId !== (nextId || null)) setSelectedCourseMapId(nextId || null);
     if (!nextId) {
-      setCourseMapDetail(null);
-      setCourseMapLoadState('idle');
+      loadCourseMapDetail(null);
       return;
     }
-    if (selectedCourseMapId !== nextId) setSelectedCourseMapId(nextId);
     const nextItem = courseMapQueueItems.find((item) => getCourseMapRaceId(item) === nextId) || null;
     loadCourseMapDetail(nextId, nextItem);
   }, [activeTab, courseMapQueueItems, loadCourseMapDetail, selectedCourseMapId]);
 
   useEffect(() => {
-    if (activeTab !== 'courseMaps') { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
-    const nextId = selectedCourseMapId || getCourseMapRaceId(courseMapQueueItems?.[0]);
-    if (!nextId) { setCourseMapScanTimeline([]); setCourseMapTimelineLoadState('idle'); return; }
+    if (activeTab !== 'courseMaps') { loadCourseMapScanTimeline(null); return; }
+    const nextId = courseMapQueueItems.some(item => getCourseMapRaceId(item) === selectedCourseMapId)
+      ? selectedCourseMapId : getCourseMapRaceId(courseMapQueueItems[0]);
     loadCourseMapScanTimeline(nextId);
   }, [activeTab, courseMapQueueItems, loadCourseMapScanTimeline, selectedCourseMapId]);
 
@@ -1434,7 +1447,7 @@ const Dashboard = memo(function Dashboard() {
       announceCourseMapAction(raceId, { type: 'queued', progress: 12, jobId, jobStatus: 'PENDING' });
       setCourseMapAction({ raceId, type: 'processing' });
       const job = await waitForAdminJob(jobId);
-      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId), loadCourseMapScanTimeline(raceId)]);
       if (job.status === 'FAILED') {
         throw new Error(job.summary || 'Course-map upload failed.');
       }
@@ -1442,7 +1455,7 @@ const Dashboard = memo(function Dashboard() {
         setMessage(job.summary);
       }
     } catch (error) {
-      setMessage(error.message || 'Course-map upload failed.');
+      reportCourseMapError(raceId, error, 'Course-map upload failed.');
     } finally {
       clearCourseMapActionForRace(raceId, activeJobId);
     }
@@ -1472,6 +1485,8 @@ const Dashboard = memo(function Dashboard() {
       await apiJson(`/api/admin/race-course-maps/${raceId}/accept-live`, { method: 'POST' });
       await Promise.all([loadCourseMaps(), loadQueues()]);
       await loadCourseMapDetail(raceId);
+    } catch (error) {
+      reportCourseMapError(raceId, error, t('dashboard.course_maps_publish_error'));
     } finally {
       clearCourseMapActionForRace(raceId);
     }
@@ -1491,7 +1506,7 @@ const Dashboard = memo(function Dashboard() {
       activeJobId = jobId;
       announceCourseMapAction(raceId, { type: 'reanalyze', progress: 12, jobId, jobStatus: 'PENDING' });
       const job = await waitForAdminJob(jobId);
-      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId)]);
+      await Promise.all([loadCourseMaps(), loadQueues(), loadCourseMapDetail(raceId), loadCourseMapScanTimeline(raceId)]);
       if (job.status === 'FAILED') {
         throw new Error(job.summary || 'Course-map re-analysis failed.');
       }
@@ -1499,7 +1514,7 @@ const Dashboard = memo(function Dashboard() {
         setMessage(job.summary);
       }
     } catch (error) {
-      setMessage(error.message || 'Course-map re-analysis failed.');
+      reportCourseMapError(raceId, error, 'Course-map re-analysis failed.');
     } finally {
       clearCourseMapActionForRace(raceId, activeJobId);
     }
@@ -1529,7 +1544,7 @@ const Dashboard = memo(function Dashboard() {
         setMessage(job.summary);
       }
     } catch (error) {
-      setMessage(error.message || 'Course-map source scan failed.');
+      reportCourseMapError(raceId, error, 'Course-map source scan failed.');
     } finally {
       clearCourseMapActionForRace(raceId, activeJobId);
     }
@@ -1570,8 +1585,10 @@ const Dashboard = memo(function Dashboard() {
     announceCourseMapAction(raceId, { type: 'pipeline' });
     try {
       const sourceItem = getCourseMapActionSourceItem(raceId);
+      const { website, ...metadata } = buildCourseMapAdminPayload(sourceItem);
       const payload = {
-        ...buildCourseMapAdminPayload(sourceItem),
+        ...metadata,
+        officialWebsite: website,
         raceId,
         imageFilePath: getCourseMapImageUrl(getCourseMapPending(sourceItem) || getCourseMapLive(sourceItem)),
       };
@@ -1597,7 +1614,7 @@ const Dashboard = memo(function Dashboard() {
       await loadCourseMapDetail(raceId, { forceFetch: true, fallbackItem: sourceItem });
       setMessage(t('dashboard.course_maps_pipeline_success'));
     } catch (e) {
-      setMessage(t('dashboard.course_maps_pipeline_failed', { error: e.message }));
+      reportCourseMapError(raceId, null, t('dashboard.course_maps_pipeline_failed', { error: e.message }));
     } finally {
       clearCourseMapActionForRace(raceId);
     }
@@ -1648,26 +1665,32 @@ const Dashboard = memo(function Dashboard() {
     // Queue endpoints return some fields as arrays and others as counts;
     // Number(arrayLike) is NaN, so coerce per shape before rendering.
     const toCount = (value) => (Array.isArray(value) ? value.length : Number(value) || 0);
+    // Preview queues are capped by the API; overview KPIs carry full totals.
+    const countFromKpi = (label, fallback) => {
+      const kpi = overview?.kpis?.find(item => item.label === label);
+      return kpi != null && Number.isFinite(Number(kpi.value)) ? Number(kpi.value) : fallback;
+    };
     const raceCourseMapPending = toCount(
       queues.raceCourseMapsPendingReview
         ?? queues.raceCourseMapsPendingReviewCount
-        ?? queues.pendingRaceCourseMaps,
+        ?? (courseMapsPage.totalItems > 0 ? courseMapsPage.items.filter(item => getCourseMapPending(item)).length : queues.pendingRaceCourseMaps),
     );
     const raceCourseMapMissing = toCount(
       queues.raceCourseMapsMissing
         ?? queues.raceCourseMapsMissingCount
-        ?? queues.missingRaceCourseMaps,
+        ?? queues.missingRaceCourseMaps
+        ?? mergeCourseMapQueueItems({ catalogItems: courseMapCatalogItems, backendItems: courseMapBackendItems }).filter(item => getCourseMapStatus(item) === 'missing').length,
     );
     return [
       { titleKey: 'dashboard.queue_pending_course_maps', count: raceCourseMapPending, key: 'pending', tab: 'courseMaps' },
       { titleKey: 'dashboard.queue_missing_course_maps', count: raceCourseMapMissing, key: 'missing', tab: 'courseMaps' },
-      { titleKey: 'dashboard.queue_unverified_photos', count: queues.unverifiedShoePhotos?.length || 0, key: 'unverified_photo', tab: 'shoes' },
-      { titleKey: 'dashboard.queue_missing_images', count: queues.missingShoeImages?.length || 0, key: 'missing_photo', tab: 'shoes' },
-      { titleKey: 'dashboard.queue_signup_issues', count: queues.recentSignupIssues?.length || 0, key: 'recent_signup_issues', tab: 'users' },
-      { titleKey: 'dashboard.queue_billing', count: queues.billingExceptions?.length || 0, key: 'billing_exceptions', tab: 'users' },
-      { titleKey: 'dashboard.queue_failed_syncs', count: queues.failedSyncs?.length || 0, key: 'FAILED', tab: 'jobs' },
+      { titleKey: 'dashboard.queue_unverified_photos', count: countFromKpi('Unverified shoe photos', queues.unverifiedShoePhotos?.length || 0), key: 'unverified_photo', tab: 'shoes' },
+      { titleKey: 'dashboard.queue_missing_images', count: countFromKpi('Missing shoe images', queues.missingShoeImages?.length || 0), key: 'missing_photo', tab: 'shoes' },
+      { titleKey: 'dashboard.queue_signup_issues', count: countFromKpi('Recent signup issues', queues.recentSignupIssues?.length || 0), key: 'recent_signup_issues', tab: 'users' },
+      { titleKey: 'dashboard.queue_billing', count: countFromKpi('Billing exceptions', queues.billingExceptions?.length || 0), key: 'billing_exceptions', tab: 'users' },
+      { titleKey: 'dashboard.queue_failed_syncs', count: countFromKpi('Failed sync jobs', queues.failedSyncs?.length || 0), key: 'FAILED', tab: 'jobs' },
     ];
-  }, [queues]);
+  }, [queues, overview, courseMapsPage.items, courseMapsPage.totalItems, courseMapCatalogItems, courseMapBackendItems]);
 
   const catalogItems = useMemo(() => (
     [...catalogInventory.reduce((uniqueItems, brand) => {
@@ -1822,7 +1845,7 @@ const Dashboard = memo(function Dashboard() {
   const courseMapAction = selectedCourseMapAction;
   const courseMapActionProgress = getCourseMapActionProgress(courseMapAction);
   const courseMapActionIsSelected = Boolean(courseMapAction.type);
-  const courseMapPointCount = courseMapRoutePoints.length || Number(courseMapDisplayPreview?.pointCount || 12482);
+  const courseMapPointCount = courseMapRoutePoints.length || Number(courseMapDisplayPreview?.pointCount || 0);
   const courseMapActivePipelines = Math.max(1, courseMapSummary.pending + courseMapActiveActions.length);
   const courseMapSurfaceQuality = courseMapConfidenceValue == null
     ? 'B'
@@ -1848,7 +1871,7 @@ const Dashboard = memo(function Dashboard() {
       {
         key: 'scan',
         label: t('dashboard.course_maps_source_scan'),
-        disabled: courseMapActionIsSelected,
+        disabled: pendingCourseMapPreview?.sourceAvailable === false || courseMapActionIsSelected,
       },
       {
         key: 'upload',
@@ -1858,16 +1881,15 @@ const Dashboard = memo(function Dashboard() {
       {
         key: 'reanalyze',
         label: t('dashboard.course_maps_reanalyze'),
-        disabled: !pendingCourseMapPreview || courseMapActionIsSelected,
+        disabled: !pendingCourseMapPreview || pendingCourseMapPreview.sourceAvailable === false || courseMapActionIsSelected,
       },
       {
         key: 'pipeline',
         label: t('dashboard.course_maps_run_pipeline'),
-        disabled: !courseMapSourcePreview || courseMapActionIsSelected,
+        disabled: !getCourseMapImageUrl(courseMapSourcePreview) || isInteractiveCourseMapSource(courseMapSourcePreview) || courseMapSourcePreview?.source === 'official-source-recovered' || courseMapSourcePreview?.sourceAvailable === false || courseMapActionIsSelected,
       },
     ]
-      .filter((action) => action.key !== courseMapRecommendation.action)
-      .slice(0, 3);
+      .filter((action) => action.key !== courseMapRecommendation.action);
 
   const pendingCourseMapConfidence = getCourseMapPreviewConfidence(pendingCourseMapPreview);
   const liveCourseMapConfidence = getCourseMapPreviewConfidence(liveCourseMapPreview);
@@ -1945,12 +1967,6 @@ const Dashboard = memo(function Dashboard() {
     ];
   }, [navigateToTab, queueCards, t, totalQueueCount]);
 
-  const topbarTabs = useMemo(
-    () => getDashboardTopbarTabKeys(activeTab)
-      .map((tabKey) => TAB_ITEM_MAP[tabKey])
-      .filter(Boolean),
-    [activeTab],
-  );
   const dashboardThemeOptions = useMemo(() => ([
     { value: 'midnight', label: t('settings.theme_midnight') },
     { value: 'light', label: t('settings.theme_light') },
@@ -2092,8 +2108,8 @@ const Dashboard = memo(function Dashboard() {
   const proVisibleCount = visibleUsers.filter((user) => String(user.subscriptionTier || '').toUpperCase() === 'PRO').length;
   const adminVisibleCount = visibleUsers.filter((user) => String(user.role || '').toUpperCase() === 'ADMIN').length;
   const visibleProShare = visibleUsersCount > 0 ? Math.round((proVisibleCount / visibleUsersCount) * 100) : 0;
-  const recentSignupIssuesCount = queues?.recentSignupIssues?.length || 0;
-  const billingExceptionCount = queues?.billingExceptions?.length || 0;
+  const recentSignupIssuesCount = queueCards.find(card => card.key === 'recent_signup_issues')?.count || 0;
+  const billingExceptionCount = queueCards.find(card => card.key === 'billing_exceptions')?.count || 0;
   const selectedUsersCount = selectedUserIds.length;
   const visibleUserIds = visibleUsers.map((user) => user.id);
   const allVisibleUsersSelected = visibleUserIds.length > 0 && visibleUserIds.every((id) => selectedUserIds.includes(id));
@@ -2320,69 +2336,28 @@ const Dashboard = memo(function Dashboard() {
   if (loadState === 'error') return <div className="dashboard-body"><div className="dashboard-container">{t('dashboard.portal_error')}</div></div>;
 
   return (
-    <div className="dashboard-body admin-command-page">
-      <div className="admin-command-layout">
-        <aside className="admin-command-sidebar ops-sidebar" aria-label={t('admin.kinetic.sidebar_brand')}>
-          <div className="admin-command-sidebar__brand ops-sidebar-brand">
-            <div className="ops-sidebar-brand-copy">
-              <HermesLogo dark />
-              <span>{t('admin.kinetic.sidebar_brand_sub')}</span>
-            </div>
-          </div>
-
-          <nav className="admin-command-sidebar__nav ops-sidebar-nav">
-            {TAB_ITEMS.map((tab, index) => (
-              <button
-                key={tab.key}
-                type="button"
-                aria-label={t(tab.labelKey)}
-                className={`admin-command-sidebar__nav-item ops-sidebar-link${activeTab === tab.key ? ' is-active' : ''}`}
-                onClick={() => navigateToTab(tab.key)}
-              >
-                <AppIcon name={TAB_ICONS[tab.key]} className="material-symbols-outlined" />
-                <span className="ops-sidebar-link-label">{t(tab.labelKey)}</span>
-                <span className="admin-command-sidebar__nav-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
-              </button>
-            ))}
+    <div className="dashboard-body admin-command-page admin-reference">
+      <div className="admin-ref-layout">
+        <aside className="admin-ref-sidebar" aria-label={t('admin.console.admin_console')}>
+          <div className="admin-ref-brand"><HermesLogo dark /><span>{t('admin.console.admin_console')}</span></div>
+          <nav aria-label={t('admin.console.admin_sections')}>
+            {TAB_ITEMS.map(tab => {
+              const count = tab.key === 'users' ? recentSignupIssuesCount : tab.key === 'courseMaps' ? queueCards.find(card => card.key === 'pending')?.count : tab.key === 'shoes' ? queueCards.find(card => card.key === 'unverified_photo')?.count : tab.key === 'jobs' ? jobsQueueFailureCount : 0;
+              return <button key={tab.key} type="button" aria-current={activeTab === tab.key ? 'page' : undefined} onClick={() => navigateToTab(tab.key)}>
+                <AppIcon name={TAB_ICONS[tab.key]} /><span>{t('admin.console.nav_' + tab.key)}</span>{count > 0 && <small className={tab.key === 'jobs' ? 'is-alert' : ''}>{count}</small>}
+              </button>;
+            })}
           </nav>
-
-          <div className="admin-command-sidebar__footer ops-sidebar-footer">
-            <button type="button" className="admin-command-sidebar__link admin-command-sidebar__link--logout ops-sidebar-cta" onClick={logout} aria-label={t('dashboard.nav_logout')}>
-              <AppIcon name="logout" className="material-symbols-outlined" />
-              <span>{t('dashboard.nav_logout')}</span>
-            </button>
-          </div>
+          <button type="button" className="admin-ref-back" onClick={() => logout()}><span aria-hidden="true">‹</span>{t('admin.console.sign_out')}</button>
         </aside>
-
-        <div className="admin-command-main ops-content">
-          <header className="runner-shell-topbar runner-dashboard-shell-topbar admin-command-topbar ops-topbar">
-            <div className="runner-shell-topbar-left">
-              <RunnerShellTopNav
-                activeLabel={activeRouteSurface.eyebrow}
-                navigate={navigate}
-                className="admin-command-topbar__surface-nav"
-              />
-            </div>
-            <div className="runner-shell-topbar-actions admin-command-topbar__controls ops-topbar-actions">
-              <div className="admin-command-topbar__brand">
-                <div className="admin-command-topbar__wordmark">HERMES</div>
-                <div className="admin-command-topbar__nav">
-                  {topbarTabs.map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      className={`admin-command-topbar__nav-link${activeTab === tab.key ? ' is-active' : ''}`}
-                      onClick={() => navigateToTab(tab.key)}
-                    >
-                      {t(tab.labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+        <div className="admin-ref-main">
+          <header className="admin-ref-topbar">
+            <div className="admin-ref-breadcrumb"><span>{t('admin.console.admin')}</span><span aria-hidden="true">/</span><strong>{t('admin.console.nav_' + (activeTab || 'overview'))}</strong></div>
+            <button type="button" className={`admin-ref-health-pill${jobsQueueFailureCount > 0 ? ' is-failed' : ''}`} onClick={() => { setJobQuery(prev => ({ ...prev, status: jobsQueueFailureCount > 0 ? 'FAILED' : '', page: 0 })); navigateToTab('jobs'); }}><i className="admin-ref-dot" />{t(jobsQueueFailureCount === 1 ? 'admin.console.failed_job' : jobsQueueFailureCount > 0 ? 'admin.console.failed_jobs' : 'admin.console.system_healthy', { count: jobsQueueFailureCount })}</button>
+            <button type="button" className="admin-ref-account" aria-label={t('admin.console.account_settings')} title={email || ''} onClick={() => navigateToTab('settings')}>{String(email || '?').slice(0, 1).toUpperCase()}</button>
+            <select className="admin-ref-mobile-nav" aria-label={t('admin.console.admin_sections')} value={activeTab || 'overview'} onChange={event => navigateToTab(event.target.value)}>{TAB_ITEMS.map(tab => <option key={tab.key} value={tab.key}>{t('admin.console.nav_' + tab.key)}</option>)}</select>
           </header>
-
-          <main className={`dashboard-container admin-portal-container admin-command-shell${activeTab === 'courseMaps' ? ' admin-command-shell--coursemaps' : ''}`}>
+          <main className="admin-ref-content" aria-label={activeRouteSurface.title}>
         <div className={`admin-command-route admin-command-route--${activeTab || 'overview'}`}>
         {message && <div className="admin-shoe-status dashboard-message dashboard-message--toast" role="status" aria-live="polite">{message}</div>}
 
@@ -2462,6 +2437,8 @@ const Dashboard = memo(function Dashboard() {
 
         {activeTab === 'courseMaps' && (
           <CourseMapsSection
+            lang={lang}
+            courseMapError={courseMapErrors[selectedCourseMapId] || ''}
             t={t}
             courseMapActivePipelines={courseMapActivePipelines}
             courseMapSatellitesConnected={courseMapSatellitesConnected}
@@ -2512,6 +2489,9 @@ const Dashboard = memo(function Dashboard() {
         )}
 
         {activeTab === 'shoes' && (
+          <div className="admin-ref-shoes">
+            <ShoeReviewSection t={t} shoesPage={shoesPage} shoeQuery={shoeQuery} setShoeQuery={setShoeQuery} selectedShoe={selectedShoeWorkbench} setSelectedShoeWorkbenchId={setSelectedShoeWorkbenchId} shoeImageAction={shoeImageAction} acceptShoeLive={acceptShoeLive} clearShoePending={clearShoePending} openImagePicker={openImagePicker} setMessage={setMessage} />
+            <details className="admin-ref-tools admin-ref-catalog-tools"><summary>{t('admin.console.catalog_tools')}</summary>
           <div className="admin-command-route__surface ops-page admin-shoe-rework">
             {!catalogOnlyShoeOverview && (
               <>
@@ -2979,6 +2959,8 @@ const Dashboard = memo(function Dashboard() {
               </div>
             )}
           </div>
+            </details>
+          </div>
         )}
 
         {activeTab === 'jobs' && (
@@ -3010,22 +2992,22 @@ const Dashboard = memo(function Dashboard() {
               <article className="admin-jobs-command-deck__summary-card">
                 <span>{t('dashboard.jobs_deck_metric_live')}</span>
                 <strong>{jobsCommandMetrics.running.toLocaleString()}</strong>
-                <p>{t('dashboard.jobs_deck_metric_live_copy', { count: jobsCommandMetrics.pending })}</p>
+                <p>{t('admin.console.jobs_queued', { count: jobsCommandMetrics.pending })}</p>
               </article>
               <article className="admin-jobs-command-deck__summary-card">
                 <span>{t('dashboard.jobs_deck_metric_failures')}</span>
                 <strong>{jobsQueueFailureCount.toLocaleString()}</strong>
-                <p>{t('dashboard.jobs_deck_metric_failures_copy', { count: jobsCommandMetrics.failed })}</p>
+                <p>{t('admin.console.jobs_failed_page', { count: jobsCommandMetrics.failed })}</p>
               </article>
               <article className="admin-jobs-command-deck__summary-card">
                 <span>{t('dashboard.jobs_deck_metric_processed')}</span>
                 <strong>{jobsCommandMetrics.processed.toLocaleString()}</strong>
-                <p>{t('dashboard.jobs_deck_metric_processed_copy', { total: jobsCommandMetrics.total.toLocaleString() })}</p>
+                <p>{t('admin.console.jobs_total', { count: jobsCommandMetrics.total.toLocaleString() })}</p>
               </article>
               <article className="admin-jobs-command-deck__summary-card">
                 <span>{t('dashboard.jobs_deck_metric_success_mix')}</span>
                 <strong>{jobsCommandMetrics.successRate}%</strong>
-                <p>{t('dashboard.jobs_deck_metric_success_mix_copy', { count: jobsCommandMetrics.failures.toLocaleString() })}</p>
+                <p>{t('admin.console.jobs_processed_page')}</p>
               </article>
             </div>
 
@@ -3066,10 +3048,8 @@ const Dashboard = memo(function Dashboard() {
                       <h3>{t('dashboard.jobs_deck_terminal_title')}</h3>
                       <p>{t('dashboard.jobs_deck_terminal_copy')}</p>
                     </div>
-                    <div className="admin-jobs-terminal__pills">
-                      <span className={!jobQuery.status ? 'is-active' : ''}>{t('dashboard.jobs_deck_pill_all')}</span>
-                      <span className={jobQuery.status === 'RUNNING' ? 'is-active' : ''}>{t('dashboard.jobs_deck_pill_live')}</span>
-                      <span className={jobQuery.status === 'FAILED' ? 'is-active' : ''}>{t('dashboard.jobs_deck_pill_failures')}</span>
+                    <div className="admin-jobs-terminal__pills" role="group" aria-label={t('admin.console.job_status')}>
+                      {[{ value: '', key: 'admin.console.all' }, { value: 'RUNNING', key: 'dashboard.jobs_filter_status_running' }, { value: 'PENDING', key: 'dashboard.jobs_filter_status_pending' }, { value: 'FAILED', key: 'dashboard.jobs_filter_status_failed' }].map(item => <button type="button" key={item.value} aria-pressed={jobQuery.status === item.value} className={jobQuery.status === item.value ? 'is-active' : ''} onClick={() => setJobQuery(prev => ({ ...prev, status: item.value, page: 0 }))}>{t(item.key)}</button>)}
                     </div>
                   </div>
                   <div className="admin-jobs-terminal__actions">
@@ -3143,9 +3123,9 @@ const Dashboard = memo(function Dashboard() {
                 {selectedJob ? (
                   <>
                     <div className="admin-jobs-detail__head">
-                      <span className="section-intro-kicker">{t('dashboard.jobs_deck_detail_title')}</span>
-                      <h3>{getDashboardJobTraceId(selectedJob)}</h3>
-                      <p>{selectedJob.summary || t('dashboard.jobs_deck_detail_empty_copy')}</p>
+                      <span className="section-intro-kicker">{getDashboardJobTraceId(selectedJob)}</span>
+                      <h3>{getDashboardJobTypeLabel(selectedJob.jobType, t)}</h3>
+                      {selectedJob.summary && <p className={selectedJob.status === 'FAILED' ? 'is-failed' : ''}>{selectedJob.summary}</p>}
                       <span className={`admin-jobs-detail__fetch-state is-${selectedJobDetailState}`}>
                         {selectedJobDetailState === 'loading'
                           ? t('dashboard.jobs_deck_detail_loading')
@@ -3173,6 +3153,12 @@ const Dashboard = memo(function Dashboard() {
                       </small>
                     </div>
 
+                    <div className="admin-jobs-detail__grid">
+                      <article className="admin-jobs-detail__stat"><span>{t('dashboard.jobs_deck_detail_total')}</span><strong>{Number(selectedJob.totalCount || 0).toLocaleString()}</strong></article>
+                      <article className="admin-jobs-detail__stat"><span>{t('dashboard.jobs_deck_detail_success')}</span><strong>{Number(selectedJob.successCount || 0).toLocaleString()}</strong></article>
+                      <article className="admin-jobs-detail__stat"><span>{t('dashboard.jobs_deck_detail_failure')}</span><strong>{Number(selectedJob.failureCount || 0).toLocaleString()}</strong></article>
+                    </div>
+                    <details className="admin-ref-tools"><summary>{t('admin.console.job_details')}</summary>
                     <div className="admin-jobs-detail__grid">
                       <article className="admin-jobs-detail__stat">
                         <span>{t('dashboard.jobs_deck_detail_created')}</span>
@@ -3281,7 +3267,7 @@ const Dashboard = memo(function Dashboard() {
                       ) : (
                         <div className="admin-jobs-detail__json-empty">{t('dashboard.jobs_deck_detail_no_payload')}</div>
                       )}
-                    </div>
+                    </div>                    </details>
                   </>
                 ) : (
                   <div className="admin-jobs-detail__empty">
@@ -3309,97 +3295,7 @@ const Dashboard = memo(function Dashboard() {
           />
         )}
 
-        {activeTab === 'settings' && (
-          <div className="admin-command-route__surface ops-page">
-          <section className="admin-settings-studio">
-            <div className="admin-settings-studio__hero">
-              <div className="admin-settings-studio__hero-copy">
-                <span className="section-intro-kicker">{t('dashboard.settings_kicker')}</span>
-                <h1>{t('dashboard.settings_title')}</h1>
-                <p>{t('dashboard.settings_intro')}</p>
-              </div>
-              <div className="admin-settings-studio__hero-stats">
-                <article className="admin-settings-studio__stat">
-                  <span>{t('settings.language_title')}</span>
-                  <strong>{currentLanguageLabel}</strong>
-                </article>
-                <article className="admin-settings-studio__stat">
-                  <span>{t('settings.theme_title')}</span>
-                  <strong>{currentThemeLabel}</strong>
-                </article>
-                <article className="admin-settings-studio__stat">
-                  <span>{t('dashboard.settings_surface_label')}</span>
-                  <strong>{t('dashboard.settings_live_badge')}</strong>
-                </article>
-              </div>
-            </div>
-
-            <div className="admin-settings-studio__grid">
-              <article className="admin-settings-studio__panel">
-                <div className="admin-settings-studio__panel-head">
-                  <div>
-                    <span>{t('settings.language_title')}</span>
-                    <h2>{currentLanguageLabel}</h2>
-                  </div>
-                  <p>{t('dashboard.settings_language_copy')}</p>
-                </div>
-                <div className="admin-settings-studio__choices">
-                  {dashboardLanguageOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`admin-settings-studio__choice${lang === option.value ? ' is-active' : ''}`}
-                      onClick={() => setLang(option.value)}
-                    >
-                      <strong>{option.label}</strong>
-                      <span>{lang === option.value ? t('dashboard.settings_selected') : t('dashboard.settings_tap_to_apply')}</span>
-                    </button>
-                  ))}
-                </div>
-              </article>
-
-              <article className="admin-settings-studio__panel">
-                <div className="admin-settings-studio__panel-head">
-                  <div>
-                    <span>{t('settings.theme_title')}</span>
-                    <h2>{currentThemeLabel}</h2>
-                  </div>
-                  <p>{t('dashboard.settings_theme_copy')}</p>
-                </div>
-                <div className="admin-settings-studio__choices">
-                  {dashboardThemeOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`admin-settings-studio__choice${theme === option.value ? ' is-active' : ''}`}
-                      onClick={() => setTheme(option.value)}
-                    >
-                      <strong>{option.label}</strong>
-                      <span>{theme === option.value ? t('dashboard.settings_selected') : t('dashboard.settings_tap_to_apply')}</span>
-                    </button>
-                  ))}
-                </div>
-              </article>
-
-              <article className="admin-settings-studio__panel admin-settings-studio__panel--session">
-                <div className="admin-settings-studio__panel-head">
-                  <div>
-                    <span>{t('dashboard.settings_session_title')}</span>
-                    <h2>{t('dashboard.nav_logout')}</h2>
-                  </div>
-                  <p>{t('dashboard.settings_session_copy')}</p>
-                </div>
-                <div className="admin-settings-studio__session">
-                  <p>{t('dashboard.settings_signout_hint')}</p>
-                  <button type="button" className="btn-primary btn-inline-md admin-settings-studio__logout" onClick={logout}>
-                    {t('dashboard.nav_logout')}
-                  </button>
-                </div>
-              </article>
-            </div>
-          </section>
-          </div>
-        )}
+        {activeTab === 'settings' && <ConsoleSettings t={t} lang={lang} setLang={setLang} theme={theme} setTheme={setTheme} email={email} logout={logout} dashboardLanguageOptions={dashboardLanguageOptions} dashboardThemeOptions={dashboardThemeOptions} />}
 
         </div>
           </main>

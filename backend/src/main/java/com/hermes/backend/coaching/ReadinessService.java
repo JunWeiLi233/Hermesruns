@@ -1,5 +1,6 @@
 package com.hermes.backend.coaching;
 
+import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.activity.ImportProvider;
@@ -73,7 +74,7 @@ public class ReadinessService {
     }
 
     public List<ReadinessDay> getReadinessTrend(Runner runner, int days) {
-        LocalDate end = LocalDate.now();
+        LocalDate end = LocalDate.now(ActivityLocalDates.zoneOf(runner));
         LocalDate start = end.minusDays(days - 1);
 
         Map<LocalDate, List<DailySleepData>> sleepMap = sleepRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, start, end)
@@ -141,11 +142,11 @@ public class ReadinessService {
         if (state == null) {
             return neutralResult();
         }
-        return resolveReadinessSnapshot(state.getRunner(), state, LocalDate.now()).readiness();
+        return resolveReadinessSnapshot(state.getRunner(), state, LocalDate.now(ActivityLocalDates.zoneOf(state.getRunner()))).readiness();
     }
 
     public MultiSourceReadinessSnapshot resolveReadinessSnapshot(Runner runner, CoachRunnerState state, LocalDate date) {
-        LocalDate targetDate = date == null ? LocalDate.now() : date;
+        LocalDate targetDate = date == null ? LocalDate.now(ActivityLocalDates.zoneOf(runner)) : date;
         CoachRunnerState fallback = state == null ? new CoachRunnerState() : state;
 
         SourceSelection<DailySleepData> sleep = selectSleep(
@@ -191,7 +192,8 @@ public class ReadinessService {
                         targetDate.minusDays(1)
                 ).stream().collect(Collectors.groupingBy(DailyHRVData::getDate)), targetDate);
 
-        Integer loadScore = computeLoadScore(runsForRunner(runner, targetDate), runner, targetDate);
+        LoadEvidence loadEvidence = computeLoadEvidence(runsForRunner(runner, targetDate), runner, targetDate);
+        Integer loadScore = loadEvidence == null ? null : loadEvidence.score();
 
         ReadinessResult readiness = computeReadiness(
                 sleepScore,
@@ -215,7 +217,8 @@ public class ReadinessService {
                         loadScore != null
                 ),
                 new MetricReadings(sleepScore, hrvMs, hrvStatus, restingHr, stressScore,
-                        wellness.value() == null ? null : wellness.value().getBodyBatteryAtWake())
+                        wellness.value() == null ? null : wellness.value().getBodyBatteryAtWake()),
+                loadEvidence
         );
     }
 
@@ -413,12 +416,17 @@ public class ReadinessService {
      * 30-90 component score.
      */
     private Integer computeLoadScore(List<RunMetricsProjection> runs, Runner runner, LocalDate date) {
+        LoadEvidence evidence = computeLoadEvidence(runs, runner, date);
+        return evidence == null ? null : evidence.score();
+    }
+
+    private LoadEvidence computeLoadEvidence(List<RunMetricsProjection> runs, Runner runner, LocalDate date) {
         if (runs == null || runs.isEmpty()) return null;
         Integer runnerMaxHr = runner == null ? null : runner.getMaxHeartRateBpm();
 
-        Double acwr = TrainingLoadAnalyzer.ewmaAcwr(runs, date);
-        Double monotony = TrainingLoadAnalyzer.weeklyMonotony(runs, date);
-        Integer hoursSinceHard = TrainingLoadAnalyzer.hoursSinceLastHardSession(runs, runnerMaxHr, date);
+        Double acwr = TrainingLoadAnalyzer.ewmaAcwr(runs, date, runner);
+        Double monotony = TrainingLoadAnalyzer.weeklyMonotony(runs, date, runner);
+        Integer hoursSinceHard = TrainingLoadAnalyzer.hoursSinceLastHardSession(runs, runnerMaxHr, date, runner);
         if (acwr == null && monotony == null && hoursSinceHard == null) return null;
 
         int score = LOAD_BASE;
@@ -432,15 +440,19 @@ public class ReadinessService {
             }
             // acwr < 0.8: fresh or undertrained - not a readiness problem.
         }
+        int ratioAdjustment = score - LOAD_BASE;
         if (monotony != null) {
             if (monotony > MONOTONY_HIGH) score -= 15;
             else if (monotony > MONOTONY_WARN) score -= 8;
         }
+        int monotonyAdjustment = score - LOAD_BASE - ratioAdjustment;
         if (hoursSinceHard != null) {
             if (hoursSinceHard < 24) score -= 10;
             else if (hoursSinceHard < 48) score -= 5;
         }
-        return Math.max(30, Math.min(90, score));
+        int spacingAdjustment = score - LOAD_BASE - ratioAdjustment - monotonyAdjustment;
+        return new LoadEvidence(acwr, monotony, hoursSinceHard, Math.max(30, Math.min(90, score)),
+                LOAD_BASE, ratioAdjustment, monotonyAdjustment, spacingAdjustment);
     }
 
     private List<RunMetricsProjection> runsForRunner(Runner runner, LocalDate date) {
@@ -448,8 +460,9 @@ public class ReadinessService {
         List<RunMetricsProjection> runs = activityRepository.findRunMetricsBetween(
                 runner,
                 ActivityType.RUN,
-                date.minusDays(LOAD_WINDOW_DAYS).atStartOfDay(),
-                date.plusDays(1).atStartOfDay()
+                // File clocks are UTC and API clocks are local; filter by account day in the analyzer.
+                date.minusDays(LOAD_WINDOW_DAYS + 1).atStartOfDay(),
+                date.plusDays(2).atStartOfDay()
         );
         return runs == null ? List.of() : runs;
     }
@@ -459,13 +472,13 @@ public class ReadinessService {
         List<RunMetricsProjection> runs = activityRepository.findRunMetricsBetween(
                 runner,
                 ActivityType.RUN,
-                start.atStartOfDay(),
-                end.plusDays(1).atStartOfDay()
+                start.minusDays(1).atStartOfDay(),
+                end.plusDays(2).atStartOfDay()
         );
         if (runs == null || runs.isEmpty()) return Map.of();
         return runs.stream()
-                .filter(run -> run.getEffectiveStartTime() != null)
-                .collect(Collectors.groupingBy(run -> run.getEffectiveStartTime().toLocalDate()));
+                .filter(run -> ActivityLocalDates.localStartTimeOf(run, runner) != null)
+                .collect(Collectors.groupingBy(run -> ActivityLocalDates.localStartTimeOf(run, runner).toLocalDate()));
     }
 
     private List<RunMetricsProjection> trailingRuns(Map<LocalDate, List<RunMetricsProjection>> runsByDay, LocalDate date) {
@@ -639,8 +652,13 @@ public class ReadinessService {
             MetricSources sources,
             boolean hasSourceData,
             MetricAvailability availability,
-            MetricReadings readings
+            MetricReadings readings,
+            LoadEvidence loadEvidence
     ) {
+        public MultiSourceReadinessSnapshot(ReadinessResult readiness, MetricSources sources, boolean hasSourceData,
+                MetricAvailability availability, MetricReadings readings) {
+            this(readiness, sources, hasSourceData, availability, readings, null);
+        }
         public MultiSourceReadinessSnapshot(ReadinessResult readiness, MetricSources sources,
                                             boolean hasSourceData, MetricAvailability availability) {
             this(readiness, sources, hasSourceData, availability, MetricReadings.none());
@@ -651,6 +669,20 @@ public class ReadinessService {
 
         public MultiSourceReadinessSnapshot(ReadinessResult readiness, MetricSources sources, boolean hasSourceData) {
             this(readiness, sources, hasSourceData, hasSourceData ? MetricAvailability.all() : MetricAvailability.none());
+        }
+    }
+
+    public record LoadEvidence(Double ewmaLoadRatio, Double weeklyMonotony, Integer hoursSinceHardAtEndOfDay, int score,
+            int baseScore, int ratioAdjustment, int monotonyAdjustment, int spacingAdjustment) {}
+
+    public record RecoveryEvidence(LocalDate date, MetricSources sources, MetricAvailability availability,
+            MetricReadings readings, ReadinessResult result, LoadEvidence trainingLoad,
+            double sleepWeight, double hrvWeight, double restingHrWeight, double stressWeight,
+            double trainingLoadWeight, int neutralScore) {
+        public static RecoveryEvidence from(LocalDate date, MultiSourceReadinessSnapshot snapshot) {
+            return snapshot == null ? null : new RecoveryEvidence(date, snapshot.sources(), snapshot.availability(),
+                    snapshot.readings(), snapshot.readiness(), snapshot.loadEvidence(), WEIGHT_SLEEP, WEIGHT_HRV,
+                    WEIGHT_RHR, WEIGHT_STRESS, WEIGHT_LOAD, NEUTRAL_SCORE);
         }
     }
 

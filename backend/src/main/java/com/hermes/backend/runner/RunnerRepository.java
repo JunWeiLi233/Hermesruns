@@ -14,6 +14,10 @@ public interface RunnerRepository extends JpaRepository<Runner, Long>, JpaSpecif
 
     Optional<Runner> findByEmailIgnoreCase(String email);
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Runner r WHERE r.id = :runnerId")
+    Optional<Runner> findByIdForUpdate(@Param("runnerId") Long runnerId);
+
     Optional<Runner> findBySessionToken(String sessionToken);
 
     Optional<Runner> findByStravaAthleteId(Long stravaAthleteId);

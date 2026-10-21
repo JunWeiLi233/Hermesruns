@@ -1,0 +1,1755 @@
+/* Admin Dashboard Redesign.html: scoped to the admin console. */
+.dashboard-body.admin-command-page.admin-reference {
+  --console-canvas: #f2f2f7;
+  --console-card: #fff;
+  --console-sidebar: #fafafd;
+  --console-ink: #1c1917;
+  --console-muted: #625c56;
+  --console-line: rgba(60, 60, 67, 0.09);
+  --console-accent: #a0392a;
+  --console-soft: rgba(160, 57, 42, 0.08);
+  --console-field: #f5f5f9;
+  --console-green: #347e50;
+  --console-amber: #996000;
+  --admin-text-primary: var(--console-ink);
+  --admin-text-secondary: var(--console-muted);
+  --admin-text-muted: var(--console-muted);
+  --admin-border-subtle: var(--console-line);
+  --admin-profile-ink: var(--console-ink);
+  --admin-profile-muted: var(--console-muted);
+  --admin-profile-line: var(--console-line);
+  --admin-profile-card: var(--console-card);
+  --admin-profile-card-strong: var(--console-card);
+  --admin-profile-flame: var(--console-accent);
+  --admin-profile-shadow: none;
+  --admin-profile-shadow-soft: none;
+  min-height: 100vh;
+  padding: 0;
+  color: var(--console-ink);
+  /* The shared glass page rule uses !important; keep the supplied flat canvas. */
+  background: var(--console-canvas) !important;
+  font-family: "Manrope", sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow: clip;
+}
+body.theme-light .dashboard-body.admin-command-page.admin-reference {
+  background: var(--console-canvas);
+}
+body.theme-midnight .dashboard-body.admin-command-page.admin-reference {
+  --console-canvas: #19191e;
+  --console-card: #232329;
+  --console-sidebar: #202025;
+  --console-ink: #f5f2ee;
+  --console-muted: #b6b1ad;
+  --console-line: rgba(255, 255, 255, 0.1);
+  --console-accent: #f09b8b;
+  --console-soft: rgba(240, 155, 139, 0.1);
+  --console-field: #2d2d35;
+  --console-green: #88c99d;
+  --console-amber: #e7ba6c;
+  background: var(--console-canvas);
+}
+.admin-reference.admin-command-page::before,
+.admin-reference.admin-command-page::after {
+  display: none;
+}
+.admin-reference .admin-ref-layout {
+  display: block;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  min-height: 100vh;
+}
+.admin-reference button,
+.admin-reference input,
+.admin-reference select {
+  font: inherit;
+}
+.admin-reference button {
+  cursor: pointer;
+}
+.admin-reference button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.admin-reference :is(button, input, select, summary):focus-visible {
+  outline: 2px solid var(--console-accent);
+  outline-offset: 4px;
+}
+.admin-reference :is(h1, h2, h3, p) {
+  margin: 0;
+  color: inherit;
+}
+.admin-reference :is(h1, h2, h3) {
+  font-family: "Manrope", sans-serif;
+  letter-spacing: -0.035em;
+  text-transform: none;
+}
+.admin-reference :is(small, time) {
+  color: var(--console-muted);
+}
+.admin-reference .admin-ref-sidebar {
+  width: 248px;
+  position: fixed;
+  inset: 0 auto 0 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px 14px 18px;
+  background: var(--console-sidebar);
+  border-right: 1px solid var(--console-line);
+  z-index: 40;
+}
+.admin-reference .admin-ref-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 0 10px;
+}
+.admin-reference .admin-ref-brand .hermes-logo {
+  height: 24px;
+}
+.admin-reference .admin-ref-brand > span:last-child {
+  color: var(--console-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.admin-reference .admin-ref-sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow: auto;
+}
+.admin-reference .admin-ref-sidebar nav button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--console-muted);
+  background: transparent;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.admin-reference .admin-ref-sidebar nav button > span {
+  flex: 1;
+}
+.admin-reference .admin-ref-sidebar nav button:hover {
+  background: var(--console-field);
+}
+.admin-reference .admin-ref-sidebar nav button[aria-current] {
+  color: var(--console-accent);
+  background: var(--console-soft);
+  font-weight: 800;
+}
+.admin-reference .admin-ref-sidebar nav svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.admin-reference .admin-ref-sidebar nav small {
+  display: grid;
+  place-items: center;
+  min-width: 21px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 20px;
+  background: var(--console-line);
+  font-size: 11px;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-sidebar nav .is-alert {
+  background: #a0392a;
+  color: #fff;
+}
+.admin-reference .admin-ref-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid var(--console-line);
+  background: transparent;
+  color: var(--console-ink);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.admin-reference .admin-ref-back > span {
+  font-size: 22px;
+  line-height: 1;
+}
+.admin-reference .admin-ref-main {
+  margin-left: 248px;
+  min-width: 0;
+}
+.admin-reference .admin-ref-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 14px 32px;
+  background: var(--console-canvas);
+}
+.admin-reference .admin-ref-breadcrumb {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  color: var(--console-muted);
+  font-weight: 600;
+}
+.admin-reference .admin-ref-breadcrumb strong {
+  color: var(--console-ink);
+  font-weight: 800;
+}
+.admin-reference .admin-ref-health-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--console-card);
+  color: var(--console-green);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.admin-reference .admin-ref-health-pill.is-failed {
+  color: var(--console-accent);
+}
+.admin-reference .admin-ref-account {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--console-ink);
+  color: var(--console-card);
+  font-weight: 800;
+  flex: none;
+}
+.admin-reference .admin-ref-mobile-nav {
+  display: none;
+}
+.admin-reference .admin-ref-content {
+  padding: 8px 32px 48px;
+  width: 100%;
+}
+.admin-reference .admin-command-route,
+.admin-reference .admin-command-route__surface.ops-page {
+  display: block;
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.admin-reference .admin-ref-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 20px;
+}
+.admin-reference .admin-ref-heading h1 {
+  font-size: 36px;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.admin-reference .admin-ref-heading p {
+  margin-top: 5px;
+  color: var(--console-muted);
+  font-size: 14px;
+}
+.admin-reference .admin-ref-button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 17px;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 128, 128, 0.24);
+  background: var(--console-card);
+  color: var(--console-ink);
+  font-weight: 800;
+  font-size: 12px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.admin-reference .admin-ref-button:hover {
+  background: var(--console-field);
+}
+.admin-reference .admin-ref-button--primary {
+  background: #a0392a;
+  color: #fff;
+  border-color: #a0392a;
+}
+.admin-reference .admin-ref-button--primary:hover {
+  background: #882e21;
+}
+.admin-reference .admin-ref-button--ink {
+  background: var(--console-ink);
+  color: var(--console-card);
+  border-color: var(--console-ink);
+}
+.admin-reference .admin-ref-button--ink:hover {
+  opacity: 0.85;
+  background: var(--console-ink);
+}
+.admin-reference .admin-ref-button--small {
+  min-height: 32px;
+  padding: 0 12px;
+}
+.admin-reference .admin-ref-card {
+  border-radius: 20px;
+  padding: 24px;
+  border: 0;
+  background: var(--console-card);
+  min-width: 0;
+  box-shadow: none;
+}
+.admin-reference .admin-ref-card h2 {
+  font-size: 20px;
+  font-style: italic;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-kicker,
+.admin-reference h2.admin-ref-kicker {
+  font-size: 11px;
+  line-height: 1.5;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--console-muted);
+}
+.admin-reference .admin-ref-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.admin-reference .admin-ref-section-head > span {
+  color: var(--console-muted);
+  font-size: 11px;
+}
+.admin-reference .admin-ref-attention {
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+}
+.admin-reference .admin-ref-attention-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-height: 64px;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid var(--console-line);
+  background: transparent;
+  color: var(--console-ink);
+  text-align: left;
+}
+.admin-reference .admin-ref-attention-row:hover {
+  background: var(--console-field);
+}
+.admin-reference .admin-ref-attention-count {
+  width: 38px;
+  font-size: 24px;
+  line-height: 1;
+  padding-left: 0;
+  font-weight: 800;
+  flex: none;
+}
+.admin-reference .admin-ref-attention-row.is-failed .admin-ref-attention-count {
+  color: var(--console-accent);
+}
+.admin-reference .admin-ref-attention-copy {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
+.admin-reference .admin-ref-attention-copy strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-attention-copy small {
+  font-size: 12px;
+}
+.admin-reference .admin-ref-attention-action {
+  font-weight: 800;
+  color: var(--console-accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.admin-reference .admin-ref-all-clear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--console-line);
+  color: var(--console-muted);
+  font-size: 12px;
+}
+.admin-reference .admin-ref-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  background: currentColor;
+  flex: none;
+}
+.admin-reference .admin-ref-dot.is-success,
+.admin-reference .admin-ref-dot.is-completed {
+  background: var(--console-green);
+}
+.admin-reference .admin-ref-dot.is-failed {
+  background: var(--console-accent);
+}
+.admin-reference .admin-ref-dot.is-pending,
+.admin-reference .admin-ref-dot.is-running {
+  background: var(--console-amber);
+}
+.admin-reference .admin-ref-accent {
+  color: var(--console-accent);
+}
+.admin-reference .admin-ref-success {
+  color: var(--console-green);
+}
+.admin-reference .admin-ref-muted {
+  color: var(--console-muted);
+}
+.admin-reference .admin-ref-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.admin-reference .admin-ref-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 14px 18px;
+  min-height: 96px;
+  border: 2px solid transparent;
+  border-radius: 18px;
+  background: var(--console-card);
+  color: var(--console-ink);
+  text-align: left;
+}
+.admin-reference .admin-ref-metric span {
+  color: var(--console-muted);
+  font-size: 12px;
+}
+.admin-reference .admin-ref-metric strong {
+  font-size: 28px;
+  line-height: 1.3;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-metric.is-active {
+  border-color: var(--console-ink);
+}
+.admin-reference .admin-ref-trend {
+  margin-bottom: 20px;
+}
+.admin-reference .admin-ref-trend-canvas {
+  height: 190px;
+  margin: 20px 0 12px;
+}
+.admin-reference .admin-ref-chart-dates {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--console-muted);
+}
+.admin-reference .admin-ref-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.admin-reference .admin-ref-health-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 62px;
+  border: 0;
+  border-top: 1px solid var(--console-line);
+  padding: 10px 0;
+  background: transparent;
+  color: var(--console-ink);
+  text-align: left;
+}
+.admin-reference .admin-ref-health > h2 {
+  margin-bottom: 8px;
+}
+.admin-reference .admin-ref-health-row > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-reference .admin-ref-health-row strong {
+  font-size: 13px;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-health-row b {
+  font-size: 11px;
+  max-width: 150px;
+  text-align: right;
+}
+.admin-reference .admin-ref-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--console-field);
+  color: var(--console-muted);
+  font-size: 12px;
+  font-weight: 800;
+  flex: none;
+}
+.admin-reference .admin-ref-activity-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-height: 57px;
+  border-top: 1px solid var(--console-line);
+  padding: 10px 0;
+}
+.admin-reference .admin-ref-activity-row > span:nth-child(2) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.admin-reference .admin-ref-activity-row strong {
+  font-weight: 600;
+  font-size: 12px;
+}
+.admin-reference .admin-ref-activity-row small {
+  font-size: 11px;
+}
+.admin-reference .admin-ref-activity-row time {
+  font-size: 10px;
+  text-align: right;
+  max-width: 70px;
+}
+.admin-reference .admin-ref-text-button {
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: var(--console-accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-text-button:hover {
+  text-decoration: underline;
+}
+.admin-reference .admin-ref-empty {
+  display: grid;
+  place-items: center;
+  min-height: 140px;
+  padding: 24px;
+  color: var(--console-muted);
+  text-align: center;
+}
+.admin-reference .admin-ref-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 20px;
+}
+.admin-reference .admin-ref-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: var(--console-card);
+  flex: 1 1 280px;
+  max-width: 420px;
+  min-width: 0;
+  color: var(--console-muted);
+}
+.admin-reference .admin-ref-search svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.admin-reference .admin-ref-search input {
+  background: transparent;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  padding: 0;
+  color: var(--console-ink);
+  width: 100%;
+  min-width: 0;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  border-radius: 0;
+}
+.admin-reference .admin-ref-search input::placeholder {
+  color: var(--console-muted);
+  opacity: 0.85;
+}
+.admin-reference .admin-ref-search:focus-within {
+  outline: 2px solid var(--console-accent);
+  outline-offset: 2px;
+}
+.admin-reference .admin-ref-segments {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  background: var(--console-card);
+  border-radius: 999px;
+  gap: 2px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.admin-reference .admin-ref-segments button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--console-muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.admin-reference .admin-ref-segments button[aria-pressed="true"] {
+  background: var(--console-ink);
+  color: var(--console-card);
+}
+.admin-reference .admin-ref-segments small {
+  color: inherit;
+  opacity: 0.7;
+  font-size: 10px;
+}
+.admin-reference .admin-ref-table-scroll {
+  overflow-x: auto;
+}
+.admin-reference .admin-ref-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--console-ink);
+  font-size: 12px;
+}
+.admin-reference .admin-ref-table th {
+  color: var(--console-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  padding: 0 12px 12px;
+  text-transform: none;
+  border-bottom: 1px solid var(--console-line);
+}
+.admin-reference .admin-ref-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--console-line);
+  white-space: nowrap;
+}
+.admin-reference .admin-ref-table :is(th, td):first-child {
+  padding-left: 0;
+  width: 30px;
+}
+.admin-reference .admin-ref-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--console-accent);
+  cursor: pointer;
+}
+.admin-reference .admin-ref-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-reference .admin-ref-identity > span:last-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-reference .admin-ref-identity strong {
+  font-size: 12px;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-identity small {
+  font-size: 11px;
+}
+.admin-reference .admin-ref-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  min-height: 24px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--console-muted);
+  background: var(--console-field);
+  white-space: nowrap;
+}
+.admin-reference .admin-ref-badge.is-pro {
+  color: var(--console-accent);
+  background: var(--console-soft);
+}
+.admin-reference .admin-ref-badge.is-pending {
+  color: var(--console-amber);
+  background: rgba(180, 120, 20, 0.13);
+}
+.admin-reference .admin-ref-badge.is-live {
+  color: var(--console-green);
+  background: rgba(65, 145, 90, 0.1);
+}
+.admin-reference .admin-ref-row-actions,
+.admin-reference .admin-ref-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.admin-reference .admin-ref-bulk {
+  padding-bottom: 18px;
+}
+.admin-reference .admin-ref-table-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding-top: 8px;
+  color: var(--console-muted);
+  font-size: 11px;
+}
+.admin-reference .pagination-row {
+  background: transparent;
+  border: 0;
+  padding: 8px 0 0;
+  margin: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.admin-reference .pagination-arrow {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--console-field);
+  color: var(--console-ink);
+  box-shadow: none;
+}
+.admin-reference .pagination-page-indicator {
+  color: var(--console-muted);
+  font-size: 11px;
+}
+.admin-reference .admin-ref-tools {
+  margin-top: 20px;
+  border: 1px solid var(--console-line);
+  border-radius: 14px;
+  padding: 14px 18px;
+  color: var(--console-muted);
+}
+.admin-reference .admin-ref-tools summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-reference .admin-ref-tools[open] > :not(summary) {
+  margin-top: 16px;
+}
+.admin-reference .admin-ref-audit-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 62px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--console-line);
+}
+.admin-reference .admin-ref-audit-row:last-child {
+  border: 0;
+}
+.admin-reference .admin-ref-audit-summary {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.admin-reference .admin-ref-audit-summary strong {
+  font-weight: 600;
+}
+.admin-reference .admin-ref-audit-summary small {
+  font-size: 11px;
+}
+.admin-reference .admin-ref-audit-row code {
+  width: 23%;
+  color: var(--console-muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.admin-reference .admin-ref-audit-row time {
+  font-size: 10px;
+  width: 95px;
+  text-align: right;
+}
+.admin-reference .admin-ref-icon-button {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--console-muted);
+  flex: none;
+}
+.admin-reference .admin-ref-icon-button svg {
+  width: 15px;
+  height: 15px;
+}
+.admin-reference .admin-ref-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.admin-reference .admin-ref-review-rail {
+  padding: 20px 14px;
+}
+.admin-reference .admin-ref-review-rail > .admin-ref-segments {
+  width: calc(100% - 20px);
+  margin: 0 10px 12px;
+  background: var(--console-field);
+}
+.admin-reference .admin-ref-review-rail > .admin-ref-segments > button {
+  flex: 1;
+  padding: 0 8px;
+}
+.admin-reference
+  .admin-ref-review-rail
+  .admin-ref-segments
+  button[aria-pressed="true"],
+.admin-reference
+  .admin-ref-review-detail
+  .admin-ref-segments
+  button[aria-pressed="true"] {
+  background: var(--console-card);
+  color: var(--console-ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.admin-reference .admin-ref-review-rail > .admin-ref-search {
+  margin: 0 10px 12px;
+  height: 38px;
+  background: var(--console-field);
+}
+.admin-reference .admin-ref-review-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.admin-reference .admin-ref-review-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 66px;
+  width: 100%;
+  padding: 12px 10px;
+  border: 0;
+  border-top: 1px solid var(--console-line);
+  border-radius: 12px;
+  color: var(--console-ink);
+  background: transparent;
+  text-align: left;
+}
+.admin-reference .admin-ref-review-row[aria-pressed="true"] {
+  background: var(--console-field);
+}
+.admin-reference
+  .admin-ref-review-row
+  > span:not(.admin-ref-avatar):not(.admin-ref-badge) {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-reference .admin-ref-review-row strong {
+  font-size: 12px;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-review-row small {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.admin-reference .admin-ref-review-detail > h1,
+.admin-reference .admin-ref-detail-head h1 {
+  font-size: 24px;
+  font-weight: 800;
+  font-style: italic;
+  margin: 3px 0;
+  line-height: 1.25;
+}
+.admin-reference .admin-ref-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.admin-reference .admin-ref-review-detail > .admin-ref-segments {
+  background: var(--console-field);
+  margin-bottom: 18px;
+}
+.admin-reference .admin-ref-photo-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 20px 0;
+}
+.admin-reference .admin-ref-photo-compare h2 {
+  font-size: 12px;
+  font-style: normal;
+  letter-spacing: 0;
+  margin-bottom: 8px;
+  color: var(--console-muted);
+  font-weight: 600;
+}
+.admin-reference .admin-ref-photo {
+  height: 210px;
+  border: 1px solid var(--console-line);
+  border-radius: 14px;
+  background: var(--console-field);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 10px;
+}
+.admin-reference .admin-ref-photo.is-submitted {
+  border-color: #bb842b;
+}
+.admin-reference .admin-ref-photo .admin-shoe-img-empty {
+  width: auto;
+  height: auto;
+  color: var(--console-muted);
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  text-align: center;
+}
+.admin-reference .admin-ref-photo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.admin-reference .admin-ref-facts {
+  margin: 24px 0 16px;
+}
+.admin-reference .admin-ref-facts > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--console-line);
+  gap: 16px;
+}
+.admin-reference dt {
+  color: var(--console-muted);
+  font-size: 11px;
+}
+.admin-reference dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.admin-reference .admin-ref-map-frame {
+  height: 300px;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--console-field);
+}
+.admin-reference
+  .admin-ref-map-frame
+  :is(
+    .admin-review-preview,
+    .admin-review-preview__map-layer,
+    .admin-review-preview__map
+  ) {
+  height: 100%;
+  min-height: 100%;
+  width: 100%;
+}
+.admin-reference .admin-ref-map-frame .leaflet-container {
+  height: 100%;
+  min-height: 300px;
+}
+.admin-reference .admin-ref-map-confidence {
+  position: absolute;
+  z-index: 5;
+  top: 10px;
+  left: 10px;
+  background: var(--console-card);
+  color: var(--console-ink);
+  border-radius: 30px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.admin-reference .admin-ref-map-facts {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  padding: 18px 0;
+  margin: 0;
+}
+.admin-reference .admin-ref-map-facts dd {
+  text-align: left;
+  font-size: 15px;
+  margin-top: 3px;
+}
+.admin-reference .admin-ref-map-timeline {
+  padding: 8px 0 20px;
+}
+.admin-reference .admin-ref-map-timeline ol {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.admin-reference .admin-ref-map-timeline li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+.admin-reference .admin-ref-map-timeline li > span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.admin-reference .admin-ref-map-timeline li strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.admin-reference .admin-ref-map-timeline li small {
+  font-size: 11px;
+}
+.admin-reference .admin-ref-map-timeline time {
+  font-size: 10px;
+}
+.admin-reference .admin-ref-decision {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--console-line);
+}
+.admin-reference .admin-ref-settings {
+  display: grid;
+  gap: 20px;
+}
+.admin-reference .admin-ref-settings .admin-ref-heading {
+  margin-bottom: 0;
+}
+.admin-reference .admin-ref-settings .admin-ref-card > p {
+  margin: 4px 0 12px;
+  font-size: 12px;
+}
+.admin-reference .admin-ref-settings-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.admin-reference .admin-ref-settings-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 66px;
+  padding: 12px 14px;
+  border: 1px solid rgba(128, 128, 128, 0.24);
+  border-radius: 17px;
+  color: var(--console-ink);
+  background: var(--console-card);
+  text-align: left;
+}
+.admin-reference .admin-ref-settings-choice > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.admin-reference .admin-ref-settings-choice strong {
+  font-weight: 800;
+}
+.admin-reference .admin-ref-settings-choice small {
+  font-size: 11px;
+}
+.admin-reference .admin-ref-settings-choice i {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 50%;
+  flex: none;
+}
+.admin-reference .admin-ref-settings-choice[aria-pressed="true"] {
+  border: 2px solid var(--console-ink);
+  padding: 11px 13px;
+}
+.admin-reference .admin-ref-settings-choice[aria-pressed="true"] i {
+  border: 6px solid var(--console-accent);
+}
+.admin-reference .admin-ref-session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.admin-reference .admin-ref-session p {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Keep the existing job data, timeline and payload inspection tools. */
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-command-deck {
+  display: grid;
+  gap: 20px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  :is(.admin-jobs-command-deck__hero, .admin-jobs-command-deck__spotlight) {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-command-deck__summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-command-deck__summary-card {
+  display: block;
+  padding: 16px 18px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--console-card);
+  color: var(--console-ink);
+  box-shadow: none;
+  min-height: 102px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-command-deck__summary-card::before {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-command-deck__summary-card
+  > span {
+  color: var(--console-muted);
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-command-deck__summary-card
+  strong {
+  display: block;
+  font-size: 28px;
+  line-height: 1.3;
+  font-weight: 800;
+  margin: 2px 0;
+  color: var(--console-ink);
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-command-deck__summary-card:nth-child(2)
+  strong {
+  color: var(--console-accent);
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-command-deck__summary-card
+  p {
+  color: var(--console-muted);
+  font-size: 11px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-command-deck__workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.dashboard-body.admin-command-page.admin-reference
+  :is(.admin-jobs-terminal, .admin-jobs-detail) {
+  display: block;
+  padding: 24px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--console-card);
+  color: var(--console-ink);
+  box-shadow: none;
+  min-width: 0;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  gap: 10px;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-terminal__title {
+  display: block;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__title
+  > div:first-child {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-terminal__pills {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  overflow-x: auto;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--console-field);
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__pills
+  > button {
+  border: 0;
+  border-radius: 999px;
+  min-height: 32px;
+  padding: 0 11px;
+  color: var(--console-muted);
+  background: transparent;
+  font-size: 11px;
+  white-space: nowrap;
+  font-weight: 800;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__pills
+  > button.is-active {
+  color: var(--console-ink);
+  background: var(--console-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0;
+  gap: 8px;
+  align-items: center;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__actions
+  > select:first-child {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__actions
+  select {
+  min-width: 0;
+  width: auto;
+  flex: 1;
+  background: var(--console-field);
+  color: var(--console-ink);
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 11px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__actions
+  button {
+  background: transparent;
+  border: 0;
+  color: var(--console-muted);
+  font-size: 11px;
+  padding: 4px;
+  min-height: 32px;
+  box-shadow: none;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-terminal__list {
+  padding: 0;
+  margin-top: 12px;
+  max-height: 650px;
+  overflow-y: auto;
+  background: transparent;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-terminal__group {
+  padding: 0;
+  border: 0;
+  margin: 0;
+  background: transparent;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__group-head {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-terminal__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  min-width: 0;
+  height: 100%;
+  width: 100%;
+  padding: 14px 10px;
+  border: 0;
+  border-top: 1px solid var(--console-line);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--console-ink);
+  box-shadow: none;
+  text-align: left;
+}
+.dashboard-body.admin-command-page.admin-reference
+  :is(
+    .admin-jobs-terminal__trace,
+    .admin-jobs-terminal__ops,
+    .admin-jobs-terminal__primary small
+  ) {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__primary {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__primary
+  strong {
+  font-size: 13px;
+  color: var(--console-ink);
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__status {
+  grid-column: 2;
+  grid-row: 1;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__status
+  small {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__status-badge {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 10px;
+  padding: 3px 9px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__summary {
+  display: block;
+  grid-column: 1 / -1;
+  min-width: 0;
+  color: var(--console-muted);
+  font-size: 11px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__summary
+  > span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__summary
+  small {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__counts {
+  grid-column: 1 / -1;
+  color: var(--console-muted);
+  font-size: 11px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__counts
+  > strong {
+  display: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__counts
+  > small {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+}
+.admin-reference .admin-ref-job-progress {
+  height: 4px;
+  border-radius: 8px;
+  background: var(--console-field);
+  margin: 4px 0;
+  overflow: hidden;
+}
+.admin-reference .admin-ref-job-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--console-ink);
+  border-radius: inherit;
+}
+.admin-reference
+  .admin-ref-map-frame
+  .leaflet-admin-review-preview__route-pane-pane
+  path {
+  stroke: #a0392a;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__row.is-active {
+  background: var(--console-field);
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-terminal__footer {
+  background: transparent;
+  border: 0;
+  padding: 12px 0 0;
+  color: var(--console-muted);
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-detail__head {
+  background: transparent;
+  padding: 0;
+  border: 0;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-detail__head h3 {
+  font-size: 24px;
+  font-style: italic;
+  color: var(--console-ink);
+  margin: 3px 0 8px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-detail__head
+  > p {
+  color: var(--console-muted);
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  margin-top: 16px;
+  background: var(--console-field);
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-detail__head
+  > p.is-failed {
+  color: var(--console-accent);
+  background: var(--console-soft);
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-detail__fetch-state {
+  color: var(--console-muted);
+  font-size: 10px;
+  background: transparent;
+  border: 0;
+  padding: 8px 0 0;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--console-field);
+  gap: 16px;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-jobs-detail__stat {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-detail__stat
+  > span {
+  color: var(--console-muted);
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-detail__stat
+  strong {
+  color: var(--console-ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.dashboard-body.admin-command-page.admin-reference
+  :is(
+    .admin-jobs-detail__timeline-shell,
+    .admin-jobs-detail__payload-shell,
+    .admin-jobs-detail__json-shell
+  ) {
+  padding: 16px 0 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-detail__timeline
+  li {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 12px 0;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-detail__section-head
+  strong {
+  color: var(--console-ink);
+  font-size: 12px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  .admin-jobs-detail__section-head
+  > span {
+  color: var(--console-muted);
+  font-size: 10px;
+}
+.dashboard-body.admin-command-page.admin-reference
+  :is(.admin-jobs-detail__json, .admin-jobs-detail__payload-card) {
+  background: var(--console-field);
+  color: var(--console-ink);
+  border: 0;
+  box-shadow: none;
+}
+.dashboard-body.admin-command-page.admin-reference .admin-shoe-catalog-browser {
+  border-radius: 20px;
+  background: var(--console-card);
+  box-shadow: none;
+  border: 0;
+}
+
+@media (min-width: 1700px) {
+  .admin-reference .admin-ref-content {
+    max-width: 1500px;
+    margin: auto;
+  }
+}
+@media (max-width: 1100px) {
+  .admin-reference .admin-ref-sidebar {
+    width: 210px;
+    padding-inline: 10px;
+  }
+  .admin-reference .admin-ref-main {
+    margin-left: 210px;
+  }
+  .admin-reference .admin-ref-content {
+    padding-inline: 24px;
+  }
+  .admin-reference .admin-ref-topbar {
+    padding-inline: 24px;
+  }
+  .admin-reference .admin-ref-two-col {
+    grid-template-columns: 1fr;
+  }
+  .admin-reference .admin-ref-workspace {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+    gap: 12px;
+  }
+  .admin-reference .admin-ref-review-detail {
+    padding: 20px;
+  }
+  .admin-reference .admin-ref-review-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .admin-reference .admin-ref-photo-compare {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-body.admin-command-page.admin-reference
+    .admin-jobs-command-deck__workspace {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 760px) {
+  .admin-reference .admin-ref-sidebar {
+    display: none;
+  }
+  .admin-reference .admin-ref-main {
+    margin: 0;
+  }
+  .admin-reference .admin-ref-topbar {
+    flex-wrap: wrap;
+    padding: 12px 20px;
+    gap: 10px;
+  }
+  .admin-reference .admin-ref-mobile-nav {
+    display: block;
+    flex: 1 0 100%;
+    width: 100%;
+    background: var(--console-card);
+    border: 1px solid var(--console-line);
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: var(--console-ink);
+    min-height: 44px;
+  }
+  .admin-reference .admin-ref-content {
+    padding: 12px 20px 32px;
+  }
+  .admin-reference .admin-ref-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .admin-reference .admin-ref-heading h1 {
+    font-size: 30px;
+  }
+  .admin-reference .admin-ref-heading p {
+    font-size: 12px;
+  }
+  .admin-reference .admin-ref-card {
+    padding: 20px;
+  }
+  .admin-reference .admin-ref-attention-row {
+    gap: 10px;
+    min-height: 80px;
+  }
+  .admin-reference .admin-ref-attention-count {
+    width: 24px;
+    font-size: 22px;
+  }
+  .admin-reference .admin-ref-attention-copy strong {
+    font-size: 12px;
+  }
+  .admin-reference .admin-ref-attention-copy small {
+    font-size: 11px;
+  }
+  .admin-reference .admin-ref-attention-action {
+    font-size: 11px;
+  }
+  .admin-reference .admin-ref-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-reference .admin-ref-metric {
+    min-height: 90px;
+    padding: 12px;
+  }
+  .admin-reference .admin-ref-workspace {
+    grid-template-columns: 1fr;
+  }
+  .admin-reference .admin-ref-review-list {
+    max-height: 260px;
+  }
+  .admin-reference .admin-ref-review-rail {
+    padding: 16px 10px;
+  }
+  .admin-reference .admin-ref-review-row {
+    flex-wrap: nowrap;
+  }
+  .admin-reference .admin-ref-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-reference .admin-ref-search {
+    max-width: none;
+  }
+  .admin-reference .admin-ref-segments {
+    width: fit-content;
+  }
+  .admin-reference .admin-ref-roster {
+    padding: 16px;
+  }
+  .admin-reference .admin-ref-table {
+    min-width: 640px;
+  }
+  .admin-reference .admin-ref-table-footer {
+    flex-wrap: wrap;
+  }
+  .admin-reference .admin-ref-audit-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .admin-reference .admin-ref-audit-summary {
+    flex-basis: calc(100% - 68px);
+  }
+  .admin-reference .admin-ref-audit-row code {
+    width: auto;
+    flex: 1;
+    margin-left: 17px;
+  }
+  .admin-reference .admin-ref-audit-row time {
+    width: auto;
+  }
+  .admin-reference .admin-ref-audit-row .admin-ref-icon-button {
+    width: 24px;
+  }
+  .admin-reference .admin-ref-settings-choices {
+    grid-template-columns: 1fr;
+  }
+  .admin-reference .admin-ref-session {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .admin-reference .admin-ref-photo-compare {
+    grid-template-columns: 1fr 1fr;
+  }
+  .admin-reference .admin-ref-photo {
+    height: 150px;
+  }
+  .admin-reference .admin-ref-map-frame {
+    height: 260px;
+  }
+  .dashboard-body.admin-command-page.admin-reference
+    .admin-jobs-command-deck__summary-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dashboard-body.admin-command-page.admin-reference
+    :is(.admin-jobs-terminal, .admin-jobs-detail) {
+    padding: 20px;
+  }
+}
+.admin-reference .admin-ref-map-error {
+  margin-block: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f9eeeb;
+  color: #8b3025;
+  line-height: 1.5;
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-reference *,
+  .admin-reference *::before,
+  .admin-reference *::after {
+    animation: none;
+    transition: none;
+    scroll-behavior: auto;
+  }
+}

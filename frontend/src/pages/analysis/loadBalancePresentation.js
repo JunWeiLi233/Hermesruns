@@ -1,4 +1,6 @@
 import { kmOf } from '../../utils/analysisInsights.js';
+import { runDayKey } from '../../utils/calendarDays.js';
+import { trainingStrain } from '../../utils/trainingStrain.js';
 
 // Legacy headroom estimate retained for existing consumers.
 export function getLoadBalanceZoneKey(key) {
@@ -47,29 +49,35 @@ export function buildLoadBalanceBudget(trainingLoad) {
 
 export function getLoadBalanceWeekStats(trainingLoad, runs) {
   const anchor = dateTime(trainingLoad?.days?.at(-1));
-  if (anchor == null) return { volumeKm: null, volumeDelta: null, monotony: null, baseDelta: null, chronicTrend: 'unknown' };
+  if (anchor == null) {
+    return { volumeKm: null, volumeDelta: null, monotony: null, weekLoad: null, strain: null, previousStrain: null, strainDelta: null, hasPriorWeek: false, baseDelta: null, chronicTrend: 'unknown' };
+  }
   let volumeKm = 0;
   let previousKm = 0;
   for (const run of runs) {
     const started = new Date(run.startTime || run.startDate || 0);
     if (!Number.isFinite(started.getTime()) || Number(run.movingTimeSeconds) <= 0) continue;
-    const day = dateTime(started.toISOString().slice(0, 10));
+    const day = dateTime(runDayKey(run));
     const distance = kmOf(run);
     if (!Number.isFinite(distance) || distance <= 0 || day > anchor || day <= anchor - 14 * DAY_MS) continue;
     if (day > anchor - 7 * DAY_MS) volumeKm += distance;
     else previousKm += distance;
   }
-  const daily = trainingLoad.dailyLoads?.slice(-7) || [];
-  const mean = daily.reduce((sum, load) => sum + load, 0) / 7;
-  const variance = daily.reduce((sum, load) => sum + (load - mean) ** 2, 0) / 7;
-  const monotony = daily.length === 7 && mean > 0 ? (variance > 0 ? mean / Math.sqrt(variance) : Infinity) : null;
+  // The week's load, monotony and strain come from one place, so the cards that print them cannot disagree.
+  const { week, previous, change } = trainingStrain(trainingLoad.dailyLoads);
   const chronic = trainingLoad.lastChronic;
   const previousChronic = trainingLoad.chronicSeries?.at(-8);
   const chronicChange = previousChronic > 0 ? (chronic - previousChronic) / previousChronic : null;
   return {
     volumeKm,
     volumeDelta: previousKm > 0 ? Math.round((volumeKm / previousKm - 1) * 100) : null,
-    monotony,
+    monotony: week ? week.monotony : null,
+    weekLoad: week ? week.load : null,
+    strain: week ? week.strain : null,
+    previousStrain: previous ? previous.strain : null,
+    strainDelta: change,
+    // There is a week before when the history is 14 days long; it may still have nothing to compare with (a rest week, a flat one).
+    hasPriorWeek: Boolean(previous),
     baseDelta: chronic > 0 ? Math.round((trainingLoad.lastAcute / chronic - 1) * 100) : null,
     chronicTrend: chronicChange == null ? 'unknown' : chronicChange > 0.03 ? 'rising' : chronicChange < -0.03 ? 'falling' : 'steady',
   };

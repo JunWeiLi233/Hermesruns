@@ -15,6 +15,8 @@ Backend paths in this table are relative to
 | `/profile` | [profile/ProfileDashboard.jsx](profile/ProfileDashboard.jsx) via [Profile.jsx](profile/Profile.jsx) | `runner/ProfileController.java`, `runner/ProfileApplicationService.java` | `_split/profile.css`, `_split/profile-dashboard-redesign.css` |
 | `/runs` | [runs/Runs.jsx](runs/Runs.jsx) | `activity/ActivityController.java`, `activity/ActivityDataAccess.java` | `_split/runs.css` |
 | `/runs/:id` | [runs/RunDetail.jsx](runs/RunDetail.jsx) | `activity/ActivityController.java`, telemetry helpers | `run-detail-profile-minimal.css` |
+| Pace analysis on a run (pace chart, grade-adjusted pace, time at each pace) | [runs/RunPaceAnalysis.jsx](runs/RunPaceAnalysis.jsx), [PaceChart.jsx](runs/PaceChart.jsx), [PaceDistribution.jsx](runs/PaceDistribution.jsx), [usePaceProfile.js](runs/usePaceProfile.js), [usePaceZones.js](runs/usePaceZones.js) | `activity/ActivityPaceProfileController.java` | `run-detail-v2.css` |
+| Effort score, rating and heart-rate zones on a run | [runs/RunTrainingCards.jsx](runs/RunTrainingCards.jsx), [RunEffortCard.jsx](runs/RunEffortCard.jsx), [RunZonesCard.jsx](runs/RunZonesCard.jsx), [useTrainingMetrics.js](runs/useTrainingMetrics.js) | `coaching/TrainingMetricsController.java`, `activity/ActivityEditController.java` | `run-detail-v2.css` |
 | `/analysis` | [analysis/Analysis.jsx](analysis/Analysis.jsx) | `activity/ActivityController.java` | `_split/analysis.css` |
 | `/analysis/:insightKey` | [analysis/AnalysisInsightDetail.jsx](analysis/AnalysisInsightDetail.jsx) | `activity/`, `coaching/` | `analysis-profile-visual-alignment.css`, `analysis-detail-redesigns.css` |
 | `/prediction/:distKey` | [prediction/PredictionDetail.jsx](prediction/PredictionDetail.jsx) | Analysis data from `activity/` | `prediction-profile-alignment.css` |
@@ -28,7 +30,9 @@ Backend paths in this table are relative to
 | `/races`, `/races/details/:raceId` | [races/Races.jsx](races/Races.jsx), [RacesDetail.jsx](races/RacesDetail.jsx) | `races/RaceController.java`, `races/RaceEventService.java`, course-map services | `_split/races.css` |
 | `/rewards` | [rewards/Rewards.jsx](rewards/Rewards.jsx) | `rewards/DigitalCosmeticsController.java` | `_split/rewards.css`, `rewards-profile-alignment.css` |
 | `/settings`, `/settings/import-data` | [settings/Settings.jsx](settings/Settings.jsx), [ImportDataSettings.jsx](settings/ImportDataSettings.jsx) | `runner/`, `auth/`, `imports/`, `coaching/WellnessController.java` | `_split/settings.css`, `settings-fullwidth.css` |
+| Heart-rate zones in settings (the Training tab) | `components/SettingsTrainingZones.jsx`, `components/heartRateZoneLabels.js` | `runner/TrainingZonesController.java` | `settings-v2.css` |
 | Garmin import dialog in settings | [settings/GarminImportSettings.jsx](settings/GarminImportSettings.jsx) | `imports/GarminConnectController.java` | `_split/integrations.css` |
+| Strava disconnect, account delete, data export and time zone in settings | [settings/StravaDisconnectDialog.jsx](settings/StravaDisconnectDialog.jsx), [DeleteAccountDialog.jsx](settings/DeleteAccountDialog.jsx), `components/SettingsDataCard.jsx`, `components/SettingsTimeZoneRow.jsx` | `imports/StravaAccountService.java`, `runner/AccountController.java`, `runner/ProfileController.java` | `settings-v2.css` |
 | `/dashboard/*` | [admin/Dashboard.jsx](admin/Dashboard.jsx) | `admin/` controllers and `admin/AdminPortalService.java` | `_split/admin.css`, `admin-monitoring-dashboard.css` |
 | `/terms`, `/privacy` | [legal/LegalPage.jsx](legal/LegalPage.jsx) | Static SPA response | `_split/auth.css`, `auth-liquid-glass.css` |
 

@@ -22,6 +22,18 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 class GarminWellnessCompletionTests {
+
+    @Test
+    void savedWellnessNotifiesTheSharedPlannerBeforeCompletion() throws Exception {
+        var events = mock(org.springframework.context.ApplicationEventPublisher.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "events", events);
+        doReturn(Map.of("success", true, "days", List.of(
+                Map.of("date", "2026-08-20", "wellness", Map.of("resting_heart_rate", 55)))))
+                .when(service).callPythonWellnessDownloader(anyString(), anyString(), any(), any());
+        assertThat(service.importWellnessNow(runner(), "test", "test", 21)).isTrue();
+        verify(events).publishEvent(new com.hermes.backend.coaching.RecoveryUpdatedEvent(73L));
+        assertThat(service.getStatus(73L).status()).isEqualTo("COMPLETED");
+    }
     private final DailyWellnessSummaryRepository wellness = mock(DailyWellnessSummaryRepository.class);
     private final GarminWellnessImportService service = spy(new GarminWellnessImportService(
             wellness, mock(DailySleepDataRepository.class), mock(DailyHRVDataRepository.class),

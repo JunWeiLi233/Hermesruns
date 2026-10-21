@@ -8,6 +8,10 @@ const SECTION_ITEMS = [
   { id: 'run-detail-coach', labelKey: 'run_detail.subnav_coach', icon: 'coach_review', optional: 'coach' },
   { id: 'run-detail-comparison', labelKey: 'run_detail.subnav_comparison', icon: 'trending_up', optional: 'comparison' },
   { id: 'run-detail-telemetry', labelKey: 'run_detail.subnav_telemetry', icon: 'monitor_heart' },
+  { id: 'run-detail-pace', labelKey: 'run_detail.subnav_pace', icon: 'speed' },
+  { id: 'run-detail-effort', labelKey: 'run_detail.subnav_effort', icon: 'zones' },
+  { id: 'run-detail-intervals', labelKey: 'interval_analytics.title', icon: 'splits' },
+  { id: 'run-detail-condition-comparison', labelKey: 'condition_comparison.title', icon: 'trending_up' },
   { id: 'run-detail-splits', labelKey: 'run_detail.subnav_splits', icon: 'splits' },
 ];
 
@@ -23,7 +27,12 @@ function RunSectionLink({ active, icon, label, onActivate, sectionId }) {
       href={`#${sectionId}`}
       aria-current={active ? 'location' : undefined}
       aria-label={label}
-      onClick={() => onActivate(sectionId)}
+      onClick={() => {
+        const target = document.getElementById(sectionId);
+        const disclosure = target?.closest('details');
+        if (disclosure) disclosure.open = true;
+        onActivate(sectionId);
+      }}
       title={label}
     >
       <AppIcon name={icon} className="runner-dashboard-side-link-icon" aria-hidden="true" />
@@ -85,9 +94,10 @@ export default function RunsSubpageNav({
 
     const updateActiveSection = () => {
       const activeMarker = Math.max(96, Math.min(window.innerHeight * 0.24, 160));
-      const visibleTargets = targets.filter((target) => target.getBoundingClientRect().top <= activeMarker);
+      const renderedTargets = targets.filter((target) => target.getClientRects().length > 0);
+      const visibleTargets = renderedTargets.filter((target) => target.getBoundingClientRect().top <= activeMarker);
       const isAtPageEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-      const nextTarget = isAtPageEnd ? targets[targets.length - 1] : visibleTargets[visibleTargets.length - 1] || targets[0];
+      const nextTarget = isAtPageEnd ? renderedTargets[renderedTargets.length - 1] : visibleTargets[visibleTargets.length - 1] || renderedTargets[0];
       if (nextTarget) setActiveSection(nextTarget.id);
     };
 

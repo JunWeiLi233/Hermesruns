@@ -1,0 +1,163 @@
+/* Trends: one thing about the runner's runs, run by run over a period, with the middle of it, the range the runs usually keep to, a trend line and a comparison with the
+   stretch before. Cards, headings, chips and the light and midnight palettes follow the VO2max estimates page it sits beside; every colour below is one of the --mt-* tokens
+   defined here, and the marks of the chart keep 3 to 1 against the card in all four themes. */
+
+#root .metric-trend-v2 {
+  --mt-card: #fff;
+  --mt-ink: #171717;
+  --mt-muted: #515563;
+  --mt-faint: #6f665c;
+  --mt-line: rgba(28, 25, 23, 0.08);
+  --mt-fill: rgba(28, 25, 23, 0.05);
+  --mt-accent: #a0392a;
+  --mt-on-accent: #fff;
+  --mt-error: #c4261a;
+  --mt-dot: #766d64;
+  --mt-middle: #2f6fc0;
+  --mt-band: rgba(47, 111, 192, 0.13);
+  --mt-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+  --mt-pop: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1180px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 0 0 48px;
+  color: var(--mt-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .metric-trend-v2 {
+  --mt-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --mt-ink: #f8f4ef;
+  --mt-muted: #c0b8ad;
+  --mt-faint: #a69e93;
+  --mt-line: rgba(255, 248, 238, 0.12);
+  --mt-fill: rgba(255, 255, 255, 0.06);
+  --mt-accent: #ffb4a7;
+  --mt-on-accent: #1c1917;
+  --mt-error: #ff9b87;
+  --mt-dot: #a69e93;
+  --mt-middle: #78a9ef;
+  --mt-band: rgba(120, 169, 239, 0.18);
+  --mt-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --mt-pop: #2a2c33;
+}
+
+#root .metric-trend-v2 :is(h1, h2, h3, p, dl, dd, ol, ul) { margin: 0; }
+#root .metric-trend-v2 :is(ol, ul) { padding: 0; list-style: none; }
+
+/* Heading */
+#root .metric-trend-v2__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+#root .metric-trend-v2__head h2 {
+  color: var(--mt-ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+#root .metric-trend-v2__head p { max-width: 62ch; margin-top: 6px; color: var(--mt-muted); font-size: 0.9rem; line-height: 1.5; text-wrap: pretty; }
+#root .metric-trend-v2__links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+#root .metric-trend-v2__links a { color: var(--mt-accent); font-size: 0.85rem; font-weight: 700; text-decoration: none; }
+#root .metric-trend-v2__links a:hover { text-decoration: underline; }
+#root .metric-trend-v2 :is(a, button):focus-visible { outline: 2px solid var(--mt-accent); outline-offset: 2px; border-radius: 6px; }
+
+/* The cards, and the four choices in the first of them */
+#root .metric-trend-v2__card { display: flex; flex-direction: column; gap: 12px; padding: 20px 22px; border-radius: 24px; background: var(--mt-card); }
+#root .metric-trend-v2__choices { gap: 14px; }
+@media (min-width: 901px) {
+  #root .metric-trend-v2__choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 28px; }
+}
+#root .metric-trend-v2__choice { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+#root .metric-trend-v2__choice-label { color: var(--mt-muted); font-size: 0.75rem; font-weight: 700; }
+#root .metric-trend-v2__chips { display: flex; flex-wrap: wrap; max-width: 100%; gap: 2px; padding: 3px; border-radius: 11px; background: var(--mt-fill); }
+#root .metric-trend-v2__chips button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--mt-muted); font: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer; }
+#root .metric-trend-v2__chips button[aria-pressed="true"] { background: var(--mt-card); color: var(--mt-ink); box-shadow: 0 0 0 1px var(--mt-line); }
+#root .metric-trend-v2__hint { max-width: 78ch; color: var(--mt-faint); font-size: 0.75rem; line-height: 1.45; }
+
+/* Four readings */
+#root .metric-trend-v2__reads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+#root .metric-trend-v2__reads > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 16px 18px; border-radius: 18px; background: var(--mt-card); }
+#root .metric-trend-v2__reads span { color: var(--mt-muted); font-size: 0.75rem; font-weight: 700; }
+#root .metric-trend-v2__reads strong { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#root .metric-trend-v2__reads small { color: var(--mt-faint); font-size: 0.72rem; line-height: 1.45; }
+
+/* The chart */
+#root .metric-trend-v2__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--mt-muted); font-size: 0.75rem; }
+#root .metric-trend-v2__legend span { display: inline-flex; align-items: center; gap: 6px; }
+#root .metric-trend-v2__swatch { display: inline-block; flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: var(--mt-dot); }
+#root .metric-trend-v2__swatch.is-middle { width: 16px; height: 0; border-radius: 0; border-top: 2px dashed var(--mt-middle); background: none; }
+#root .metric-trend-v2__swatch.is-band { width: 16px; height: 10px; border-radius: 2px; background: var(--mt-band); }
+#root .metric-trend-v2__swatch.is-trend { width: 16px; height: 0; border-radius: 0; border-top: 3px solid var(--mt-accent); background: none; }
+#root .metric-trend-v2__plot { position: relative; min-width: 0; }
+#root .metric-trend-v2__svg { display: block; width: 100%; height: auto; overflow: visible; }
+#root .metric-trend-v2__svg text { fill: var(--mt-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+#root .metric-trend-v2__svg text.metric-trend-v2__axis-unit { font-weight: 700; }
+#root .metric-trend-v2__band { fill: var(--mt-band); }
+#root .metric-trend-v2__grid { stroke: var(--mt-line); stroke-width: 1; }
+#root .metric-trend-v2__middle { stroke: var(--mt-middle); stroke-width: 1.5; stroke-dasharray: 6 5; }
+#root .metric-trend-v2__trend { fill: none; stroke: var(--mt-accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+#root .metric-trend-v2__dot { fill: var(--mt-dot); stroke: var(--mt-card); stroke-width: 1.5; }
+#root .metric-trend-v2__svg.is-dense .metric-trend-v2__dot { stroke-width: 0.5; }
+/* One run looked at: the plot is a slider (pointer, finger, arrow keys), with a ring and a thin line on the run and its readout beside it. */
+#root .metric-trend-v2__slider { position: relative; touch-action: pan-y; cursor: crosshair; border-radius: 12px; }
+#root .metric-trend-v2__slider:focus-visible { outline: 2px solid var(--mt-accent); outline-offset: 4px; }
+#root .metric-trend-v2__cross { stroke: var(--mt-faint); stroke-width: 1; stroke-dasharray: 3 4; }
+#root .metric-trend-v2__selected { fill: none; stroke: var(--mt-ink); stroke-width: 2; }
+#root .metric-trend-v2__tooltip { position: absolute; z-index: 2; width: max-content; max-width: min(13rem, calc(100% - 16px)); display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 14px; background: var(--mt-pop); color: var(--mt-ink); box-shadow: var(--mt-shadow), 0 0 0 1px var(--mt-line); font-size: 0.75rem; pointer-events: none; }
+#root .metric-trend-v2__tooltip time { color: var(--mt-muted); font-weight: 700; }
+#root .metric-trend-v2__tooltip strong { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+#root .metric-trend-v2__tooltip span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; color: var(--mt-muted); overflow-wrap: anywhere; }
+#root .metric-trend-v2__tooltip small { color: var(--mt-faint); font-size: 0.7rem; line-height: 1.4; }
+
+/* The list of every run, for a screen reader: it is not drawn (sr-only), and has no bullets if a style sheet ever draws it. */
+#root .metric-trend-v2__list { margin: 0; padding: 0; list-style: none; }
+
+/* Notes, states */
+#root .metric-trend-v2__sentences { display: flex; flex-direction: column; gap: 8px; }
+#root .metric-trend-v2__note { max-width: 78ch; color: var(--mt-muted); font-size: 0.85rem; line-height: 1.55; text-wrap: pretty; }
+#root .metric-trend-v2__note.is-faint { color: var(--mt-faint); font-size: 0.75rem; }
+#root .metric-trend-v2__note.is-error { color: var(--mt-error); }
+#root .metric-trend-v2__note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+#root .metric-trend-v2__empty { align-items: flex-start; gap: 8px; padding: 28px; }
+#root .metric-trend-v2__empty h2 { font-size: 1.1rem; }
+#root .metric-trend-v2__empty p { max-width: 62ch; color: var(--mt-muted); font-size: 0.88rem; line-height: 1.5; }
+#root .metric-trend-v2__state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+#root .metric-trend-v2__button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--mt-accent);
+  color: var(--mt-on-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+#root .metric-trend-v2__skeleton { display: flex; flex-direction: column; gap: 12px; }
+#root .metric-trend-v2__skeleton-choices { height: 150px; border-radius: 24px; }
+#root .metric-trend-v2__skeleton-tiles { height: 100px; border-radius: 18px; }
+#root .metric-trend-v2__skeleton-chart { height: 320px; border-radius: 24px; }
+
+@media (max-width: 900px) {
+  #root .metric-trend-v2__reads { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  #root .metric-trend-v2__card { padding: 16px; }
+  /* The four readings are the rows of one card, a name on the left and its number on the right of a line, and when the two do not fit on a line (the text made larger)
+     the number goes under the name and not over it. */
+  #root .metric-trend-v2__reads { grid-template-columns: minmax(0, 1fr); gap: 0; overflow: hidden; border-radius: 18px; background: var(--mt-card); }
+  #root .metric-trend-v2__reads > div { display: flex; flex-flow: row wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; padding: 12px 16px; border-radius: 0; background: transparent; }
+  #root .metric-trend-v2__reads > div + div { border-top: 1px solid var(--mt-line); }
+  #root .metric-trend-v2__reads span { flex: 0 1 auto; }
+  #root .metric-trend-v2__reads strong { flex: 0 1 auto; min-width: 0; max-width: 100%; margin-left: auto; font-size: 1.3rem; text-align: right; overflow-wrap: anywhere; }
+  #root .metric-trend-v2__reads small { flex: 1 1 100%; }
+  #root .metric-trend-v2__skeleton-chart { height: 260px; }
+}

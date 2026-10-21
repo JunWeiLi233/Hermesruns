@@ -1,6 +1,8 @@
 package com.hermes.backend.shoes;
 
 import com.hermes.backend.coaching.LettaAgentClient;
+import com.hermes.backend.billing.AiSpendingBudget;
+import com.hermes.backend.billing.AiBudgetExceededException;
 import com.hermes.backend.infrastructure.config.SystemConfigService;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -24,6 +26,25 @@ import static org.mockito.Mockito.when;
 
 class ShoeQueryNormalizationServiceTests {
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"gemini", "letta"})
+    void exhaustedBudgetBlocksGeminiAndLettaBeforeProviderCall(String provider) throws Exception {
+        RestTemplate http = mock(RestTemplate.class);
+        AiSpendingBudget budget = mock(AiSpendingBudget.class);
+        SystemConfigService config = mock(SystemConfigService.class);
+        LettaAgentClient letta = mock(LettaAgentClient.class);
+        when(config.isAiConfigured()).thenReturn(true);
+        when(letta.isConfigured()).thenReturn(true);
+        org.mockito.Mockito.doThrow(new AiBudgetExceededException()).when(budget).reserve();
+        ShoeQueryNormalizationService service = new ShoeQueryNormalizationService(http,
+                new com.fasterxml.jackson.databind.ObjectMapper(), config, letta, budget);
+        setField(service, "aiApiKey", "test-key");
+        setField(service, "aiAgentProvider", provider);
+        assertThrows(AiBudgetExceededException.class, () -> service.normalize("Nike Pegasus"));
+        org.mockito.Mockito.verifyNoInteractions(http);
+        verify(letta, org.mockito.Mockito.never()).sendUserMessage(any(String.class));
+    }
+
         @SuppressWarnings({"unchecked", "rawtypes"})
         private static Class<HttpEntity<Map<String, Object>>> httpEntityMapClass() {
                 return (Class) HttpEntity.class;
@@ -38,7 +59,7 @@ class ShoeQueryNormalizationServiceTests {
         ShoeQueryNormalizationService service = new ShoeQueryNormalizationService(
                 restTemplate,
                 new com.fasterxml.jackson.databind.ObjectMapper(),
-                systemConfigService
+                systemConfigService, null, mock(AiSpendingBudget.class)
         );
         setField(service, "aiApiKey", "test-key");
         setField(service, "aiModel", "gemini-2.5-flash");
@@ -91,7 +112,7 @@ class ShoeQueryNormalizationServiceTests {
         ShoeQueryNormalizationService service = new ShoeQueryNormalizationService(
                 restTemplate,
                 new com.fasterxml.jackson.databind.ObjectMapper(),
-                systemConfigService
+                systemConfigService, null, mock(AiSpendingBudget.class)
         );
         setField(service, "aiApiKey", "test-key");
 
@@ -129,7 +150,7 @@ class ShoeQueryNormalizationServiceTests {
         ShoeQueryNormalizationService service = new ShoeQueryNormalizationService(
                 restTemplate,
                 new com.fasterxml.jackson.databind.ObjectMapper(),
-                systemConfigService
+                systemConfigService, null, mock(AiSpendingBudget.class)
         );
 
         IllegalStateException error = assertThrows(
@@ -158,7 +179,7 @@ class ShoeQueryNormalizationServiceTests {
                 restTemplate,
                 new com.fasterxml.jackson.databind.ObjectMapper(),
                 systemConfigService,
-                lettaAgentClient
+                lettaAgentClient, mock(AiSpendingBudget.class)
         );
         setField(service, "aiAgentProvider", "letta");
 

@@ -84,7 +84,7 @@ assert.match(
 
 assert.match(
   styleSource,
-  /#root \.run-detail-v2 \.run-detail-v2__map\s*\{[^}]*position:\s*relative;[^}]*min-height:\s*480px;[^}]*overflow:\s*hidden;[^}]*isolation:\s*isolate;/,
+  /#root \.run-detail-v2 \.run-detail-v2__map\s*\{[^}]*position:\s*relative;[^}]*min-height:\s*360px;[^}]*overflow:\s*hidden;[^}]*isolation:\s*isolate;/,
   'The normal map should be a contained, interactive hero card.',
 );
 assert.match(
@@ -124,7 +124,7 @@ assert.match(
 );
 assert.match(mapLifecycle, /if \(!points\.length\) return;/, 'No-route activities should not initialize Leaflet.');
 assert.match(styleSource, /\.run-detail-v2__map\.is-empty\s*\{[^}]*place-items:\s*center;/, 'The no-route fallback should remain visible in the map card.');
-assert.match(styleSource, /@media \(max-width: 1200px\)\s*\{[\s\S]*?\.run-detail-v2__map\s*\{\s*min-height: 380px;/, 'Tablet maps should use the compact card height.');
+assert.match(styleSource, /@media \(max-width: 960px\)\s*\{[\s\S]*?\.run-detail-v2__map\s*\{\s*min-height: 380px;/, 'Tablet maps should use the compact card height.');
 assert.match(styleSource, /@media \(max-width: 860px\)\s*\{[\s\S]*?\.run-detail-v2__map\s*\{\s*min-height: 300px;/, 'Narrow-screen maps should retain a usable card height.');
 
 console.log('[PASS] Run Detail v2 OpenStreetMap card guardrails passed.');

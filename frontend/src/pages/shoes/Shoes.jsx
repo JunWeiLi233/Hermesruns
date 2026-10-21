@@ -24,6 +24,7 @@ import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../../utils/shoeImagePickerState';
 import { getSafeImageUrl } from '../../utils/safeImageUrl.js';
 import PageSkeleton from '../../components/PageSkeleton';
+import LoadingOperationStatus from '../../components/loading/LoadingOperationStatus';
 import {
   buildRecentShoeSignal,
   calculateRotationHealth,
@@ -1261,8 +1262,8 @@ const Shoes = memo(function Shoes() {
                       {[
                         t('shoes.v2_active_pairs', { count: activeShoes.length }),
                         t('shoes.v2_retire_soon', { count: retireSoonCount }),
-                        `${t('shoes.rotation_health_label')}: ${t(`shoes.rotation_health_${rotationHealth.status}`)}`,
-                      ].join(' · ')}
+                        activeShoes.length > 1 ? `${t('shoes.rotation_health_label')}: ${t(`shoes.rotation_health_${rotationHealth.status}`)}` : null,
+                      ].filter(Boolean).join(' · ')}
                     </p>
                   </div>
                   <div className="shoe-v2-head-actions">
@@ -1624,6 +1625,7 @@ const Shoes = memo(function Shoes() {
                 </span>
               </div>
 
+              {imgSearching && <LoadingOperationStatus t={t} what="shoe images" initial={t('shoes.img_searching')} slow={t('loading.copy.still_searching')} />}
               <div className="shoe-photo-picker-body" id="shoe-photo-panel" role="tabpanel" aria-labelledby={`shoe-photo-tab-${imgPickerTab}`} aria-busy={imgApplying || imgSearching || imgUploading}>
                 {imgPickerTab === 'search' && (
                   <div className="shoe-photo-picker-pane">
@@ -1648,13 +1650,13 @@ const Shoes = memo(function Shoes() {
                       </button>
                     </form>
                     <div className="shoe-photo-picker-meta">
-                      <span>{imgSearching ? t('shoes.img_searching') : (visibleCandidates.length ? t('shoes.img_results_count', { count: visibleCandidates.length }) : t('shoes.img_search_copy'))}</span>
+                      <span>{!imgSearching && (visibleCandidates.length ? t('shoes.img_results_count', { count: visibleCandidates.length }) : t('shoes.img_search_copy'))}</span>
                       {visibleCandidates.length > 0 && !imgSearching ? <span>{t('shoes.img_pick_hint')}</span> : null}
                     </div>
                     {!imgSearching && imgSearchStatus && <div className="shoe-photo-studio-search-status">{imgSearchStatus}</div>}
                     {imgSearching ? (
-                      <div className="shoe-photo-picker-grid" aria-hidden="true">
-                        {Array.from({ length: 8 }, (_, i) => <span key={i} className="shoe-photo-picker-cell is-loading" />)}
+                      <div className="shoe-photo-picker-grid loading-design" aria-hidden="true">
+                        {Array.from({ length: 8 }, (_, i) => <span key={i} className="shoe-photo-picker-cell is-loading hr-sk" />)}
                       </div>
                     ) : visibleCandidates.length > 0 ? (
                       <div className="shoe-photo-picker-grid">

@@ -68,6 +68,10 @@ COPY tools/garmin_connect_download.py tools/garmin_wellness_download.py tools/ch
 
 USER hermes
 
+# The deploy image must fail closed on incomplete production security settings.
+ENV SPRING_PROFILES_ACTIVE=production \
+    HERMES_ENV=production
+
 # Exercise both stdin/JSON workers with offline fixtures as the runtime user.
 # Missing scripts, dependencies, or incompatible provider APIs fail the build.
 RUN python tools/check_garmin_runtime.py

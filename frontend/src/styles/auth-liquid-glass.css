@@ -248,14 +248,15 @@
 }
 
 #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-wordmark-row {
+  --hermes-logo-tile: 46px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: calc(var(--hermes-logo-tile) * 0.2292);
 }
 
 #root .auth-page--liquid-glass[data-auth-redesign="command-entry"] .auth-flow-wordmark-logo {
-  width: 30px;
-  height: 30px;
+  width: var(--hermes-logo-tile);
+  height: var(--hermes-logo-tile);
   flex: 0 0 auto;
 }
 

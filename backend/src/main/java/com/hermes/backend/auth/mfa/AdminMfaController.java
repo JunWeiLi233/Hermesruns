@@ -1,6 +1,5 @@
 package com.hermes.backend.auth.mfa;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.auth.AdminPortalSessionCookie;
 import com.hermes.backend.runner.Runner;
@@ -119,7 +118,9 @@ public class AdminMfaController {
             String json = registration
                     ? adminMfaService.registrationOptions(selector, bootstrapToken)
                     : adminMfaService.authenticationOptions(selector);
-            JsonNode payload = objectMapper.readTree(json);
+            // Plain containers preserve WebAuthn fields when Spring's Jackson 3
+            // HTTP converter serializes data parsed by the Jackson 2 mapper.
+            Map<?, ?> payload = objectMapper.readValue(json, Map.class);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CACHE_CONTROL, "no-store")
                     .header(HttpHeaders.PRAGMA, "no-cache")

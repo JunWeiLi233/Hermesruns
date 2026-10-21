@@ -14,7 +14,7 @@ function mount(props = {}) { return render(<MemoryRouter initialEntries={['/shoe
 async function openConfirmation(user) {
   await user.click(screen.getByRole('button', { name: 'Preview runner' }));
   await user.click(screen.getByRole('button', { name: 'Log Out' }));
-  return screen.getByRole('dialog', { name: 'Log out of Hermes?' });
+  return screen.getByRole('dialog', { name: 'Log out of HermesRuns?' });
 }
 it('opts the floating menu out of generic content-panel glass styling', async () => {
   const user = userEvent.setup(); mount();

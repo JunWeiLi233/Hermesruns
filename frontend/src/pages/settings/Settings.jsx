@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { apiFetch, apiJson } from '../../api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { apiJson } from '../../api';
+import { invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
 import HermesLogo from '../../components/HermesLogo';
@@ -8,7 +9,9 @@ import PageSkeleton from '../../components/PageSkeleton';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import SettingsAtlasLayout from '../../components/SettingsAtlasLayout';
 import TopbarNotifications from '../../components/TopbarNotifications';
+import DeleteAccountDialog from './DeleteAccountDialog';
 import GarminImportModal from './GarminImportSettings';
+import StravaDisconnectDialog from './StravaDisconnectDialog';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -70,6 +73,7 @@ export default function Settings() {
   const { theme, setTheme } = useTheme();
   const { unit, setUnit } = useUnit();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -87,6 +91,16 @@ export default function Settings() {
   const [runActivities, setRunActivities] = useState([]);
   const [runActivityState, setRunActivityState] = useState('loading');
   const [garminImportModalOpen, setGarminImportModalOpen] = useState(false);
+  const [stravaDisconnectOpen, setStravaDisconnectOpen] = useState(false);
+  const [stravaNotice, setStravaNotice] = useState('');
+  const [stravaConnectError, setStravaConnectError] = useState('');
+  const stravaConnectScopeRef = useRef(null);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+
+  useEffect(() => {
+    stravaConnectScopeRef.current = {};
+    return () => { stravaConnectScopeRef.current = null; };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     try {
@@ -260,26 +274,56 @@ export default function Settings() {
   }
 
   async function connectStrava() {
+    const scope = stravaConnectScopeRef.current;
+    const requestPathname = window.location.pathname;
+    const stillHere = () => scope != null && stravaConnectScopeRef.current === scope
+      && window.location.pathname === requestPathname;
     setStravaLinking(true);
+    setStravaConnectError('');
+    setStravaNotice('');
     try {
       const data = await apiJson('/api/auth/strava/link-url', { method: 'POST' });
+      if (!stillHere()) return;
       if (data?.url) {
         window.location.href = data.url;
         return;
       }
-    } catch {
+      setStravaConnectError('profile.strava_link_start_failed');
+    } catch (error) {
+      if (!stillHere()) return;
+      const missingConfiguration = error?.status === 503
+        && (stravaStatus?.configured === false || /not configured/i.test(error?.message || ''));
+      setStravaConnectError(missingConfiguration ? 'common.strava_not_configured' : 'profile.strava_link_start_failed');
+    }
+    if (stillHere()) {
       setStravaLinking(false);
     }
-    setStravaLinking(false);
   }
 
-  async function disconnectStrava() {
-    try {
-      await apiFetch('/api/auth/strava/unlink', { method: 'DELETE' });
-      setStravaStatus((current) => ({ ...(current || {}), linked: false, stravaEmail: '' }));
-    } catch {
-      setNameMsg(t('settings.stitch_strava_disconnect_error'));
+  function handleStravaDisconnected(result) {
+    const removed = Number(result?.removedActivities) || 0;
+    const notice = [removed > 0
+      ? t('settings.strava_disconnected_notice', { count: removed })
+      : t('settings.strava_disconnected_plain')];
+    if (result?.revokedAtStrava === false) {
+      notice.push(t('settings.strava_revoke_unconfirmed'));
     }
+    setStravaDisconnectOpen(false);
+    setStravaStatus((current) => ({ ...(current || {}), linked: false, stravaEmail: '' }));
+    setStravaNotice(notice.join(' '));
+    // The runs HermesRuns synced from Strava are gone, so pages that cached them must ask again.
+    invalidateResourceCache('/api/activities');
+    invalidateResourceCache('/api/profile/dashboard');
+    if (removed > 0) {
+      apiJson('/api/activities')
+        .then((activities) => setRunActivities(Array.isArray(activities) ? activities : []))
+        .catch(() => {});
+    }
+  }
+
+  function handleAccountDeleted() {
+    invalidateResourceCache();
+    logout();
   }
 
   function toggleDigest() {
@@ -468,6 +512,8 @@ export default function Settings() {
         </header>
 
         <SettingsAtlasLayout
+          accountEmail={profile?.email || ''}
+          initialSection={searchParams.get('section') || undefined}
           t={t}
           navigate={navigate}
           initials={initials}
@@ -483,8 +529,19 @@ export default function Settings() {
           stravaStatus={stravaStatus}
           stravaLabel={stravaLabel}
           stravaLinking={stravaLinking}
+          stravaNotice={stravaConnectError ? (
+            <>
+              {t(stravaConnectError)}{' '}
+              <button type="button" className="st-v2-btn" onClick={connectStrava} disabled={stravaLinking}>
+                {t('settings.training_retry')}
+              </button>
+            </>
+          ) : stravaNotice}
           connectStrava={connectStrava}
-          disconnectStrava={disconnectStrava}
+          requestStravaDisconnect={() => setStravaDisconnectOpen(true)}
+          timeZone={profile?.timeZone || ''}
+          onTimeZoneSaved={(zone) => setProfile((current) => ({ ...(current || {}), timeZone: zone }))}
+          onRequestDeleteAccount={() => setDeleteAccountOpen(true)}
           toggleDigest={toggleDigest}
           logout={logout}
           saveProfile={saveProfile}
@@ -520,6 +577,18 @@ export default function Settings() {
             onClose={() => setGarminImportModalOpen(false)}
           />
         )}
+        <StravaDisconnectDialog
+          t={t}
+          isOpen={stravaDisconnectOpen}
+          onClose={() => setStravaDisconnectOpen(false)}
+          onDisconnected={handleStravaDisconnected}
+        />
+        <DeleteAccountDialog
+          t={t}
+          isOpen={deleteAccountOpen}
+          onClose={() => setDeleteAccountOpen(false)}
+          onDeleted={handleAccountDeleted}
+        />
       </main>
     </div>
   );

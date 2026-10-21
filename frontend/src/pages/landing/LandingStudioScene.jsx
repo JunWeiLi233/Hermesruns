@@ -1,5 +1,6 @@
 import { useI18n } from '../../contexts/I18nContext';
 import AppIcon from '../../components/AppIcon';
+import HermesMarkSvg from '../../components/HermesMarkSvg';
 
 /** A quiet public illustration; example data never enters runner state. */
 export default function LandingStudioScene({ shoe }) {
@@ -12,7 +13,7 @@ export default function LandingStudioScene({ shoe }) {
         <div className="landing-studio-shoe-sheet">{shoe}</div>
         <div className="landing-studio-plan-sheet">
           <div className="landing-studio-sheet-head">
-            <span className="landing-studio-mini-mark" aria-hidden="true">H</span>
+            <span className="landing-studio-mini-mark" aria-hidden="true"><HermesMarkSvg variant="colon" /></span>
             <span>{t('landing.studio_today')}</span>
             <AppIcon name="timer" />
           </div>

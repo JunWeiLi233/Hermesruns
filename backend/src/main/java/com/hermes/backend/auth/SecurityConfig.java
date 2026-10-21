@@ -63,6 +63,8 @@ public class SecurityConfig {
                         // APP_CORS_ALLOWED_ORIGINS is configured; the actual requests below
                         // still require authentication.
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/internal/ready").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/internal/ready").permitAll()
                         .requestMatchers(
                                 "/api/auth/login", "/api/auth/signup", "/api/auth/verify-email",
                                 "/api/auth/forgot-password", "/api/auth/reset-password",
@@ -70,13 +72,17 @@ public class SecurityConfig {
                                 "/api/auth/resend-verification",
                                 "/api/auth/google", "/api/auth/google/start", "/api/auth/google/callback",
                                 "/api/auth/strava", "/api/auth/strava/start", "/api/auth/strava/callback",
-                                "/api/auth/strava/webhook", "/api/auth/refresh",
+                                "/api/auth/refresh",
                                 "/api/auth/providers", "/api/auth/strava/status",
                                 "/api/auth/password-rules", "/api/auth/ping"
                         ).permitAll()
                         .requestMatchers("/api/auth/admin-login").permitAll()
                         .requestMatchers("/api/auth/admin-mfa/**").permitAll()
-                        .requestMatchers("/api/billing/stripe/webhook").permitAll()
+                        // Provider callbacks carry no Hermes session. Each controller authenticates the call
+                        // itself: Stripe by signature, Strava by treating events as hints it confirms.
+                        // These must match the controllers' real paths, or the provider gets a 401.
+                        .requestMatchers("/api/billing/webhook").permitAll()
+                        .requestMatchers("/api/strava/webhook").permitAll()
                         // Leaflet requests basemap tiles as image URLs and cannot attach the
                         // runner's bearer token. The proxy only returns public OSM tiles, so
                         // keep this read-only endpoint available without authentication.
@@ -106,6 +112,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/index.html", "/assets/**",
                                 "/favicon.ico", "/favicon.svg", "/hermes-tab-icon.svg", "/icons.svg",
+                                "/training-plan-sw.js", "/apple-touch-icon.png", "/og-image.png",
                                 "/robots.txt", "/sitemap.xml", "/llms.txt",
                                 "/images/**",
                                 "/error"

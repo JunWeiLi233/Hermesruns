@@ -2,11 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import AppIcon from './AppIcon';
 import FooterNavLinks from './FooterNavLinks';
 import RunActivityContributionGraph from './RunActivityContributionGraph';
+import SettingsDataCard from './SettingsDataCard';
+import SettingsPlanCard from './SettingsPlanCard';
+import SettingsTimeZoneRow from './SettingsTimeZoneRow';
+import SettingsTrainingZones from './SettingsTrainingZones';
+import TrainingDataProvider from '../features/training/integrated/TrainingDataProvider';
+import SettingsTrainingTools from '../features/training/integrated/SettingsTrainingTools';
+import { dismissCompletionCard, isCompletionCardDismissed } from '../utils/settingsCompletionDismissal';
 
 /* Settings v2 (design 25a): sticky section selector + one active group.
-   Same props as the previous SettingsAtlasLayout, so Settings.jsx does not change. */
+   Disconnecting Strava and deleting the account only ask here (requestStravaDisconnect,
+   onRequestDeleteAccount): the confirmation dialogs live in Settings.jsx, outside .st-v2. */
+
+const SECTION_IDS = ['profile', 'preferences', 'training', 'connections', 'notifications', 'activity', 'account'];
 
 export default function SettingsAtlasLayout({
+  accountEmail = '',
+  initialSection,
   t,
   navigate,
   initials,
@@ -20,8 +32,12 @@ export default function SettingsAtlasLayout({
   stravaStatus,
   stravaLabel,
   stravaLinking,
+  stravaNotice,
   connectStrava,
-  disconnectStrava,
+  requestStravaDisconnect,
+  timeZone,
+  onTimeZoneSaved,
+  onRequestDeleteAccount,
   toggleDigest,
   logout,
   saveProfile,
@@ -50,8 +66,17 @@ export default function SettingsAtlasLayout({
   onAvatarUpload,
   onAvatarRemove,
 }) {
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeSection, setActiveSection] = useState(SECTION_IDS.includes(initialSection) ? initialSection : 'profile');
+  // The address can ask for another tab while Settings stays open (a link to /settings?section=training from
+  // here, or the browser's back and forward buttons), so a changed request moves the tab too.
+  const [requestedSection, setRequestedSection] = useState(initialSection);
+  if (initialSection !== requestedSection) {
+    setRequestedSection(initialSection);
+    if (SECTION_IDS.includes(initialSection)) setActiveSection(initialSection);
+  }
   const [compactNavigation, setCompactNavigation] = useState(false);
+  const [dismissedAccount, setDismissedAccount] = useState(null);
+  const completionDismissed = dismissedAccount === accountEmail || isCompletionCardDismissed(accountEmail);
   const avatarInputRef = useRef(null);
   const sectionTabsRef = useRef(null);
   const stravaConnected = Boolean(stravaStatus?.linked);
@@ -60,6 +85,7 @@ export default function SettingsAtlasLayout({
   const sections = [
     ['profile', t('settings.stitch_account_info')],
     ['preferences', t('settings.stitch_prefs_title')],
+    ['training', t('settings.training_tab')],
     ['connections', t('settings.stitch_data_services_title')],
     ['notifications', t('settings.v2_notifications_title')],
     ['activity', t('settings.v2_activity_title')],
@@ -97,6 +123,12 @@ export default function SettingsAtlasLayout({
     if (file) onAvatarUpload?.(file);
   }
 
+  function dismissCompletion() {
+    dismissCompletionCard(accountEmail);
+    setDismissedAccount(accountEmail);
+    sectionTabsRef.current?.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+  }
+
   const avatar = (size) => (
     <span className={`st-v2-avatar is-${size}`} aria-hidden="true">
       {avatarUrl ? <img src={avatarUrl} alt="" width="256" height="256" loading="eager" decoding="async" /> : initials}
@@ -115,10 +147,15 @@ export default function SettingsAtlasLayout({
             </div>
           </div>
 
-          <div className="st-v2-setup">
+          {!completionDismissed && <div className="st-v2-setup">
             <div className="st-v2-setup-head">
               <span>{t('settings.stitch_completion_title')}</span>
-              <strong>{setupChecklist.length ? `${doneCount} / ${setupChecklist.length}` : `${completionScore}%`}</strong>
+              <div className="st-v2-setup-actions">
+                <strong>{setupChecklist.length ? `${doneCount} / ${setupChecklist.length}` : `${completionScore}%`}</strong>
+                <button type="button" className="st-v2-setup-dismiss" onClick={dismissCompletion} aria-label={t('settings.dismiss_completion')} title={t('settings.dismiss_completion')}>
+                  <AppIcon name="delete" />
+                </button>
+              </div>
             </div>
             <div className="st-v2-progress" aria-hidden="true"><i style={{ width: `${completionScore}%` }} /></div>
             <ul>
@@ -129,7 +166,7 @@ export default function SettingsAtlasLayout({
                 </li>
               ))}
             </ul>
-          </div>
+          </div>}
 
           <nav ref={sectionTabsRef} className="st-v2-nav" role="tablist" aria-orientation={compactNavigation ? 'horizontal' : 'vertical'} aria-label={t('settings.heading')}>
             {sections.map(([id, label], index) => (
@@ -263,7 +300,14 @@ export default function SettingsAtlasLayout({
                   <button type="button" className={lang === 'zh-CN' ? 'is-active' : ''} aria-pressed={lang === 'zh-CN'} onClick={() => setLang('zh-CN')}>简体中文</button>
                 </div>
               </div>
+              <SettingsTimeZoneRow t={t} timeZone={timeZone} onSaved={onTimeZoneSaved} />
             </div>
+          </section>
+
+          <section id="st-v2-training" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'training'} aria-labelledby="st-v2-tab-training">
+            <h2 id="st-v2-training-label" className="st-v2-group-label">{t('settings.training_zones_title')}</h2>
+            <SettingsTrainingZones t={t} active={activeSection === 'training'} />
+            {activeSection === 'training' && <TrainingDataProvider><SettingsTrainingTools view="training" /></TrainingDataProvider>}
           </section>
 
           <section id="st-v2-connections" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'connections'} aria-labelledby="st-v2-tab-connections">
@@ -275,15 +319,16 @@ export default function SettingsAtlasLayout({
                   <div className="st-v2-row-copy">
                     <strong>Strava</strong>
                     <span className="st-v2-status"><i className={stravaConnected ? 'is-on' : ''} />{stravaLabel}</span>
+                    {stravaNotice ? <span role="status">{stravaNotice}</span> : null}
                   </div>
                 </div>
                 <button
                   type="button"
                   className={stravaConnected ? 'st-v2-btn' : 'st-v2-btn is-dark'}
-                  onClick={stravaConnected ? disconnectStrava : connectStrava}
+                  onClick={stravaConnected ? requestStravaDisconnect : connectStrava}
                   disabled={stravaLinking}
                 >
-                  {stravaConnected ? t('settings.stitch_manage') : (stravaLinking ? t('profile.strava_link_connecting') : t('settings.stitch_connect'))}
+                  {stravaConnected ? t('settings.strava_disconnect') : (stravaLinking ? t('profile.strava_link_connecting') : t('settings.stitch_connect'))}
                 </button>
               </div>
               <div className="st-v2-row">
@@ -359,7 +404,7 @@ export default function SettingsAtlasLayout({
 
           <section id="st-v2-activity" className="st-v2-group st-v2-activity" role="tabpanel" hidden={activeSection !== 'activity'} aria-labelledby="st-v2-tab-activity">
             <h2 id="st-v2-activity-label" className="st-v2-group-label">{t('settings.v2_activity_title')}</h2>
-            <RunActivityContributionGraph runs={runActivities} status={runActivityState} lang={lang} t={t} />
+            <RunActivityContributionGraph runs={runActivities} status={runActivityState} lang={lang} t={t} timeZone={timeZone} />
           </section>
 
           <section id="st-v2-account" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'account'} aria-labelledby="st-v2-tab-account">
@@ -373,6 +418,9 @@ export default function SettingsAtlasLayout({
                 <AppIcon name="chevron_right" />
               </button>
             </div>
+            <SettingsPlanCard t={t} />
+            <SettingsDataCard t={t} onRequestDeleteAccount={onRequestDeleteAccount} />
+            {activeSection === 'account' && <TrainingDataProvider><SettingsTrainingTools view="account" /></TrainingDataProvider>}
             <p className="st-v2-meta">{[resolvedUnitLabel, resolvedLanguageLabel, activeThemeLabel].filter(Boolean).join(' · ')}</p>
           </section>
         </div>

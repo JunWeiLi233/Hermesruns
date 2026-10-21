@@ -174,6 +174,46 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("runnerId") Long runnerId,
             @Param("activityType") String activityType
     );
+
+    /** Aggregate the complete history in SQL; return one observed point, never millions of rows. */
+    @Query(value = """
+            with densest as (
+                select floor(ap.latitude / 0.001) as lat_cell, floor(ap.longitude / 0.001) as lng_cell,
+                       count(*) as point_count, count(distinct ap.activity_id) as activity_count,
+                       avg(ap.latitude) as center_lat, avg(ap.longitude) as center_lng
+                from activity_points ap join activities a on a.id = ap.activity_id
+                where a.runner_id = :runnerId and a.activity_type = :activityType
+                  and ap.latitude between -90 and 90 and ap.longitude between -180 and 180
+                  and not (ap.latitude = 0 and ap.longitude = 0)
+                group by floor(ap.latitude / 0.001), floor(ap.longitude / 0.001)
+                order by point_count desc, activity_count desc, lat_cell asc, lng_cell asc limit 1
+            )
+            select ap.latitude, ap.longitude, d.activity_count, d.point_count
+            from activity_points ap join activities a on a.id = ap.activity_id
+            join densest d on floor(ap.latitude / 0.001) = d.lat_cell and floor(ap.longitude / 0.001) = d.lng_cell
+            where a.runner_id = :runnerId and a.activity_type = :activityType
+              and not (ap.latitude = 0 and ap.longitude = 0)
+            order by power(ap.latitude - d.center_lat, 2)
+                   + power((ap.longitude - d.center_lng) * cos(radians(d.center_lat)), 2),
+                     ap.latitude asc, ap.longitude asc limit 1
+            """, nativeQuery = true)
+    List<Object[]> findDensestHeatmapAnchor(@Param("runnerId") Long runnerId, @Param("activityType") String activityType);
+
+    /** Rank runs through the winning cell, then fetch only their traces. */
+    @Query(value = """
+            select a.id from activities a
+            where a.runner_id = :runnerId and a.activity_type = :activityType
+              and exists (select 1 from activity_points ap where ap.activity_id = a.id
+                  and ap.latitude >= :minLat and ap.latitude < :maxLat
+                  and ap.longitude >= :minLng and ap.longitude < :maxLng
+                  and not (ap.latitude = 0 and ap.longitude = 0))
+            order by abs(coalesce(a.distance_km, a.distance_meters / 1000.0, 0)
+                       - coalesce(cast(:targetKm as double precision), a.distance_km, a.distance_meters / 1000.0, 0)),
+                     coalesce(a.start_time, a.created_at) desc, a.id desc limit 18
+            """, nativeQuery = true)
+    List<Long> findHeatmapRouteActivityIds(@Param("runnerId") Long runnerId, @Param("activityType") String activityType,
+            @Param("minLat") double minLat, @Param("maxLat") double maxLat,
+            @Param("minLng") double minLng, @Param("maxLng") double maxLng, @Param("targetKm") Double targetKm);
     @Query(value = """
             select ap.activity_id, ap.latitude, ap.longitude, ap.distance_meters, ap.elapsed_seconds
             from activity_points ap

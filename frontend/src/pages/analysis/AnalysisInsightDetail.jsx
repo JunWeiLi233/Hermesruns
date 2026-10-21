@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
+import HowWorkedOut, { MethodsLink } from '../../components/HowWorkedOut';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson } from '../../api';
 import { cachedApiJson } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
+import useScrollHold from '../../hooks/useScrollHold';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
 import AnalysisSubpageNav from '../../components/AnalysisSubpageNav';
 import CoachIdentityBadge from '../../components/CoachIdentityBadge';
@@ -14,13 +16,24 @@ import PageSkeleton from '../../components/PageSkeleton';
 import Modal from '../../components/Modal';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
-import { formatDuration } from '../../utils/format';
+import { formatDuration, getDistanceUnitLabel } from '../../utils/format';
 import { resolveAssignedCoach } from '../../utils/coachIdentity';
-import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows } from '../../utils/analysisInsights';
+import { buildAnalysisSnapshot, buildCoachSystemSections, buildRunInsightRows, prepareAnalysisRuns } from '../../utils/analysisInsights';
 import { buildRunDetailPath } from '../../utils/runRoute';
-import { resolvePersonalizedCoachRecommendation } from '../../utils/personalizedCoachPlan';
+import { buildCoachRecommendationSessions, resolveCoachReadinessScore, resolvePersonalizedCoachRecommendation } from '../../utils/personalizedCoachPlan';
+import { getAccountDate } from '../../utils/timeZone';
+import useRecommendationRevision from '../../hooks/useRecommendationRevision';
+import { useAccountDate } from '../../hooks/useAccountDate';
 import { buildLoadBalanceBudget, getLoadBalanceWeekStats, getLoadBalanceRecentRuns, getLoadBalanceZoneKey, getLoadContribution } from './loadBalancePresentation';
 import CoachLoadChart from './CoachLoadChart';
+import MeasuredHrZoneBlock from './MeasuredHrZoneBlock';
+import { buildInjuryTimelineRows, buildTrendGeometry, nearestTrendPoint } from './injuryTrendGeometry';
+import { FitnessModelTool, RecoveryJournalTool } from '../../features/training/integrated/AthleteTools';
+import FitnessFormSection from './FitnessFormSection';
+import IntensitySection from './IntensitySection';
+import QualitySessions from './QualitySessions';
+import WeeklyDistanceSection from './WeeklyDistanceSection';
+import WeeklyEffortSection from './WeeklyEffortSection';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
@@ -84,13 +97,6 @@ function coachContent(t, coachInsight) {
   };
 }
 
-function formatDistanceValue(distanceKm, unit) {
-  if (distanceKm == null || Number.isNaN(distanceKm)) return '--';
-  const value = unit === 'mile' ? distanceKm / 1.60934 : distanceKm;
-  const suffix = unit === 'mile' ? 'mi' : 'km';
-  return `${value >= 10 ? value.toFixed(0) : value.toFixed(1)} ${suffix}`;
-}
-
 function formatRelativeDuration(seconds, t) {
   if (seconds == null || Number.isNaN(seconds)) return t('analysisInsight.rhythm_no_baseline');
   const magnitude = formatDuration(Math.abs(seconds));
@@ -140,56 +146,8 @@ function getTrendPointStyle(point) {
   };
 }
 
-function buildTrendGeometry(rows, sampleLimit = 4) {
-  const samples = rows.slice(0, sampleLimit).reverse();
-  if (!samples.length) {
-    return { areaPath: '', primaryPath: '', comparisonPath: '', points: [], labels: [] };
-  }
-
-  const width = 1000;
-  const height = 220;
-  const left = 18;
-  const right = 18;
-  const top = 22;
-  const bottom = 28;
-  const chartHeight = height - top - bottom;
-  const step = samples.length > 1 ? (width - left - right) / (samples.length - 1) : 0;
-  const maxLoad = Math.max(100, ...samples.map((sample) => Number(sample.loadScore || 0)));
-  const cadenceValues = samples.map((sample) => Number(sample.cadence || 0)).filter((value) => value > 0);
-  const cadenceMax = cadenceValues.length ? Math.max(...cadenceValues) : 190;
-  const cadenceMin = cadenceValues.length ? Math.min(...cadenceValues) : 170;
-  const cadenceRange = Math.max(1, cadenceMax - cadenceMin);
-
-  const points = samples.map((sample, index) => {
-    const loadRatio = clamp(Number(sample.loadScore || 0) / maxLoad, 0.1, 1);
-    const y = top + (1 - loadRatio) * chartHeight;
-    const cadenceRatio = sample.cadence
-      ? clamp((Number(sample.cadence) - cadenceMin) / cadenceRange, 0, 1)
-      : null;
-    const comparisonY = cadenceRatio == null ? null : top + (1 - cadenceRatio) * chartHeight;
-    return {
-      x: left + (step * index),
-      y,
-      comparisonY,
-      label: sample.dateLabel,
-      title: sample.title,
-      loadScore: sample.loadScore,
-      paceLabel: sample.paceLabel,
-      cadence: sample.cadence,
-    };
-  });
-
-  const primaryPath = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`).join(' ');
-  let comparisonStarted = false;
-  const comparisonPath = points.map(point => {
-    if (point.comparisonY == null) { comparisonStarted = false; return ''; }
-    const command = comparisonStarted ? 'L' : 'M';
-    comparisonStarted = true;
-    return `${command}${point.x},${point.comparisonY}`;
-  }).filter(Boolean).join(' ');
-  const areaPath = `${primaryPath} L${points.at(-1)?.x || width},${height - bottom} L${points[0]?.x || left},${height - bottom} Z`;
-
-  return { areaPath, primaryPath, comparisonPath, points, labels: points.map((point) => point.label) };
+function getTrendPointDescription(point) {
+  return `${point.dateKey} · ${point.title} #${point.id ?? point.sampleNumber}`;
 }
 
 function buildLoadChartGeometry(loadDashboard, layoutWidth = 920, withBand = false) {
@@ -269,413 +227,10 @@ function tonePalette(tone) {
 }
 
 // Legacy lane helper kept temporarily for diff safety while the merged coach-system builder settles in.
-function coachSystemCopy(lang) {
-  if (lang === 'zh-CN') {
-    return {
-      kicker: 'Hermes Coach System',
-      readinessLabel: '训练准备度',
-      readinessDescriptions: {
-        protect: '先降压，把频率守住，再把身体带回稳定轨道。',
-        absorb: '负荷偏高，先吸收，再安排关键刺激。',
-        rebalance: '高强度占比偏多，重新拉回有氧主导。',
-        press: '状态窗口已打开，可以把关键课做深一点。',
-        build: '基础正在变厚，继续稳步堆叠能力。',
-      },
-      planTitles: {
-        protect: '恢复防护周',
-        absorb: '吸收训练周',
-        rebalance: '强度重平衡周',
-        press: '进攻提升周',
-        build: '有氧建设周',
-      },
-      planSubtitles: {
-        protect: '像 Garmin Coach 一样把恢复、频率、长跑顺序重新排稳。',
-        absorb: '先把最近的训练吃进去，再安排一次可控的质量课。',
-        rebalance: '让 easy volume 重新成为主线，避免每次都跑成中高强度。',
-        press: '把最近的正向趋势转成下一次关键课和长跑执行质量。',
-        build: '围绕最近表现继续扩容，让训练计划更连续、更能落地。',
-      },
-      blockTitle: '当前训练系统',
-      blockCopy: '系统会根据最近表现、训练负荷、受伤信号和预测趋势，自动把下一段训练重点排成一个可执行的小周期。',
-      focusTitle: '本轮训练焦点',
-      focusCopy: '不是看更多卡片，而是先知道今天该怎么练、这一周该把什么放在前面。',
-      phaseTitle: '训练推进阶段',
-      phases: ['稳定', '建设', '兑现'],
-      scheduleTitle: '下一组训练动作',
-      scheduleCopy: '这不是固定模板，而是 Hermes 根据最近表现给出的当前最优排法。',
-      reasonsTitle: '系统为什么这样排',
-      reasonsIntro: '每一条建议都来自最近训练数据，而不是静态模板。',
-      evidenceTitle: '最近训练证据',
-      evidenceIntro: '这些训练记录正在驱动本轮教练系统。',
-      keyWorkoutLabel: '下一次关键课',
-      raceForecastLabel: '当前马拉松预测',
-      volume7Label: '近7天训练量',
-      volume28Label: '近28天训练量',
-      runCountLabel: '近7天训练次数',
-      loadLabel: '负荷比',
-      intensityLabel: '高强度占比',
-      injuryLabel: '伤病风险',
-      vdotLabel: '当前 VDOT',
-      primaryActionLabel: '今日优先动作',
-      sessionSlots: ['今天', '下一次质量课', '长跑主线', '支撑训练'],
-      sessionTarget: '目标',
-      sessionWhy: '原因',
-      actions: {
-        protect: [
-          { title: '恢复慢跑 + 动作检查', target: '35-45 分钟轻松跑，结束后做 4 组跑姿激活', why: '先把疲劳和动作偏移压回安全区。', tone: 'danger' },
-          { title: '休息或低冲击交叉', target: '离开高冲击，做灵活性和轻力量', why: '让最近偏高的负荷先被吸收。', tone: 'warn' },
-          { title: '有氧回归跑', target: '全程能说完整句子，最后加 4 次短加速', why: '守住频率，但不继续堆压力。', tone: 'cool' },
-          { title: '短版长跑', target: '把长跑缩到舒适上限，拒绝配速冒进', why: '长跑保留节奏，不把恢复周跑成赌状态。', tone: 'warn' },
-        ],
-        absorb: [
-          { title: '轻松跑吸收训练', target: '用 easy pace 把昨天的刺激吃进去', why: '先恢复，再谈新强度。', tone: 'warn' },
-          { title: '可控阈值课', target: '做 3-4 段稳定阈值，不追极限', why: '保留质量，但不把负荷继续顶高。', tone: 'cool' },
-          { title: '力量与核心支撑', target: '20-30 分钟力量，重点臀腿与核心', why: '把负荷转成更稳的支撑能力。', tone: 'good' },
-          { title: '稳态长跑', target: '长跑前段保守，后段只微微提速', why: '把容量守住，同时让身体有空间恢复。', tone: 'cool' },
-        ],
-        rebalance: [
-          { title: '纯有氧重置', target: '本次只守住 easy，心率不过界', why: '先把训练系统从过热状态拉回主线。', tone: 'warn' },
-          { title: '节奏课但不过量', target: '做一堂干净的节奏训练，其余时间全部回 easy', why: '把质量集中，而不是每跑一次都带阈值。', tone: 'cool' },
-          { title: '恢复跑 + 步频提醒', target: '轻松跑里盯住动作放松和步频', why: '让动作经济性跟上强度安排。', tone: 'good' },
-          { title: '长跑不抢配速', target: '长跑只在最后一段接近马配，前面全部收住', why: '重建极化分布，而不是继续堆灰区。', tone: 'warn' },
-        ],
-        press: [
-          { title: '轻松跑留余量', target: '先用 easy run 打开身体，不抢今天状态', why: '给关键课留出新鲜度。', tone: 'good' },
-          { title: '关键质量课', target: '优先阈值或马配连续段，把完成质量放第一位', why: '最近表现支持一次更完整的进攻刺激。', tone: 'cool' },
-          { title: '恢复跑 + 技术提醒', target: '轻松跑里加入短步频激活', why: '把高质量训练后的动作稳定住。', tone: 'good' },
-          { title: '推进式长跑', target: '长跑后段渐进到目标节奏附近', why: '把近期趋势转化成专项执行感。', tone: 'cool' },
-        ],
-        build: [
-          { title: '有氧容量跑', target: '稳定完成主力 easy mileage', why: '当前最值钱的是持续堆基础。', tone: 'cool' },
-          { title: '坡度或节奏刺激', target: '用一堂短而干净的质量课提升输出', why: '给基础周加入清晰刺激，但不打乱节奏。', tone: 'good' },
-          { title: '恢复衔接跑', target: '轻松跑 + 4-6 次短加速', why: '让下一次训练转换更顺滑。', tone: 'cool' },
-          { title: '稳态长跑', target: '长跑时间到位，配速不冲动', why: '持续把有氧地基做厚。', tone: 'good' },
-        ],
-      },
-      reasonTemplates: {
-        load: (value, zone) => `近阶段负荷比 ${value}，当前处于${zone}区间，所以训练排序先考虑吸收与安全边界。`,
-        intensity: (value) => `最近高强度占比 ${value}%，这会直接决定本轮是继续推进还是先把 easy volume 拉回来。`,
-        injury: (label, cadence, drift) => `伤病风险为${label}，步频变化 ${cadence}，漂移变化 ${drift}，系统会据此调节恢复与质量课比例。`,
-        forecast: (forecast, delta) => `马拉松预测目前在 ${forecast}，相对基线 ${delta}，说明现在更适合把训练放在兑现还是建设。`,
-      },
-      emptyRuns: '最近还没有足够训练记录，先从一次轻松跑开始，系统会逐步补全计划。',
-    };
-  }
-
-  return {
-    kicker: 'Hermes Coach System',
-    readinessLabel: 'Readiness',
-    readinessDescriptions: {
-      protect: 'Lower the strain first, keep frequency alive, then rebuild from a safer base.',
-      absorb: 'Recent work is heavy enough that absorption should come before the next big stimulus.',
-      rebalance: 'Intensity is crowding out aerobic work, so the system is steering back toward balance.',
-      press: 'Your recent trend opens a real performance window. This block can push with control.',
-      build: 'Your engine is stable enough to keep stacking consistent volume and one purposeful quality touch.',
-    },
-    planTitles: {
-      protect: 'Recovery Shield Block',
-      absorb: 'Absorb The Work Block',
-      rebalance: 'Intensity Rebalance Block',
-      press: 'Press The Fitness Block',
-      build: 'Aerobic Build Block',
-    },
-    planSubtitles: {
-      protect: 'A Garmin Coach-style reset block that protects frequency while dialing down strain.',
-      absorb: 'This block soaks in the recent load before asking for another demanding session.',
-      rebalance: 'The plan shifts back toward aerobic control so every run does not drift into gray-zone work.',
-      press: 'The system is turning a positive trend into one sharper key workout and a stronger long run.',
-      build: 'A steady build sequence that turns recent performance into a more reliable training rhythm.',
-    },
-    blockTitle: 'Current coach system',
-    blockCopy: 'Hermes is reordering your next training block from recent performance, training load, injury signals, and marathon trend instead of showing another generic analytics stack.',
-    focusTitle: 'What the system is optimizing',
-    focusCopy: 'The first screen answers what to do today, what the next key workout should be, and what needs protecting this week.',
-    phaseTitle: 'Block progression',
-    phases: ['Stabilize', 'Build', 'Sharpen'],
-    scheduleTitle: 'Next training moves',
-    scheduleCopy: 'This is an adaptive microcycle built from your latest data, not a fixed template.',
-    reasonsTitle: 'Why Hermes is steering this way',
-    reasonsIntro: 'Each recommendation is tied to recent evidence, not a static plan.',
-    evidenceTitle: 'Recent proof',
-    evidenceIntro: 'These sessions are currently driving the coach system.',
-    keyWorkoutLabel: 'Next key workout',
-    raceForecastLabel: 'Current marathon forecast',
-    volume7Label: '7-day volume',
-    volume28Label: '28-day volume',
-    runCountLabel: '7-day runs',
-    loadLabel: 'Load ratio',
-    intensityLabel: 'Hard share',
-    injuryLabel: 'Injury signal',
-    vdotLabel: 'Current VDOT',
-    primaryActionLabel: 'Primary move today',
-    sessionSlots: ['Today', 'Next quality', 'Long run line', 'Support work'],
-    sessionTarget: 'Target',
-    sessionWhy: 'Why',
-    actions: {
-      protect: [
-        { title: 'Recovery run + form audit', target: '35-45 min easy with 4 short drills after', why: 'Bring fatigue and movement cost back toward a safer range first.', tone: 'danger' },
-        { title: 'Rest or low-impact cross training', target: 'Mobility, easy bike, or no-impact recovery work', why: 'Absorb the recent load before stacking another hard day.', tone: 'warn' },
-        { title: 'Aerobic return run', target: 'Conversational effort with 4 relaxed strides', why: 'Keep frequency without turning recovery into hidden stress.', tone: 'cool' },
-        { title: 'Shortened long run', target: 'Keep it comfortable and cap ambition early', why: 'Protect the block while preserving long-run rhythm.', tone: 'warn' },
-      ],
-      absorb: [
-        { title: 'Easy absorption run', target: 'Stay fully aerobic and let the last session settle', why: 'Recovery comes before the next quality ask.', tone: 'warn' },
-        { title: 'Controlled threshold session', target: '3-4 threshold reps, smooth not maximal', why: 'Keep one real workout without pushing load any higher than needed.', tone: 'cool' },
-        { title: 'Strength and core support', target: '20-30 min of hips, calves, and trunk support', why: 'Turn recent work into better durability.', tone: 'good' },
-        { title: 'Steady long run', target: 'Start conservative and only lift late if you still feel fluid', why: 'Preserve volume while keeping room to recover.', tone: 'cool' },
-      ],
-      rebalance: [
-        { title: 'Pure aerobic reset', target: 'Easy effort only, with heart rate under control', why: 'Cool the system down before the next meaningful workout.', tone: 'warn' },
-        { title: 'Clean tempo session', target: 'One focused quality session, everything else stays easy', why: 'Concentrate the stress instead of leaking threshold into every run.', tone: 'cool' },
-        { title: 'Recovery run + cadence cue', target: 'Relaxed run with short cadence reminders', why: 'Let movement economy catch up to the workload.', tone: 'good' },
-        { title: 'Long run without pace chasing', target: 'Only the closing stretch approaches marathon feel', why: 'Rebuild a healthier polarized split.', tone: 'warn' },
-      ],
-      press: [
-        { title: 'Easy opener', target: 'Easy run first so the key day stays fresh', why: 'Protect the quality of the next bigger session.', tone: 'good' },
-        { title: 'Key workout', target: 'Prioritize threshold or marathon-pace continuity over hero splits', why: 'Recent trend supports one stronger, better-executed stimulus.', tone: 'cool' },
-        { title: 'Recovery run + mechanics', target: 'Easy mileage with short stride reminders', why: 'Stabilize form after the key session.', tone: 'good' },
-        { title: 'Progressive long run', target: 'Finish near goal rhythm only if the first half stays smooth', why: 'Convert current momentum into specific race execution.', tone: 'cool' },
-      ],
-      build: [
-        { title: 'Aerobic volume run', target: 'Land the main easy mileage cleanly', why: 'The most valuable thing right now is consistent engine work.', tone: 'cool' },
-        { title: 'Hill or tempo touch', target: 'One compact quality session that stays controlled', why: 'Add a clear stimulus without breaking the weekly rhythm.', tone: 'good' },
-        { title: 'Recovery bridge run', target: 'Easy run plus 4-6 short strides', why: 'Keep the next transition smooth and repeatable.', tone: 'cool' },
-        { title: 'Steady long run', target: 'Hold the duration, not the ego', why: 'Keep thickening the aerobic base.', tone: 'good' },
-      ],
-    },
-    reasonTemplates: {
-      load: (value, zone) => `Load ratio is ${value} and your stack is currently ${zone}, so the order of sessions needs to respect absorption before ambition.`,
-      intensity: (value) => `Hard work makes up ${value}% of recent training, which is driving how much the system pulls you back toward aerobic control.`,
-      injury: (label, cadence, drift) => `Injury signal is ${label}, with cadence at ${cadence} and drift at ${drift}, so recovery and quality are being rebalanced around durability.`,
-      forecast: (forecast, delta) => `Your marathon forecast sits at ${forecast} and is ${delta}, which tells Hermes whether this block should build or sharpen.`,
-    },
-    emptyRuns: 'Not enough recent training yet. Start with one easy run and Hermes will begin shaping the plan.',
-  };
-}
-
-// Legacy lane helper kept temporarily for diff safety while the merged coach-system builder settles in.
-// eslint-disable-next-line no-unused-vars
-function buildCoachSystemModel(snapshot, recentRows, runs, lang, unit) {
-  const copy = coachSystemCopy(lang);
-  const phaseKey = snapshot.coachInsight?.key || 'build';
-  const palette = tonePalette(snapshot.coachInsight?.tone || 'cool');
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const validRuns = runs.filter((run) => Number(run?.movingTimeSeconds || 0) > 0);
-  const recent7Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
-  });
-  const recent28Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 28 * dayMs;
-  });
-  const volume7Km = recent7Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
-  const volume28Km = recent28Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
-  const runCount7 = recent7Runs.length;
-  const lastRun = validRuns[0] || null;
-  const lastRunDate = lastRun ? new Date(lastRun.startTime || lastRun.startDate || 0).getTime() : null;
-  const daysSinceLastRun = lastRunDate && !Number.isNaN(lastRunDate) ? Math.max(0, Math.round((now - lastRunDate) / dayMs)) : null;
-  const averageRunKm = recent28Runs.length ? volume28Km / recent28Runs.length : (volume7Km > 0 ? volume7Km / Math.max(1, runCount7) : 8);
-  const longRunTargetKm = clamp(averageRunKm * 1.9, 10, 32);
-  const easyRunTargetKm = clamp(averageRunKm * 0.9, 5, 16);
-  const keyRunTargetKm = clamp(averageRunKm * 1.1, 6, 18);
-
-  let readinessScore = 82;
-  if (snapshot.injury.level === 'high') readinessScore -= 26;
-  else if (snapshot.injury.level === 'moderate') readinessScore -= 14;
-  if ((snapshot.trainingLoad?.lastAcwr ?? 0) > 1.3) readinessScore -= 16;
-  else if ((snapshot.trainingLoad?.lastAcwr ?? 0) < 0.8) readinessScore -= 6;
-  if ((snapshot.polarized?.hardPct ?? 0) >= 32) readinessScore -= 10;
-  if (daysSinceLastRun != null && daysSinceLastRun >= 2) readinessScore += 6;
-  readinessScore = clamp(Math.round(readinessScore), 38, 95);
-
-  const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
-  const sessionTemplates = copy.actions[phaseKey] || copy.actions.build;
-  const sessionTargets = [
-    formatDistanceValue(easyRunTargetKm, unit),
-    formatDistanceValue(keyRunTargetKm, unit),
-    formatDistanceValue(longRunTargetKm, unit),
-    lang === 'zh-CN' ? '20-30 分钟' : '20-30 min',
-  ];
-  const sessions = sessionTemplates.map((session, index) => ({
-    slot: copy.sessionSlots[index],
-    title: session.title,
-    target: index <= 2 ? sessionTargets[index] : session.target,
-    why: session.why,
-    tone: session.tone,
-    detail: session.target,
-  }));
-
-  const loadZoneLabel = snapshot.loadZone.key === 'optimal' ? (lang === 'zh-CN' ? '最佳区间' : 'optimal') : snapshot.loadZone.key;
-  const injuryLabel = lang === 'zh-CN'
-    ? (snapshot.injury.level === 'high' ? '高' : snapshot.injury.level === 'moderate' ? '中' : '低')
-    : snapshot.injury.level;
-  const cadenceDelta = formatSignedPercent(snapshot.injury.cadenceDelta);
-  const driftDelta = formatSignedPercent(snapshot.injury.costDelta);
-
-  return {
-    copy,
-    palette,
-    phaseKey,
-    readinessScore,
-    readinessDescription: copy.readinessDescriptions[phaseKey],
-    title: copy.planTitles[phaseKey],
-    subtitle: copy.planSubtitles[phaseKey],
-    forecastLabel: snapshot.marathonRow?.timeLabel || '--',
-    forecastDelta: '--',
-    keyWorkout: sessions[1]?.title || sessions[0]?.title,
-    focusCards: [
-      { label: copy.loadLabel, value: snapshot.trainingLoad?.lastAcwr?.toFixed(2) || '--', detail: loadZoneLabel, tone: snapshot.loadZone.tone || 'cool' },
-      { label: copy.intensityLabel, value: snapshot.polarized ? `${snapshot.polarized.hardPct}%` : '--', detail: snapshot.polarized ? `${snapshot.polarized.easySharePct}/${snapshot.polarized.moderateSharePct}/${snapshot.polarized.hardSharePct}` : '--', tone: (snapshot.polarized?.hardPct ?? 0) >= 32 ? 'warn' : 'good' },
-      { label: copy.injuryLabel, value: injuryLabel, detail: `${cadenceDelta} / ${driftDelta}`, tone: injuryTone(snapshot.injury.level) },
-      { label: copy.raceForecastLabel, value: snapshot.marathonRow?.timeLabel || '--', detail: '--', tone: (snapshot.marathonDeltaSeconds ?? 0) < 0 ? 'good' : 'cool' },
-    ],
-    phases: copy.phases.map((label, index) => ({ label, active: index === phaseIndex })),
-    sessions,
-    reasons: [
-      copy.reasonTemplates.load(snapshot.trainingLoad?.lastAcwr?.toFixed(2) || '--', loadZoneLabel),
-      copy.reasonTemplates.intensity(snapshot.polarized?.hardPct ?? 0),
-      copy.reasonTemplates.injury(injuryLabel, cadenceDelta, driftDelta),
-      copy.reasonTemplates.forecast(snapshot.marathonRow?.timeLabel || '--', '--'),
-    ],
-    recentRows,
-    emptyRunsCopy: copy.emptyRuns,
-  };
-}
-
 const COACH_PHASE_LABELS = {
   'zh-CN': ['稳定', '建设', '兑现'],
   en: ['Stabilize', 'Build', 'Sharpen'],
 };
-
-function mergedCoachStateCopy(lang, state) {
-  const zh = {
-    protect: {
-      title: '恢复保护周',
-      subtitle: '先把疲劳和伤病信号压下来，再像 Garmin Coach 一样稳住节奏与频率。',
-      readiness: '今天更适合回收压力，而不是继续推进。',
-    },
-    absorb: {
-      title: '吸收训练周',
-      subtitle: '最近训练已经够扎实，这一轮更像真正教练计划里的吸收阶段。',
-      readiness: '先让最近几次训练沉淀，再安排下一次质量刺激。',
-    },
-    rebalance: {
-      title: '强度平衡周',
-      subtitle: '高强度占比正在挤压有氧主线，这一轮要把训练重新拉回更健康的分布。',
-      readiness: '收拢强度，保住节奏，让 easy volume 重新成为主线。',
-    },
-    press: {
-      title: '推进兑现周',
-      subtitle: '最近趋势给了你一个可用窗口，这一轮可以把状态转成更明确的关键课和长跑执行。',
-      readiness: '今天可以更主动地推进，但仍要把质量集中到重点训练里。',
-    },
-    build: {
-      title: '有氧建设周',
-      subtitle: '当前最值钱的是继续把节奏、频率和容量叠起来，让训练更连续。',
-      readiness: '稳步建设，比额外冒险更有长期价值。',
-    },
-  };
-  const en = {
-    protect: {
-      title: 'Recovery Shield Block',
-      subtitle: 'Lower the strain first, then stabilize rhythm and frequency the way a Garmin Coach plan would.',
-      readiness: 'Today is better for absorbing stress than forcing progression.',
-    },
-    absorb: {
-      title: 'Absorb The Work Block',
-      subtitle: 'Recent training is strong enough that this week should behave like a coached absorption phase.',
-      readiness: 'Let the last few sessions settle before asking for another quality stimulus.',
-    },
-    rebalance: {
-      title: 'Intensity Rebalance Block',
-      subtitle: 'Hard work is crowding out your aerobic line, so this block pulls training back toward a healthier split.',
-      readiness: 'Compress the stress, protect rhythm, and let easy volume lead the week again.',
-    },
-    press: {
-      title: 'Press The Fitness Block',
-      subtitle: 'Recent trend opens a real window, so this block can turn momentum into a sharper workout and better long-run execution.',
-      readiness: 'You can press with control, but the quality still needs to stay concentrated.',
-    },
-    build: {
-      title: 'Aerobic Build Block',
-      subtitle: 'The highest-value move right now is to keep stacking rhythm, frequency, and volume cleanly.',
-      readiness: 'Steady build is worth more than extra risk right now.',
-    },
-  };
-
-  return (lang === 'zh-CN' ? zh : en)[state] || (lang === 'zh-CN' ? zh.build : en.build);
-}
-
-function mergedCoachSessionTemplates(lang, state) {
-  const zh = {
-    protect: [
-      { title: '恢复慢跑', detail: '35-45 分钟轻松跑，结束后做 4 组短加速', why: '把疲劳和动作成本先拉回安全区。', tone: 'danger' },
-      { title: '休息或低冲击交叉', detail: '灵活性、单车或完全休息', why: '先吸收最近的训练负荷。', tone: 'warn' },
-      { title: '回归有氧', detail: '全程可对话配速，不抢节奏', why: '守住频率，但不继续叠压力。', tone: 'cool' },
-      { title: '缩短版长跑', detail: '保留长跑主线，不抢配速', why: '保护恢复，同时保留长距离习惯。', tone: 'warn' },
-    ],
-    absorb: [
-      { title: '轻松吸收跑', detail: '让上一堂训练真正沉淀下来', why: '恢复优先于下一次刺激。', tone: 'warn' },
-      { title: '可控阈值课', detail: '3-4 段稳定阈值，不追极限', why: '保留质量，但不继续把负荷顶高。', tone: 'cool' },
-      { title: '力量与核心支撑', detail: '20-30 分钟下肢和核心强化', why: '把训练转成更稳的耐用性。', tone: 'good' },
-      { title: '稳定长跑', detail: '前段保守，感觉顺再轻轻提速', why: '保住容量，也给恢复留空间。', tone: 'cool' },
-    ],
-    rebalance: [
-      { title: '纯有氧重置', detail: '轻松跑，把心率守在舒服区间', why: '先把系统从过热状态拉回来。', tone: 'warn' },
-      { title: '干净节奏课', detail: '只保留一堂重点质量课', why: '把压力集中，而不是每次都带阈值。', tone: 'cool' },
-      { title: '恢复跑 + 步频提醒', detail: '放松配速里守住动作经济性', why: '让动作质量跟上训练负荷。', tone: 'good' },
-      { title: '不追配速的长跑', detail: '只有最后一段接近目标感', why: '重建更健康的强度分布。', tone: 'warn' },
-    ],
-    press: [
-      { title: '轻松开场', detail: '用 easy run 给关键课留新鲜度', why: '保护接下来更重要的训练日。', tone: 'good' },
-      { title: '关键质量课', detail: '优先阈值或马配连续段，不追英雄分段', why: '最近趋势支持一次更完整的刺激。', tone: 'cool' },
-      { title: '恢复跑 + 技术提醒', detail: '轻松里加一点步频或放松提示', why: '把质量课后的动作稳定住。', tone: 'good' },
-      { title: '推进式长跑', detail: '前半守住，后半再接近目标节奏', why: '把近期状态转成专项执行感。', tone: 'cool' },
-    ],
-    build: [
-      { title: '有氧容量跑', detail: '把主力 easy mileage 跑干净', why: '当前最值钱的是持续建设引擎。', tone: 'cool' },
-      { title: '坡度或节奏刺激', detail: '一堂短而清晰的质量课', why: '在不打乱节奏的前提下加入刺激。', tone: 'good' },
-      { title: '恢复衔接跑', detail: '轻松跑加 4-6 次短加速', why: '让下一次转换更顺滑。', tone: 'cool' },
-      { title: '稳定长跑', detail: '守住时长，不冲动提速', why: '继续把有氧地基做厚。', tone: 'good' },
-    ],
-  };
-  const en = {
-    protect: [
-      { title: 'Recovery run', detail: '35-45 min easy with 4 short strides after', why: 'Pull fatigue and movement cost back toward a safer range.', tone: 'danger' },
-      { title: 'Rest or low-impact cross training', detail: 'Mobility, bike, or complete rest', why: 'Absorb the recent load before stacking another hard day.', tone: 'warn' },
-      { title: 'Aerobic return run', detail: 'Fully conversational effort, no pace chasing', why: 'Keep frequency alive without hiding extra stress.', tone: 'cool' },
-      { title: 'Short long run', detail: 'Keep the rhythm of the long run, not the ego', why: 'Protect recovery while preserving the habit.', tone: 'warn' },
-    ],
-    absorb: [
-      { title: 'Easy absorption run', detail: 'Let the last session actually settle in', why: 'Recovery comes before the next big ask.', tone: 'warn' },
-      { title: 'Controlled threshold session', detail: '3-4 smooth threshold reps, not maximal', why: 'Keep one real quality day without pushing load too high.', tone: 'cool' },
-      { title: 'Strength and core support', detail: '20-30 min for hips, calves, and trunk', why: 'Convert training into better durability.', tone: 'good' },
-      { title: 'Steady long run', detail: 'Stay conservative early and lift only if still fluid', why: 'Preserve volume while leaving room to recover.', tone: 'cool' },
-    ],
-    rebalance: [
-      { title: 'Aerobic reset', detail: 'Easy effort only, with heart rate under control', why: 'Cool the system down before the next key workout.', tone: 'warn' },
-      { title: 'Clean tempo session', detail: 'One focused workout, everything else easy', why: 'Concentrate stress instead of leaking threshold into every run.', tone: 'cool' },
-      { title: 'Recovery run + cadence cue', detail: 'Relaxed running with a few form reminders', why: 'Let movement economy catch up to the workload.', tone: 'good' },
-      { title: 'Long run without pace chasing', detail: 'Only the close approaches marathon feel', why: 'Rebuild a healthier intensity split.', tone: 'warn' },
-    ],
-    press: [
-      { title: 'Easy opener', detail: 'Use an easy run to keep the key day fresh', why: 'Protect the quality of the bigger session.', tone: 'good' },
-      { title: 'Key workout', detail: 'Prioritize threshold or marathon-pace continuity', why: 'Recent trend supports one stronger stimulus.', tone: 'cool' },
-      { title: 'Recovery run + mechanics', detail: 'Easy mileage with short technique reminders', why: 'Stabilize form after the key session.', tone: 'good' },
-      { title: 'Progressive long run', detail: 'Finish stronger only if the first half stays smooth', why: 'Turn current momentum into race-specific execution.', tone: 'cool' },
-    ],
-    build: [
-      { title: 'Aerobic volume run', detail: 'Land the main easy mileage cleanly', why: 'The best return right now is consistent engine work.', tone: 'cool' },
-      { title: 'Hill or tempo touch', detail: 'One compact quality session that stays controlled', why: 'Add a clear stimulus without breaking the week.', tone: 'good' },
-      { title: 'Recovery bridge run', detail: 'Easy run plus 4-6 short strides', why: 'Keep the next transition smooth and repeatable.', tone: 'cool' },
-      { title: 'Steady long run', detail: 'Hold the duration, not the ego', why: 'Keep thickening the aerobic base.', tone: 'good' },
-    ],
-  };
-
-  return (lang === 'zh-CN' ? zh : en)[state] || (lang === 'zh-CN' ? zh.build : en.build);
-}
 
 function mergedCoachSectionCopy(t, key) {
   if (key === 'load') return { label: t('analysis.coach_insight_readiness_title'), copy: t('analysis.coach_insight_readiness_copy') };
@@ -683,90 +238,16 @@ function mergedCoachSectionCopy(t, key) {
   return { label: t('analysis.coach_insight_planning_title'), copy: t('analysis.coach_insight_planning_copy') };
 }
 
-function mergedCoachReasonLines(t, snapshot, coachSections) {
-  const signals = coachSections.signals || {};
-  const loadZoneLabel = snapshot.loadZone.key === 'optimal' ? t('analysisInsight.load_zone_optimal_zone') : snapshot.loadZone.key;
-
-  return [
-    t('analysisInsight.coach_reason_load', { acwr: signals.acwr?.toFixed(2) || '--', zone: loadZoneLabel }),
-    t('analysisInsight.coach_reason_intensity', { pct: signals.hardSharePct ?? 0 }),
-    t('analysisInsight.coach_reason_injury', { level: t(`analysisInsight.injury_level_${snapshot.injury.level}`), cadence: formatSignedPercent(snapshot.injury.cadenceDelta) }),
-    t('analysisInsight.coach_reason_forecast', { forecast: snapshot.marathonRow?.timeLabel || '--', delta: formatRelativeDuration(snapshot.marathonDeltaSeconds, t) }),
-  ];
-}
-
-function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, runs, lang, unit, coachToday) {
-  const personalized = resolvePersonalizedCoachRecommendation({ coachPayload: coachToday, t, lang, unit });
-  const phaseKey = personalized?.plan?.phase || coachSections.key || snapshot.coachInsight?.key || 'build';
-  const stateCopy = mergedCoachStateCopy(lang, phaseKey);
+function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, runs, lang, unit, coachToday, timeZone) {
+  const todayKey = getAccountDate(coachToday?.plan?.timeZone || timeZone);
+  const personalized = resolvePersonalizedCoachRecommendation({ coachPayload: coachToday, t, lang, unit, todayKey });
+  const phaseKey = personalized?.plan?.phase || null;
   const palette = tonePalette(coachSections.tone || snapshot.coachInsight?.tone || 'cool');
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const validRuns = runs.filter((run) => Number(run?.movingTimeSeconds || 0) > 0);
-  const recent7Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
+  const readinessScore = resolveCoachReadinessScore(coachToday);
+  const phaseIndex = phaseKey == null ? -1 : ['protect', 'absorb', 'rebalance'].includes(phaseKey) ? 0 : phaseKey === 'press' ? 2 : 1;
+  const sessions = buildCoachRecommendationSessions({
+    coachPayload: coachToday, schedule: coachToday?.schedule, t, lang, unit, todayKey,
   });
-  const recent28Runs = validRuns.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 28 * dayMs;
-  });
-  const volume7Km = recent7Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
-  const volume28Km = recent28Runs.reduce((sum, run) => sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)), 0);
-  const runCount7 = recent7Runs.length;
-  const lastRun = validRuns[0] || null;
-  const lastRunDate = lastRun ? new Date(lastRun.startTime || lastRun.startDate || 0).getTime() : null;
-  const daysSinceLastRun = lastRunDate && !Number.isNaN(lastRunDate) ? Math.max(0, Math.round((now - lastRunDate) / dayMs)) : null;
-  const averageRunKm = recent28Runs.length ? volume28Km / recent28Runs.length : (volume7Km > 0 ? volume7Km / Math.max(1, runCount7) : 8);
-  const longRunTargetKm = clamp(averageRunKm * 1.9, 10, 32);
-  const easyRunTargetKm = clamp(averageRunKm * 0.9, 5, 16);
-  const keyRunTargetKm = clamp(averageRunKm * 1.1, 6, 18);
-
-  let readinessScore = Number(coachToday?.state?.currentReadinessScore ?? coachToday?.state?.readinessScore);
-  if (!Number.isFinite(readinessScore)) {
-    readinessScore = 82;
-    if (snapshot.injury.level === 'high') readinessScore -= 26;
-    else if (snapshot.injury.level === 'moderate') readinessScore -= 14;
-    if ((snapshot.trainingLoad?.lastAcwr ?? 0) > 1.3) readinessScore -= 16;
-    else if ((snapshot.trainingLoad?.lastAcwr ?? 0) < 0.8) readinessScore -= 6;
-    if ((snapshot.polarized?.hardPct ?? 0) >= 32) readinessScore -= 10;
-    if (daysSinceLastRun != null && daysSinceLastRun >= 2) readinessScore += 6;
-  }
-  readinessScore = clamp(Math.round(readinessScore), 0, 100);
-
-  const phaseIndex = phaseKey === 'protect' ? 0 : phaseKey === 'press' ? 2 : 1;
-  const sessionTemplates = mergedCoachSessionTemplates(lang, phaseKey);
-  const sessionTargets = [
-    formatDistanceValue(easyRunTargetKm, unit),
-    formatDistanceValue(keyRunTargetKm, unit),
-    formatDistanceValue(longRunTargetKm, unit),
-    t('analysisInsight.session_strength'),
-  ];
-  const sessionSlots = [
-    t('analysisInsight.session_today'),
-    t('analysisInsight.session_quality'),
-    t('analysisInsight.session_long_run'),
-    t('analysisInsight.session_support'),
-  ];
-
-  const sessions = sessionTemplates.map((session, index) => ({
-    slot: sessionSlots[index],
-    title: session.title,
-    target: index <= 2 ? sessionTargets[index] : sessionTargets[3],
-    why: session.why,
-    tone: session.tone,
-    detail: session.detail,
-  }));
-  if (personalized?.recommendation && sessions.length) {
-    sessions[0] = {
-      slot: t('analysisInsight.session_today'),
-      title: personalized.recommendation.title,
-      target: personalized.recommendation.distance,
-      why: personalized.recommendation.purpose,
-      tone: personalized.recommendation.intent === 'quality' ? 'warn' : personalized.recommendation.intent === 'rest' ? 'muted' : 'good',
-      detail: personalized.recommendation.pace,
-    };
-  }
 
   return {
     copy: {
@@ -794,12 +275,12 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
     palette,
     phaseKey,
     readinessScore,
-    readinessDescription: stateCopy.readiness,
-    title: stateCopy.title,
-    subtitle: stateCopy.subtitle,
+    readinessDescription: personalized?.recommendation?.purpose || t('today_run.shared_plan_unavailable'),
+    title: personalized?.recommendation?.title || t('today_run.shared_plan_waiting'),
+    subtitle: personalized?.recommendation?.purpose || t('today_run.shared_plan_unavailable'),
     forecastLabel: snapshot.marathonRow?.timeLabel || '--',
     forecastDelta: formatRelativeDuration(snapshot.marathonDeltaSeconds, t),
-    keyWorkout: personalized?.recommendation?.title || sessionTemplates[1]?.title || sessionTemplates[0]?.title,
+    keyWorkout: personalized?.recommendation?.title || t('today_run.shared_plan_waiting'),
     focusCards: (coachSections.sections || []).map((section) => {
       const meta = mergedCoachSectionCopy(t, section.key);
       const value = section.key === 'load'
@@ -816,7 +297,7 @@ function buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, run
     }),
     phases: (COACH_PHASE_LABELS[lang] || COACH_PHASE_LABELS.en).map((label, index) => ({ label, active: index === phaseIndex })),
     sessions,
-    reasons: personalized?.reasons?.length ? personalized.reasons : mergedCoachReasonLines(t, snapshot, coachSections),
+    reasons: personalized?.reasons?.length ? personalized.reasons : [t('today_run.shared_plan_unavailable')],
     recentRows,
     emptyRunsCopy: t('analysisInsight.coach_empty_runs'),
   };
@@ -983,110 +464,29 @@ function buildDetailModel(insightKey, snapshot, recentRows, t, lang) {
   };
 }
 
-function formatClockDuration(totalSeconds) {
-  if (totalSeconds == null || Number.isNaN(totalSeconds) || totalSeconds <= 0) return '--:--:--';
-  const seconds = Math.max(0, Math.round(totalSeconds));
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainder = seconds % 60;
-  return [hours, minutes, remainder].map((value) => String(value).padStart(2, '0')).join(':');
-}
-
-function buildIntensityDashboardModel(snapshot, recentRows, runs, t, lang, unit) {
-  const polarized = snapshot.polarized || {};
-  const easyShare = polarized.easySharePct ?? 0;
-  const moderateShare = polarized.moderateSharePct ?? 0;
-  const hardShare = polarized.hardSharePct ?? 0;
-  const easyRatio = polarized.easyPct ?? 0;
-  const hardRatio = polarized.hardPct ?? 0;
-  const now = Date.now();
-  const dayMs = 24 * 60 * 60 * 1000;
-  const recent7Runs = runs.filter((run) => {
-    const started = new Date(run.startTime || run.startDate || 0).getTime();
-    return !Number.isNaN(started) && now - started <= 7 * dayMs;
-  });
-  const volume7Km = recent7Runs.reduce((sum, run) => sum + (
-    Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)
-  ), 0);
-  const stateKey = hardShare >= 14 || easyRatio < 80
-    ? 'rebalance'
-    : moderateShare >= 12 || snapshot.injury.level === 'moderate' || (snapshot.trainingLoad?.lastAcwr ?? 0) > 1.18
-      ? 'watch'
-      : 'optimal';
-  const statusTone = stateKey === 'rebalance' ? 'alert' : stateKey === 'watch' ? 'watch' : 'optimal';
-
+function buildIntensityDashboardModel(snapshot, recentRows, t, lang) {
+  const polarized = snapshot.polarized;
+  const total = (polarized?.easySeconds || 0) + (polarized?.moderateSeconds || 0) + (polarized?.hardSeconds || 0);
+  const hasData = total > 0;
+  const mix = !hasData ? 'empty' : polarized.hardSharePct >= 20 ? 'hard' : polarized.moderateSharePct >= 20 ? 'moderate' : 'easy';
   return {
-    stateKey,
-    statusTone,
-    heroTitle: t('analysis.intensity_dashboard_hero_title'),
-    heroAccent: t('analysis.intensity_dashboard_hero_accent'),
-    heroCopy: t(`analysis.intensity_dashboard_focus_${stateKey}`),
-    weeklyVolumeLabel: t('analysis.intensity_dashboard_hero_volume'),
-    weeklyVolume: formatDistanceValue(volume7Km, unit),
-    zoneTimeLabel: t('analysis.intensity_dashboard_hero_time'),
-    zoneTime: formatClockDuration(polarized.easySeconds ?? 0),
-    distributionTitle: t('analysis.intensity_dashboard_distribution_title'),
-    distributionWindow: t('analysis.intensity_dashboard_distribution_window'),
+    hasData,
+    heroTitle: t(`analysis.intensity_redesign_hero_${mix}`),
+    heroCopy: t(`analysis.intensity_redesign_intro_${mix}`, { easy: polarized?.easySharePct ?? 0, moderate: polarized?.moderateSharePct ?? 0, hard: polarized?.hardSharePct ?? 0 }),
+    easyRatio: polarized?.easyPct,
+    hardRatio: polarized?.hardPct,
     zones: [
-      {
-        key: 'low',
-        value: easyShare,
-        label: t('analysis.intensity_dashboard_zone_low'),
-        hint: t('analysis.intensity_dashboard_zone_low_hint'),
-        tone: 'accent',
-      },
-      {
-        key: 'moderate',
-        value: moderateShare,
-        label: t('analysis.intensity_dashboard_zone_moderate'),
-        hint: t('analysis.intensity_dashboard_zone_moderate_hint'),
-        tone: 'muted',
-      },
-      {
-        key: 'high',
-        value: hardShare,
-        label: t('analysis.intensity_dashboard_zone_high'),
-        hint: t('analysis.intensity_dashboard_zone_high_hint'),
-        tone: 'dim',
-      },
+      { key: 'low', value: polarized?.easySharePct ?? 0, label: t('analysis.intensity_dashboard_zone_low'), hint: t('analysis.intensity_dashboard_zone_low_hint'), color: '#9cd2aa' },
+      { key: 'moderate', value: polarized?.moderateSharePct ?? 0, label: t('analysis.intensity_dashboard_zone_moderate'), hint: t('analysis.intensity_dashboard_zone_moderate_hint'), color: '#ffd38a' },
+      { key: 'high', value: polarized?.hardSharePct ?? 0, label: t('analysis.intensity_dashboard_zone_high'), hint: t('analysis.intensity_dashboard_zone_high_hint'), color: '#e0705c' },
     ],
-    complianceLabel: t('analysis.intensity_dashboard_compliance'),
-    complianceValue: `${easyRatio}/${hardRatio}`,
-    statusLabel: t('analysis.intensity_dashboard_status'),
-    statusValue: t(`analysis.intensity_dashboard_status_${stateKey}`),
-    judgmentTitle: t(`analysis.intensity_dashboard_judgment_title_${stateKey}`),
-    judgmentBody: t(`analysis.intensity_dashboard_judgment_body_${stateKey}`),
-    judgmentFollowup: t(`analysis.intensity_dashboard_judgment_followup_${stateKey}`),
-    roadmapLabel: t('analysis.intensity_dashboard_roadmap'),
-    recoveryTitle: t('analysis.intensity_dashboard_recovery_title'),
-    recoveryCopy: t(
-      snapshot.injury.level === 'high'
-        ? 'analysis.intensity_dashboard_recovery_copy_high'
-        : snapshot.injury.level === 'moderate'
-          ? 'analysis.intensity_dashboard_recovery_copy_moderate'
-          : 'analysis.intensity_dashboard_recovery_copy_low',
-    ),
-    recoveryBadge: t(
-      snapshot.injury.level === 'high'
-        ? 'analysis.intensity_dashboard_recovery_badge_high'
-        : snapshot.injury.level === 'moderate'
-          ? 'analysis.intensity_dashboard_recovery_badge_moderate'
-          : 'analysis.intensity_dashboard_recovery_badge_low',
-    ),
-    samplesTitle: t('analysis.intensity_dashboard_samples_title'),
-    samplesViewAll: t('analysis.intensity_dashboard_samples_view'),
-    sampleDistanceLabel: t('analysis.intensity_dashboard_sample_distance'),
-    samplePaceLabel: t('analysis.intensity_dashboard_sample_pace'),
-    sampleHeartRateLabel: t('analysis.intensity_dashboard_sample_heart_rate'),
-    sampleIntensityLabel: t('analysis.intensity_dashboard_sample_intensity'),
-    sampleRows: recentRows.slice(0, 3).map((row) => ({
+    judgmentTitle: t(`analysis.intensity_redesign_coach_${mix}`),
+    judgmentBody: t(`analysis.intensity_redesign_coach_body_${mix}`),
+    recoveryTone: hasData ? snapshot.injury?.level || 'low' : 'unknown',
+    sampleRows: recentRows.slice(0, 3).map(row => ({
       ...row,
-      zoneTone: row.zoneKey === 'threshold' || row.zoneKey === 'interval' || row.zoneKey === 'rep'
-        ? 'hard'
-        : row.zoneKey === 'marathon'
-          ? 'steady'
-          : 'easy',
-      heartRateLabel: row.averageHeartRate ? `${Math.round(row.averageHeartRate)} BPM` : '--',
+      zoneTone: ['threshold', 'interval', 'rep'].includes(row.zoneKey) ? 'hard' : row.zoneKey === 'marathon' ? 'moderate' : 'easy',
+      heartRateLabel: row.averageHeartRate ? `${Math.round(row.averageHeartRate)} bpm` : null,
       intensityLabel: zoneLabel(row.zoneKey, lang),
     })),
   };
@@ -1234,6 +634,7 @@ function buildLoadBalanceDashboardModel(snapshot, recentRows, profile, t, lang, 
 }
 
 export default function AnalysisInsightDetail() {
+  const recommendationRevision = useRecommendationRevision();
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
@@ -1242,7 +643,10 @@ export default function AnalysisInsightDetail() {
   const [profile, setProfile] = useState(null);
   const [runs, setRuns] = useState([]);
   const [coachToday, setCoachToday] = useState(null);
+  const accountToday = useAccountDate(coachToday?.plan?.timeZone || profile?.timeZone);
   const [loadState, setLoadState] = useState('loading');
+  const loadedDataScopeRef = useRef(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [coachPerformanceWindow, setCoachPerformanceWindow] = useState(7);
   const [loadChartDays, setLoadChartDays] = useState(56);
@@ -1301,41 +705,72 @@ export default function AnalysisInsightDetail() {
       return;
     }
 
+    let cancelled = false;
+    const dataScope = `${email || ''}:${insightKey}`;
     (async () => {
-      setLoadState('loading');
+      // Keep open tools and their save feedback mounted while recommendations refresh.
+      if (loadedDataScopeRef.current !== dataScope) setLoadState('loading');
       try {
-        const [profileData, activitiesData, coachTodayData] = await Promise.all([
-          cachedApiJson('/api/profile/me'),
-          cachedApiJson('/api/activities'),
-          insightKey === 'coach-insight' ? apiJson('/api/coach/today').catch(() => null) : Promise.resolve(null),
+        const [profileData, activitiesData, coachTodayData, coachScheduleData] = await Promise.all([
+          cachedApiJson('/api/profile/me').catch(() => null),
+          cachedApiJson('/api/activities/analysis'),
+          insightKey === 'coach-insight' ? apiJson('/api/coach/today?includeRoute=false').catch(() => null) : Promise.resolve(null),
+          insightKey === 'coach-insight' ? apiJson('/api/coach/schedule?days=14').catch(() => []) : Promise.resolve([]),
         ]);
-        const list = Array.isArray(activitiesData) ? activitiesData : [];
+        if (cancelled) return;
+        const list = prepareAnalysisRuns(Array.isArray(activitiesData) ? activitiesData : []);
         list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
         setProfile(profileData);
         setRuns(list);
-        setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
+        setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? { ...coachTodayData, schedule: Array.isArray(coachTodayData.schedule) ? coachTodayData.schedule : coachScheduleData } : null);
+        loadedDataScopeRef.current = dataScope;
         setLoadState('ready');
       } catch {
-        setLoadState('error');
+        if (!cancelled) setLoadState('error');
       }
     })();
-  }, [isAuthenticated, navigate, insightKey]);
+    return () => { cancelled = true; };
+  }, [isAuthenticated, email, navigate, insightKey, reloadKey, recommendationRevision, accountToday]);
+
+  // An address with a fragment (the Training log's link to the fitness card, a link someone sent) goes to that part of Load balance once the page has been
+  // drawn. The router puts the page back at the top on every move, so this has to come after the data is in, which is after that. The cards above a part
+  // fill in later and push it down, so it is held at the top until the reader takes over.
+  const { hash } = useLocation();
+  const holdAt = useScrollHold();
+  useEffect(() => {
+    if (loadState !== 'ready' || !['load-balance', 'intensity'].includes(insightKey) || !hash) return undefined;
+    let id = hash.slice(1);
+    try {
+      id = decodeURIComponent(id);
+    } catch {
+      /* not an encoded text: keep it as it is */
+    }
+    const frame = window.requestAnimationFrame(() => holdAt(id ? document.getElementById(id) : null, { behavior: 'instant' }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [loadState, insightKey, hash, holdAt]);
+
+  /** A link of the list at the top of Load balance: to the part, with the focus moved there too (the address is left as it is). */
+  const jumpTo = useCallback((event, id) => {
+    const target = document.getElementById(id);
+    if (!target) return;
+    event.preventDefault();
+    holdAt(target);
+  }, [holdAt]);
 
   const snapshot = useMemo(() => buildAnalysisSnapshot(runs, lang, unit), [runs, lang, unit]);
   const recentRows = useMemo(() => buildRunInsightRows(runs, snapshot.bestVdot, unit, lang), [runs, snapshot.bestVdot, unit, lang]);
   const injuryRows = useMemo(() => {
-    const cutoff = Date.now() - 42 * 86400000;
-    return buildRunInsightRows(runs.filter(run => new Date(run.startTime || run.startDate || 0).getTime() >= cutoff), snapshot.bestVdot, unit, lang, runs.length);
-  }, [runs, snapshot.bestVdot, unit, lang]);
+    return buildInjuryTimelineRows(runs, snapshot.bestVdot, unit, lang, profile?.timeZone);
+  }, [runs, snapshot.bestVdot, unit, lang, profile?.timeZone]);
   const injuryTrend = useMemo(() => buildTrendGeometry(injuryRows, injuryRows.length), [injuryRows]);
   const coachSections = useMemo(() => buildCoachSystemSections(snapshot), [snapshot]);
   const coachSystem = useMemo(
-    () => (insightKey === 'coach-insight' ? buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, runs, lang, unit, coachToday) : null),
-    [insightKey, t, snapshot, coachSections, recentRows, runs, lang, unit, coachToday],
+    () => (insightKey === 'coach-insight' ? buildMergedCoachSystemModel(t, snapshot, coachSections, recentRows, runs, lang, unit, coachToday, profile?.timeZone) : null),
+    [insightKey, t, snapshot, coachSections, recentRows, runs, lang, unit, coachToday, profile?.timeZone],
   );
   const intensityDashboard = useMemo(
-    () => (insightKey === 'intensity' ? buildIntensityDashboardModel(snapshot, recentRows, runs, t, lang, unit) : null),
-    [insightKey, snapshot, recentRows, runs, t, lang, unit],
+    () => (insightKey === 'intensity' ? buildIntensityDashboardModel(snapshot, recentRows, t, lang) : null),
+    [insightKey, snapshot, recentRows, t, lang],
   );
   const loadDashboard = useMemo(
     () => {
@@ -1344,6 +779,8 @@ export default function AnalysisInsightDetail() {
       const stats = getLoadBalanceWeekStats(snapshot.trainingLoad, runs);
       const zone = getLoadBalanceZoneKey(snapshot.loadZone?.key);
       const signed = (value) => `${value >= 0 ? '+' : ''}${value}%`;
+      const numberLocale = lang === 'zh-CN' ? 'zh-CN' : 'en-US';
+      const whole = (value) => Math.round(value).toLocaleString(numberLocale);
       return {
         ...model,
         judgmentTitle: t(`analysisInsight.load_v3_title_${zone}`),
@@ -1377,8 +814,9 @@ export default function AnalysisInsightDetail() {
           },
           {
             label: t('analysisInsight.load_v3_volume'),
-            value: stats.volumeKm == null ? '--' : `${Number((stats.volumeKm / (unit === 'mile' ? 1.60934 : 1)).toFixed(1))} ${unit === 'mile' ? 'mi' : 'km'}`,
-            detail: stats.volumeDelta == null ? t('analysisInsight.load_v3_no_prior_week') : t('analysisInsight.load_v3_vs_week', { percent: signed(stats.volumeDelta) }),
+            value: stats.volumeKm == null ? '--' : `${Number((stats.volumeKm / (unit === 'mile' ? 1.60934 : 1)).toFixed(1))} ${getDistanceUnitLabel(lang, unit)}`,
+            detail: stats.volumeDelta != null ? t('analysisInsight.load_v3_vs_week', { percent: signed(stats.volumeDelta) })
+              : t(stats.hasPriorWeek ? 'analysisInsight.load_v3_no_prior_runs' : 'analysisInsight.load_v3_no_prior_week'),
             definition: t('analysisInsight.load_v3_volume_definition'),
             tone: 'good',
           },
@@ -1387,7 +825,22 @@ export default function AnalysisInsightDetail() {
             value: stats.monotony == null ? '--' : stats.monotony === Infinity ? '∞' : stats.monotony.toFixed(1),
             detail: t(stats.monotony == null ? 'analysisInsight.load_v3_no_recent_load' : stats.monotony >= 2 ? 'analysisInsight.load_v3_low_variation' : 'analysisInsight.load_v3_varied'),
             definition: t('analysisInsight.load_v3_monotony_definition'),
+            methodsAnchor: 'monotony-and-training-strain',
             tone: stats.monotony >= 2 ? 'warn' : 'good',
+          },
+          {
+            label: t('analysisInsight.load_v3_strain'),
+            value: stats.strain == null ? '--' : stats.strain === Infinity ? '∞' : whole(stats.strain),
+            detail: stats.strain == null ? t('analysisInsight.load_v3_no_recent_load')
+              : stats.strain === Infinity ? t('analysisInsight.load_v3_strain_flat')
+                : stats.strainDelta != null ? t('analysisInsight.load_v3_vs_week', { percent: signed(stats.strainDelta) })
+                  : !stats.hasPriorWeek ? t('analysisInsight.load_v3_no_prior_week')
+                    : t(stats.previousStrain === Infinity ? 'analysisInsight.load_v3_prior_flat' : 'analysisInsight.load_v3_no_prior_load'),
+            definition: Number.isFinite(stats.strain)
+              ? t('analysisInsight.load_v3_strain_working', { load: whole(stats.weekLoad), monotony: stats.monotony.toFixed(2) })
+              : t('analysisInsight.load_v3_strain_definition'),
+            methodsAnchor: 'monotony-and-training-strain',
+            tone: 'neutral',
           },
         ],
       };
@@ -1458,36 +911,53 @@ export default function AnalysisInsightDetail() {
     ? Math.round(recentRows.slice(0, 4).reduce((sum, row) => sum + Number(row.loadScore || 0), 0) / Math.min(4, recentRows.length))
     : null;
   const coachPrimarySession = coachSystem?.sessions?.[0] || null;
-  const coachReadinessScore = clamp(Number(coachSystem?.readinessScore) || 0, 0, 100);
-  const coachReadinessRingOffset = COACH_READINESS_RING_CIRCUMFERENCE * (1 - (coachReadinessScore / 100));
-  const [injuryScrubber, setInjuryScrubber] = useState(null);
+  const coachReadinessScore = coachSystem?.readinessScore ?? null;
+  const coachReadinessRingOffset = COACH_READINESS_RING_CIRCUMFERENCE * (1 - ((coachReadinessScore ?? 0) / 100));
+  const [injurySelectedKey, setInjurySelectedKey] = useState(null);
+  const [injuryHoveredKey, setInjuryHoveredKey] = useState(null);
+  const injuryScrubber = injuryTrend.points.find(point => point.key === injuryHoveredKey)
+    || injuryTrend.points.find(point => point.key === injurySelectedKey) || null;
   const activeInjuryTooltip = injuryScrubber || injuryTrendTooltip;
   const injuryTooltipPosition = getInjuryTooltipPosition(activeInjuryTooltip);
+  const injuryAxisTicks = injuryTrend.ticks.filter((_, index, ticks) => index === ticks.length - 1 || index % Math.max(1, Math.ceil((ticks.length - 1) / 4)) === 0);
+
+  const selectInjuryPoint = useCallback((key) => {
+    setInjuryHoveredKey(null);
+    setInjurySelectedKey(key);
+  }, []);
+
+  const handleInjurySelectionKeyDown = (event) => {
+    if (!injuryTrend.points.length || event.altKey || event.ctrlKey || event.metaKey) return;
+    const index = injuryTrend.points.findIndex(point => point.key === activeInjuryTooltip?.key);
+    let nextIndex;
+    if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = injuryTrend.points.length - 1;
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = Math.max(0, index - 1);
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = Math.min(injuryTrend.points.length - 1, index + 1);
+    else return;
+    event.preventDefault();
+    selectInjuryPoint(injuryTrend.points[nextIndex].key);
+  };
 
   const handleInjuryPointerMove = useCallback((event) => {
     const svg = event.currentTarget;
+    const transform = svg.getScreenCTM?.();
+    if (!transform || !svg.createSVGPoint || !injuryTrend.points.length) return;
     const pt = svg.createSVGPoint();
     pt.x = event.clientX;
     pt.y = event.clientY;
-    const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
-    const svgX = svgPt.x;
-
-    if (!injuryTrend.points.length) return;
-    let nearest = null;
-    let nearestDist = Infinity;
-    for (const point of injuryTrend.points) {
-      const dist = Math.abs(point.x - svgX);
-      if (dist < nearestDist) { nearestDist = dist; nearest = point; }
-    }
+    const svgPt = pt.matrixTransform(transform.inverse());
+    const nearest = nearestTrendPoint(injuryTrend.points, svgPt.x, svgPt.y, activeInjuryTooltip?.key);
     if (!nearest) return;
-    setInjuryScrubber(nearest);
-  }, [injuryTrend.points]);
+    if (event.type === 'pointerdown' || event.pointerType === 'touch') selectInjuryPoint(nearest.key);
+    else setInjuryHoveredKey(nearest.key);
+  }, [injuryTrend.points, activeInjuryTooltip?.key, selectInjuryPoint]);
 
-  const handleInjuryPointerLeave = useCallback(() => setInjuryScrubber(null), []);
+  const handleInjuryPointerLeave = useCallback(() => setInjuryHoveredKey(null), []);
 
   useEffect(() => {
     if (typeof document === 'undefined' || !detail) return;
-    document.title = `Hermes | ${detail.title}`;
+    document.title = `HermesRuns | ${detail.title}`;
   }, [detail]);
 
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
@@ -1512,7 +982,14 @@ export default function AnalysisInsightDetail() {
     if (loadState === 'loading') return <PageSkeleton variant="analysis-insight" />;
     return (
       <div className="runner-shell-page runner-shell-page--loading" data-loading-state={loadState}>
-        <div className="runner-shell-loading">{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</div>
+        <div className={`runner-shell-loading${loadState === 'error' ? ' runner-shell-loading--failed' : ''}`} role={loadState === 'error' ? 'alert' : undefined}>
+          <p>{t(loadState === 'error' ? 'analysis.stitch_load_error' : 'analysis.stitch_loading')}</p>
+          {loadState === 'error' ? (
+            <button type="button" className="runner-shell-inline-btn is-primary" onClick={() => setReloadKey((key) => key + 1)}>
+              {t('analysis.stitch_load_retry')}
+            </button>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -1551,6 +1028,9 @@ export default function AnalysisInsightDetail() {
         </header>
 
         <div className="runner-shell-canvas analysis-insight-detail-canvas">
+          {insightKey === 'injury-risk' && <RecoveryJournalTool />}
+          {insightKey === 'load-balance' && <FitnessModelTool />}
+          {insightKey === 'load-balance' || insightKey === 'injury-risk' ? <p>{t('analysis.load_model_basis')}</p> : null}
           {insightKey === 'coach-insight' && coachSystem ? (
             <div className="analysis-coach-profile analysis-coach-bento">
               <section className="analysis-coach-bento__verdict">
@@ -1566,7 +1046,7 @@ export default function AnalysisInsightDetail() {
                   className="analysis-coach-readiness-ring analysis-coach-bento__ring"
                   role="img"
                   data-readiness-score={coachSystem.readinessScore}
-                  aria-label={`${coachSystem.copy.readinessLabel}: ${coachReadinessScore} / 100`}
+                  aria-label={`${coachSystem.copy.readinessLabel}: ${coachReadinessScore ?? '—'} / 100`}
                 >
                   <svg className="analysis-coach-readiness-ring__svg" viewBox="0 0 160 160" aria-hidden="true" focusable="false">
                     <circle className="analysis-coach-readiness-ring__track" cx="80" cy="80" r={COACH_READINESS_RING_RADIUS} />
@@ -1580,7 +1060,7 @@ export default function AnalysisInsightDetail() {
                     />
                   </svg>
                   <span className="analysis-coach-readiness-ring__value" aria-hidden="true">
-                    <strong>{coachReadinessScore}</strong>
+                    <strong>{coachReadinessScore ?? '—'}</strong>
                     <small>{coachSystem.copy.readinessLabel}</small>
                   </span>
                 </div>
@@ -1730,6 +1210,7 @@ export default function AnalysisInsightDetail() {
                       <span>{t('analysis.stitch_injury_high')} · 72+</span>
                     </div>
                   </div>
+                  <p>{t('analysis.injury_movement_model_basis')}</p>
                   <p>{injuryCoachCopy}</p>
                   <button type="button" className="analysis-injury-v2-cta" onClick={() => navigate('/today-run')}>
                     {t('analysis.injury_v2_open_today')}
@@ -1811,21 +1292,22 @@ export default function AnalysisInsightDetail() {
                 <h3>{t('analysis.injury_v2_trend_title')}</h3>
                 <ul>
                   {injuryTrend.points.map((point) => (
-                    <li key={`injury-history-${point.x}`}>
-                      <span>{`${point.label} - ${point.title}`}</span>
+                    <li key={`injury-history-${point.key}`}>
+                      <span title={point.label}>{`${point.dateKey} - ${point.title} #${point.id ?? point.sampleNumber}`}</span>
                       <span>{`${t('analysis.injury_v2_load')}: ${point.loadScore ?? '--'}`}</span>
                       <span>{`${t('analysis.injury_v2_cadence')}: ${point.cadence ? `${point.cadence} spm` : '--'}`}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-              <div className="analysis-cinematic-chart" style={{ position: 'relative' }}>
+              <div className="analysis-cinematic-chart" style={{ position: 'relative', aspectRatio: '1000 / 220', minHeight: 0 }}>
                 <svg
                   viewBox="0 0 1000 220"
                   preserveAspectRatio="xMidYMid meet"
                   aria-hidden="true"
-                  style={{ cursor: 'crosshair', display: 'block', width: '100%', pointerEvents: 'all' }}
+                  style={{ cursor: 'crosshair', display: 'block', width: '100%', pointerEvents: 'all', touchAction: 'pan-y' }}
                   onPointerMove={handleInjuryPointerMove}
+                  onPointerDown={handleInjuryPointerMove}
                   onPointerLeave={handleInjuryPointerLeave}
                 >
                   {/* Transparent hit area */}
@@ -1842,6 +1324,15 @@ export default function AnalysisInsightDetail() {
                   <path d={injuryTrend.areaPath} fill="url(#analysisTrendFillDetail)" />
                   <path d={injuryTrend.primaryPath} className="analysis-cinematic-primary-line" />
                   <path d={injuryTrend.comparisonPath} className="analysis-cinematic-comparison-line" />
+                  {injuryTrend.points.map(point => <circle
+                    key={`injury-observation-${point.key}`}
+                    className="analysis-injury-observation-dot"
+                    cx={point.x}
+                    cy={point.y}
+                    r="3"
+                    fill="var(--analysis-cinematic-accent)"
+                    style={{ pointerEvents: 'none' }}
+                  />)}
                   {injuryScrubber && (
                     <>
                       <line
@@ -1874,7 +1365,7 @@ export default function AnalysisInsightDetail() {
                 </svg>
                 {injuryTrend.points.map((point) => (
                   <span
-                    key={`injury-point-${point.x}`}
+                    key={`injury-point-${point.key}`}
                     className="analysis-cinematic-point"
                     style={getTrendPointStyle(point)}
                     aria-hidden="true"
@@ -1886,7 +1377,7 @@ export default function AnalysisInsightDetail() {
                     style={{ pointerEvents: 'none', ...injuryTooltipPosition, left: `clamp(96px, ${injuryTooltipPosition.left}, calc(100% - 96px))` }}
                   >
                     <div className="analysis-injury-chart-tooltip-head">
-                      <span>{activeInjuryTooltip.label || activeInjuryTooltip.title}</span>
+                      <span>{getTrendPointDescription(activeInjuryTooltip)}</span>
                     </div>
                     <div className="analysis-injury-chart-tooltip-metrics">
                       <div className="analysis-injury-chart-tooltip-metric is-primary">
@@ -1903,11 +1394,29 @@ export default function AnalysisInsightDetail() {
                   </div>
                 ) : null}
               </div>
-              <div className="analysis-cinematic-axis">
-                {injuryTrend.labels.map((label) => (
-                  <span key={label}>{label}</span>
+              <div data-injury-date-axis style={{ position: 'relative', height: injuryAxisTicks.length ? 44 : 0, fontSize: '0.7rem', color: 'var(--ir-muted)' }}>
+                {injuryAxisTicks.map((tick, index) => (
+                  <span
+                    key={tick.dateKey}
+                    data-date-key={tick.dateKey}
+                    style={{ position: 'absolute', left: `${tick.x / INJURY_TREND_CHART_WIDTH * 100}%`, top: index % 2 ? 20 : 0, whiteSpace: 'nowrap', transform: injuryAxisTicks.length === 1 ? 'translateX(-50%)' : index === 0 ? 'none' : index === injuryAxisTicks.length - 1 ? 'translateX(-100%)' : 'translateX(-50%)' }}
+                  >{tick.label}</span>
                 ))}
               </div>
+              {injuryTrend.points.length > 0 && <select
+                aria-label={t('analysis.injury_v2_trend_title')}
+                value={activeInjuryTooltip?.key || ''}
+                onChange={event => selectInjuryPoint(event.target.value)}
+                onKeyDown={handleInjurySelectionKeyDown}
+                style={{ width: '100%', maxWidth: '100%', minHeight: 40, font: 'inherit', fontSize: '0.75rem', background: 'var(--ir-card)', color: 'var(--ir-ink)', border: '1px solid var(--ir-line)', borderRadius: 8 }}
+              >
+                {injuryTrend.points.map(point => <option key={point.key} value={point.key}>
+                  {`${getTrendPointDescription(point)} · ${t('analysis.injury_v2_load')}: ${point.loadScore ?? '--'} · ${t('analysis.injury_v2_cadence')}: ${point.cadence ? `${point.cadence} spm` : '--'}`}
+                </option>)}
+              </select>}
+              {activeInjuryTooltip && <p data-injury-selected-values role="status" style={{ marginTop: 8, fontSize: '0.75rem', overflowWrap: 'anywhere' }}>
+                {`${getTrendPointDescription(activeInjuryTooltip)} · ${t('analysis.injury_v2_load')}: ${activeInjuryTooltip.loadScore ?? '--'} · ${t('analysis.injury_v2_cadence')}: ${activeInjuryTooltip.cadence ? `${activeInjuryTooltip.cadence} spm` : '--'}`}
+              </p>}
                 </article>
 
                 <aside className="analysis-injury-v2-runs">
@@ -1959,6 +1468,7 @@ export default function AnalysisInsightDetail() {
                     </div>
                   </div>
                   <p>{loadDashboard.judgmentBody}</p>
+                  <HowWorkedOut textKey="methods.load" anchor="training-load-and-the-load-ratio" />
                   {loadDashboard.judgmentFollowup ? <p className="is-muted">{loadDashboard.judgmentFollowup}</p> : null}
                   <button type="button" className="analysis-load-v2-cta" onClick={() => navigate('/today-run')}>
                     {loadDashboard.judgmentCta}
@@ -1988,10 +1498,24 @@ export default function AnalysisInsightDetail() {
                 </aside>
               </section>
 
-              <section className="analysis-load-v2-chart">
+              <nav className="analysis-load-v2-jump" aria-label={t('analysisInsight.load_v3_jump_label')}>
+                <span aria-hidden="true">{t('analysisInsight.load_v3_jump_label')}</span>
+                {[
+                  ['load-chart', loadDashboard.chartTitle],
+                  ['load-fitness', t('training_series.fitness_title')],
+                  ['load-weekly-effort', t('training_series.weekly_title')],
+                  ['load-distance', t('weekly_distance.title')],
+                  ['load-intensity', t('training_intensity.title')],
+                  ['load-drivers', loadDashboard.samplesTitle],
+                ].map(([id, label]) => (
+                  <a key={id} href={`#${id}`} onClick={(event) => jumpTo(event, id)}>{label}</a>
+                ))}
+              </nav>
+
+              <section id="load-chart" tabIndex={-1} className="analysis-load-v2-chart" aria-labelledby="load-chart-title">
                 <div className="analysis-load-v2-head">
                   <div>
-                    <h2>{loadDashboard.chartTitle}</h2>
+                    <h2 id="load-chart-title">{loadDashboard.chartTitle}</h2>
                     <p>{t('analysisInsight.load_v3_band_hint')}</p>
                   </div>
                   <div className="analysis-load-v2-ranges" role="group" aria-label={t('analysisInsight.load_v3_range_label')}>
@@ -2096,21 +1620,26 @@ export default function AnalysisInsightDetail() {
               </div>
               </section>
 
-              <section className="analysis-load-v2-metrics" aria-label={loadDashboard.ratioLabel}>
+              <section className="analysis-load-v2-metrics is-load-row" aria-label={loadDashboard.ratioLabel}>
                 {loadDashboard.metricCards.map((metric) => (
                   <article key={metric.label} className={cx('analysis-load-v2-metric', `is-${metric.tone}`)}>
                     <span>{metric.label}</span>
                     <strong>{metric.value}</strong>
                     <em>{metric.detail}</em>
-                    <small>{metric.definition}</small>
+                    <small>{metric.definition}{metric.methodsAnchor ? <>{' '}<MethodsLink anchor={metric.methodsAnchor} /></> : null}</small>
                   </article>
                 ))}
               </section>
 
-              <section className="analysis-load-v2-drivers">
+              <FitnessFormSection />
+              <WeeklyEffortSection />
+              <WeeklyDistanceSection runs={runs} />
+              <IntensitySection />
+
+              <section id="load-drivers" tabIndex={-1} className="analysis-load-v2-drivers" aria-labelledby="load-drivers-title">
                 <div className="analysis-load-v2-head">
                   <div>
-                    <h2>{loadDashboard.samplesTitle}</h2>
+                    <h2 id="load-drivers-title">{loadDashboard.samplesTitle}</h2>
                     <p>{loadDashboard.samplesFilter}</p>
                   </div>
                   <button type="button" className="analysis-load-v2-link" onClick={() => navigate('/runs')}>
@@ -2146,137 +1675,40 @@ export default function AnalysisInsightDetail() {
             </div>
           ) : insightKey === 'intensity' && intensityDashboard ? (
             <div className="analysis-intensity-profile-content">
-              <section className="analysis-intensity-command-hero">
-                <div className="analysis-intensity-command-hero-copy">
-                  <span className="analysis-intensity-command-eyebrow">{detail.kicker}</span>
-                  <h1>
-                    <span>{intensityDashboard.heroTitle}</span>
-                    <strong>{intensityDashboard.heroAccent}</strong>
-                  </h1>
-                  <p>{intensityDashboard.heroCopy}</p>
-                </div>
-                <div className="analysis-intensity-command-hero-stats">
-                  <article className="analysis-intensity-command-hero-stat">
-                    <span>{intensityDashboard.weeklyVolumeLabel}</span>
-                    <strong>{intensityDashboard.weeklyVolume}</strong>
-                  </article>
-                  <article className="analysis-intensity-command-hero-stat">
-                    <span>{intensityDashboard.zoneTimeLabel}</span>
-                    <strong>{intensityDashboard.zoneTime}</strong>
-                  </article>
-                </div>
+              <section className="intensity-hero">
+                <h1>{intensityDashboard.heroTitle}</h1>
+                <p>{intensityDashboard.heroCopy}</p>
               </section>
-
-              <section className="analysis-intensity-command-grid">
-                <article className="analysis-intensity-command-distribution">
-                  <div className="analysis-intensity-command-panel-head">
-                    <div>
-                      <h2>{intensityDashboard.distributionTitle}</h2>
-                      <p>{intensityDashboard.distributionWindow}</p>
-                    </div>
-                  </div>
-
-                  <div className="analysis-intensity-command-zone-list">
-                    {intensityDashboard.zones.map((zone) => (
-                      <div key={zone.key} className="analysis-intensity-command-zone-block">
-                        <div className="analysis-intensity-command-zone-head">
-                          <strong>{zone.value}<span>%</span></strong>
-                          <span>{zone.label}</span>
-                        </div>
-                        <div className="analysis-intensity-command-zone-track" aria-hidden="true">
-                          <div className={cx('analysis-intensity-command-zone-fill', `is-${zone.tone}`)} style={{ width: `${zone.value}%` }} />
-                        </div>
-                        <p>{zone.hint}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="analysis-intensity-command-summary">
-                    <div>
-                      <span>{intensityDashboard.complianceLabel}</span>
-                      <strong>{intensityDashboard.complianceValue}</strong>
-                    </div>
-                    <div>
-                      <span>{intensityDashboard.statusLabel}</span>
-                      <strong className={cx('analysis-intensity-command-status', `is-${intensityDashboard.statusTone}`)}>{intensityDashboard.statusValue}</strong>
-                    </div>
-                  </div>
-                </article>
-
-                <div className="analysis-intensity-command-sidebar">
-                  <article className="analysis-intensity-command-judgment">
-                    <CoachIdentityBadge coach={assignedCoach} lang={lang} className="analysis-intensity-coach-badge" />
-                    <h3>{intensityDashboard.judgmentTitle}</h3>
+              <div className="intensity-layout">
+                <div className="intensity-main-column">
+                  <MeasuredHrZoneBlock presentation="summary" estimated={intensityDashboard} />
+                  <div id="quality-sessions" tabIndex={-1}><QualitySessions runs={runs} showHeader={false} compact /></div>
+                </div>
+                <aside className="intensity-side-column">
+                  <article className="intensity-coach intensity-card">
+                    <div className="intensity-coach-identity"><span aria-hidden="true">H</span><div><strong>{assignedCoach?.name || t('analysis.intensity_redesign_coach_name')}</strong><small>{t('analysis.intensity_redesign_coach_reading')}</small></div></div>
+                    <h2>{intensityDashboard.judgmentTitle}</h2>
                     <p>{intensityDashboard.judgmentBody}</p>
-                    <p>{intensityDashboard.judgmentFollowup}</p>
-                    <button type="button" className="analysis-intensity-command-cta" onClick={() => navigate('/today-run')}>
-                      {intensityDashboard.roadmapLabel}
-                    </button>
-                  </article>
-
-                  <article className="analysis-intensity-command-recovery">
-                    <h4>{intensityDashboard.recoveryTitle}</h4>
-                    <p>{intensityDashboard.recoveryCopy}</p>
-                    <div className="analysis-intensity-command-recovery-badge">
-                      <AppIcon name="bolt" className="runner-dashboard-side-link-icon" />
-                      <span>{intensityDashboard.recoveryBadge}</span>
+                    <div className={`intensity-recovery is-${intensityDashboard.recoveryTone}`}>
+                      <strong>{t(`analysis.intensity_redesign_recovery_${intensityDashboard.recoveryTone}`)}</strong>
+                      <span>{t(`analysis.intensity_redesign_recovery_body_${intensityDashboard.recoveryTone}`)}</span>
                     </div>
+                    <button type="button" className="intensity-coach-cta" onClick={() => navigate('/today-run')}>{t('analysis.intensity_redesign_today')} <span aria-hidden="true">→</span></button>
                   </article>
-                </div>
-              </section>
-
-              <section className="analysis-intensity-command-samples">
-                <div className="analysis-intensity-command-section-head">
-                  <h2>{intensityDashboard.samplesTitle}</h2>
-                  <button type="button" className="analysis-intensity-command-link" onClick={() => navigate('/runs')}>
-                    {intensityDashboard.samplesViewAll}
-                  </button>
-                </div>
-
-                <div className="analysis-intensity-command-sample-grid">
-                  {intensityDashboard.sampleRows.length ? intensityDashboard.sampleRows.map((row) => (
-                    <button
-                      key={`${row.id || row.title}-${row.dateLabel}`}
-                      type="button"
-                      className="analysis-intensity-command-sample-card"
-                      onClick={() => row.id && navigate(buildRunDetailPath(row.id))}
-                    >
-                      <div className={cx('analysis-intensity-command-sample-visual', `is-${row.zoneTone}`)}>
-                        <span>{row.intensityLabel}</span>
-                      </div>
-                      <div className="analysis-intensity-command-sample-body">
-                        <div className="analysis-intensity-command-sample-head">
-                          <div>
-                            <h3>{row.title}</h3>
-                            <span>{row.dateLabel}</span>
-                          </div>
-                          <AppIcon name="chevron_right" className="runner-dashboard-side-link-icon" />
-                        </div>
-                        <div className="analysis-intensity-command-sample-metrics">
-                          <div>
-                            <span>{intensityDashboard.sampleDistanceLabel}</span>
-                            <strong>{row.distanceLabel}</strong>
-                          </div>
-                          <div>
-                            <span>{intensityDashboard.samplePaceLabel}</span>
-                            <strong>{row.paceLabel}</strong>
-                          </div>
-                          <div>
-                            <span>{intensityDashboard.sampleHeartRateLabel}</span>
-                            <strong>{row.heartRateLabel}</strong>
-                          </div>
-                          <div>
-                            <span>{intensityDashboard.sampleIntensityLabel}</span>
-                            <strong>{row.intensityLabel}</strong>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  )) : (
-                    <div className="analysis-insight-empty-state">{t('analysis.insight_no_recent_runs')}</div>
-                  )}
-                </div>
-              </section>
+                  <section className="intensity-recent intensity-card" aria-labelledby="intensity-recent-title">
+                    <header><h2 id="intensity-recent-title">{t('analysis.intensity_redesign_recent')}</h2><button type="button" className="intensity-text-button" onClick={() => navigate('/runs')}>{t('analysis.intensity_redesign_all_runs')}</button></header>
+                    <ul>
+                      {intensityDashboard.sampleRows.map(row => <li key={`${row.id || row.title}-${row.dateLabel}`}>
+                        <button type="button" className="intensity-recent-run" disabled={row.id == null} onClick={() => navigate(buildRunDetailPath(row.id))}>
+                          <span><strong>{row.title}</strong><small>{[row.dateLabel, row.distanceLabel, row.paceLabel, row.heartRateLabel].filter(Boolean).join(' · ')}</small></span>
+                          <span className={`intensity-run-tag is-${row.zoneTone}`}>{t(`analysis.intensity_redesign_effort_${row.zoneTone}`)}</span>
+                        </button>
+                      </li>)}
+                    </ul>
+                    {!intensityDashboard.sampleRows.length ? <p>{t('analysis.insight_no_recent_runs')}</p> : null}
+                  </section>
+                </aside>
+              </div>
             </div>
           ) : (
             <>

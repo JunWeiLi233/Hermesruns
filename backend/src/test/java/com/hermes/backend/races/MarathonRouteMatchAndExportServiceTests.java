@@ -12,6 +12,18 @@ import static org.mockito.Mockito.when;
 class MarathonRouteMatchAndExportServiceTests {
 
     @Test
+    void jobResultSerializesGpxWithoutTraversingPersistenceEntities() throws Exception {
+        GeneratedRaceGpxAsset asset = mock(GeneratedRaceGpxAsset.class);
+        when(asset.getRunner()).thenThrow(new IllegalStateException("Lazy runner must not be serialized"));
+        var result = new MarathonRouteMatchAndExportService.MarathonRouteMatchAndExportResult(
+                List.of(new MatchedBreadcrumbPointDTO(35.69, 139.69)), "<gpx/>", asset, "Verified course");
+
+        String json = new tools.jackson.databind.ObjectMapper().writeValueAsString(result);
+
+        assertThat(json).contains("gpxXml", "<gpx/>").doesNotContain("persistedAsset", "runner");
+    }
+
+    @Test
     void matchExportAndPersistCoordinatesTheStep4Services() {
         OsrmMapMatchingClient osrmMapMatchingClient = mock(OsrmMapMatchingClient.class);
         GpxExportService gpxExportService = mock(GpxExportService.class);

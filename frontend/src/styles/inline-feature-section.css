@@ -1,0 +1,26 @@
+#root .analysis-inline-features { min-width: 0; }
+#root .inline-feature {
+  min-width: 0;
+  margin: 20px 0;
+  border: 1px solid var(--a2-line, var(--lb-line, var(--border-color, #dedad4)));
+  border-radius: 20px;
+  background: var(--a2-card, var(--lb-card, var(--surface-card, #fff)));
+  color: var(--a2-ink, var(--lb-ink, var(--text-primary, #24211d)));
+  scroll-margin-top: 96px;
+}
+#root .inline-feature__summary { position: relative; display: grid; gap: 6px; padding: 22px 48px 22px 24px; cursor: pointer; list-style: none; }
+#root .inline-feature__summary::-webkit-details-marker { display: none; }
+#root .inline-feature__summary::after { content: '+'; position: absolute; right: 24px; top: 22px; font-size: 1.25rem; }
+#root .inline-feature[open] > .inline-feature__summary::after { content: '−'; }
+#root .inline-feature__summary:focus-visible { outline: 2px solid var(--a2-accent, var(--lb-accent, #a0392a)); outline-offset: 3px; border-radius: 20px; }
+#root .inline-feature__title { margin: 0; font: inherit; font-size: 1.1rem; font-weight: 700; color: inherit; }
+#root .inline-feature__description { color: var(--a2-muted, var(--lb-muted, var(--text-secondary, #686159))); font-size: .85rem; line-height: 1.5; }
+#root .inline-feature__content { min-width: 0; padding: 0 24px 24px; }
+#root .inline-feature__content > :is(.metric-trend-v2, .quality-sessions-v2, .pace-curve-v2, .vo2max-estimates-v2, .training-log-v2) { width: 100%; max-width: none; margin: 0; }
+body:is(.theme-midnight, .theme-high-contrast) #root .inline-feature { background: var(--a2-card, var(--lb-card, #181a1d)); color: var(--a2-ink, var(--lb-ink, #f4f1eb)); border-color: var(--a2-line, var(--lb-line, #414348)); }
+body:is(.theme-midnight, .theme-high-contrast) #root .inline-feature__description { color: var(--a2-muted, var(--lb-muted, #c2bcb3)); }
+@media (max-width: 640px) {
+  #root .inline-feature__summary { padding: 18px 42px 18px 16px; }
+  #root .inline-feature__summary::after { right: 18px; top: 18px; }
+  #root .inline-feature__content { padding: 0 12px 18px; }
+}

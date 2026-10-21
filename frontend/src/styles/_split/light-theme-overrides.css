@@ -1,8 +1,3 @@
-body:is(.theme-midnight, .theme-high-contrast) .dashboard-body .hermes-logo--light .hermes-logo__word,
-body.theme-high-contrast-light .dashboard-body .hermes-logo--light .hermes-logo__word {
-    color: var(--text-strong);
-}
-
 body.theme-midnight,
 [data-theme="midnight"] body {
     background:
@@ -2122,6 +2117,10 @@ body.theme-light .auth-page--forgot-password {
   color: var(--text-strong);
 }
 
+body.theme-light .auth-page--forgot-password .auth-flow-wordmark {
+  color: var(--hermes-logo-ink);
+}
+
 /* 闁冲厜鍋撻柍鍏夊�?Theme-light error alerts on auth pages 闁冲厜鍋撻柍鍏夊�?*/
 
 body.theme-light .auth-page .error-alert {
@@ -2157,7 +2156,6 @@ body.theme-light .runner-shell-sidebar {
   -webkit-backdrop-filter: blur(20px);
 }
 
-body.theme-light .runner-shell-brand .hermes-logo--light .hermes-logo__word,
 body.theme-light .runner-shell-topbar-left h1 {
   color: var(--text-strong);
 }
@@ -5230,7 +5228,7 @@ body.theme-light .runner-dashboard-feature-session-pill {
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-state {
     border-color: rgba(44, 47, 48, 0.1);
     background:
-        radial-gradient(circle at top right, rgba(252, 76, 2, 0.1), transparent 30%),
+        radial-gradient(circle at top right, rgba(160, 57, 42, 0.08), transparent 30%),
         linear-gradient(145deg, rgba(255, 255, 255, 0.96), rgba(246, 241, 233, 0.94));
     box-shadow: 0 24px 48px rgba(44, 47, 48, 0.08);
 }
@@ -5244,8 +5242,12 @@ body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-hero p
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-icon {
-    background: rgba(252, 76, 2, 0.1);
-    color: rgba(214, 70, 20, 0.86);
+    background: rgba(160, 57, 42, 0.1);
+    color: #a0392a;
+}
+
+body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-steps span {
+    color: #a0392a;
 }
 
 body:is(.theme-light, .theme-high-contrast-light) .runner-dashboard-empty-steps li {
@@ -6499,6 +6501,10 @@ body.theme-light .admin-command-page .admin-command-topbar__wordmark,
 body.theme-light .admin-command-page .admin-command-topbar__nav-link.is-active,
 body.theme-light .admin-command-page .admin-command-topbar__icon.is-active {
   color: #a0392a;
+}
+
+body.theme-light .admin-command-page .admin-command-topbar__wordmark .hermes-wordmark {
+  color: var(--hermes-logo-ink);
 }
 
 body.theme-light .admin-command-page .admin-command-topbar {
@@ -8080,7 +8086,7 @@ body.theme-light .runner-shell-topnav--command {
   --runner-topnav-bg: rgba(255, 250, 244, 0.78);
   --runner-topnav-line: rgba(112, 61, 46, 0.13);
   --runner-topnav-ink: #201a17;
-  --runner-topnav-muted: rgba(32, 26, 23, 0.58);
+  --runner-topnav-muted: rgba(32, 26, 23, 0.7);
   --runner-topnav-active: #a0392a;
 }
 

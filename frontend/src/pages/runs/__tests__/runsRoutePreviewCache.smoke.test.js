@@ -23,8 +23,14 @@ assert.match(
 
 assert.match(
   runsSource,
-  /const runsPromise = cachedApiJson\('\/api\/activities'\)[\s\S]*?const list = Array\.isArray\(data\) \? data : \[\];[\s\S]*?list\.sort\(/,
+  /const runsPromise = cachedApiJson\('\/api\/activities'\)[\s\S]*?const list = Array\.isArray\(data\) \? data : \[\];[\s\S]*?sortRecentRuns\(list\);/,
   'Runs should normalize the direct /api/activities response to an array before sorting and rendering activity cards.',
+);
+
+assert.match(
+  runsSource,
+  /const sortRecentRuns = \(runs\) => \{[\s\S]*?return runs\.sort\(\(a, b\) => sortTime\(b\) - sortTime\(a\)\);/,
+  'The shared Recent sorter should still sort the normalized list before rendering.',
 );
 
 assert.match(

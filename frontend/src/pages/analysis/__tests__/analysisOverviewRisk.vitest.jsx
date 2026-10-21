@@ -1,4 +1,4 @@
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import Analysis from '../Analysis';
@@ -9,7 +9,7 @@ import { buildAnalysisSnapshot } from '../../../utils/analysisInsights';
 
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: true }) }));
 vi.mock('../../../contexts/UnitContext', () => ({ useUnit: () => ({ unit: 'km' }) }));
-vi.mock('../../../contexts/I18nContext', () => ({ useI18n: () => ({ lang: 'en', t: (key, values = {}) => {
+vi.mock('../../../contexts/I18nContext', () => ({ useI18n: () => ({ lang: 'en', formatNumber: (value, options) => new Intl.NumberFormat('en-US', options).format(value), t: (key, values = {}) => {
   const copy = key.split('.').reduce((value, part) => value?.[part], en) ?? key;
   return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, String(value)), copy);
 } }) }));
@@ -36,6 +36,39 @@ beforeEach(() => {
     : null);
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('opens Trends inside the existing Analysis page and reuses its history without adding another shell', async () => {
+  const { container } = render(<MemoryRouter initialEntries={['/analysis']}><Analysis /></MemoryRouter>);
+  await waitFor(() => expect(container.querySelector('.analysis-v2-injury-value')).toHaveTextContent('83 / 100'));
+  const panel = container.querySelector('#analysis-trends');
+  expect(panel).toBeInTheDocument();
+  expect(panel.open).toBe(false);
+  fireEvent.click(panel.querySelector('summary'));
+  await screen.findByRole('group', { name: en.trends.reads_label });
+  expect(container.querySelectorAll('.runner-shell-sidebar')).toHaveLength(1);
+  expect(container.querySelectorAll('main')).toHaveLength(1);
+  expect(cachedApiJson.mock.calls.filter(([url]) => url === '/api/activities/analysis')).toHaveLength(1);
+});
+
+it('groups the evidence under Go deeper, with a compact initial table and tools beside the intro', async () => {
+  const { container } = render(<MemoryRouter initialEntries={['/analysis']}><Analysis /></MemoryRouter>);
+  await screen.findByRole('heading', { name: 'Go deeper' });
+  const estimates = container.querySelector('#vo2max-estimates');
+  await waitFor(() => expect(estimates.querySelector('tbody tr')).toBeInTheDocument());
+  expect(estimates.open).toBe(true);
+  expect(estimates.querySelectorAll('.vo2max-estimates-v2__runs tbody tr')).toHaveLength(6);
+  expect(container.querySelector('.analysis-v2-intro .athlete-tools-actions')).toBeInTheDocument();
+  expect(container.querySelector('#analysis-trends summary .inline-feature__value')).toHaveTextContent('5:00 /km');
+  expect(container.querySelector('.analysis-inline-features').children).toHaveLength(3);
+});
+
+it('keeps the collapsed trend summary in sync with the selected metric and run filter', async () => {
+  const { container } = render(<MemoryRouter initialEntries={['/analysis?metric=distance&runs=race#analysis-trends']}><Analysis /></MemoryRouter>);
+  await screen.findByRole('heading', { name: 'Go deeper' });
+  // These fixtures have no Race labels; a filter with no data must not show an all-runs median.
+  expect(container.querySelector('#analysis-trends summary .inline-feature__value')).toHaveTextContent('—');
+  expect(container.querySelector('#vo2max-estimates').open).toBe(false);
+});
 
 it('uses server risk for the label, color, summary and score even when the run-only signal is low', async () => {
   expect(buildAnalysisSnapshot(activities, 'en', 'km').injury.level).toBe('low');

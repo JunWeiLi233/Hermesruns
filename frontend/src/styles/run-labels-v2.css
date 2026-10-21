@@ -1,0 +1,191 @@
+/* Run type and tags (M5): a card in the run page's side column. It takes the page's own card, link and muted styles and
+   the same --v2-* tokens, so light and midnight come from the page; only what is new is defined here. */
+
+#root .run-detail-v2 .run-labels { gap: 14px; }
+#root .run-detail-v2 .run-labels:focus { outline: none; }
+
+#root .run-detail-v2 .run-labels__compact > summary { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; list-style: none; cursor: pointer; }
+#root .run-detail-v2 .run-labels__compact > summary::-webkit-details-marker { display: none; }
+#root .run-detail-v2 .run-labels__compact > summary > span { display: inline-flex; align-items: center; min-height: 30px; max-width: 100%; padding: 0 12px; border-radius: 999px; background: var(--v2-fill); color: var(--v2-ink) !important; font-size: .78rem; font-weight: 700; overflow-wrap: anywhere; }
+#root .run-detail-v2 .run-labels__compact > summary > .run-labels__preview-type { background: var(--v2-accent-soft); color: var(--v2-accent) !important; }
+#root .run-detail-v2 .run-labels__compact > summary > .run-labels__preview-add { background: transparent; box-shadow: inset 0 0 0 1px var(--v2-line); }
+#root .run-detail-v2 .run-labels__compact > summary:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 4px; border-radius: 12px; }
+#root .run-detail-v2 .run-labels__compact-editor { display: grid; gap: 16px; padding-top: 18px; }
+
+#root .run-detail-v2 .run-labels__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+#root .run-detail-v2 .run-labels__group legend,
+#root .run-detail-v2 .run-labels__label {
+  padding: 0;
+  color: var(--v2-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+#root .run-detail-v2 .run-labels__group legend { margin-bottom: 8px; }
+
+/* The run type: four choices, one of them chosen. Native radio buttons, so the arrow keys work as they do everywhere. */
+#root .run-detail-v2 .run-labels__types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+/* The shell styles every label and span on this page as a small muted caption (uppercase, wide-set, with !important on the
+   colour); a choice is neither, so this says so for the label and for the text in it. */
+#root .run-detail-v2 .run-labels__type { position: relative; display: block; min-width: 0; font: inherit; letter-spacing: normal; text-transform: none; }
+
+#root .run-detail-v2 .run-labels__type input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+#root .run-detail-v2 .run-labels__type span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: var(--v2-fill);
+  color: var(--v2-ink) !important;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-align: center;
+  text-transform: none;
+}
+
+#root .run-detail-v2 .run-labels__type input:hover:not(:checked) + span { background: var(--v2-accent-soft); }
+#root .run-detail-v2 .run-labels__type input:checked + span { background: var(--v2-accent); color: var(--v2-on-accent) !important; }
+#root .run-detail-v2 .run-labels__type input:focus-visible + span { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+#root .run-detail-v2 .run-labels__group[aria-busy="true"] .run-labels__type input { cursor: progress; }
+
+/* The tags. */
+#root .run-detail-v2 .run-labels__tags-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+#root .run-detail-v2 .run-labels__tags-head > span:last-child { color: var(--v2-faint); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+
+#root .run-detail-v2 .run-labels__chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+#root .run-detail-v2 .run-labels__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 0 4px 0 12px;
+  border-radius: 999px;
+  background: var(--v2-accent-soft);
+  color: var(--v2-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+#root .run-detail-v2 .run-labels__chip-text { min-width: 0; overflow: hidden; color: var(--v2-ink) !important; text-overflow: ellipsis; white-space: nowrap; }
+
+#root .run-detail-v2 .run-labels__chip button {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--v2-muted);
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#root .run-detail-v2 .run-labels__chip button:hover { background: var(--v2-fill); color: var(--v2-ink); }
+#root .run-detail-v2 .run-labels__chip button:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 1px; }
+
+#root .run-detail-v2 .run-labels__add { display: flex; gap: 8px; }
+
+#root .run-detail-v2 .run-labels__add input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--v2-line);
+  border-radius: 10px;
+  background: var(--v2-card);
+  color: var(--v2-ink);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+#root .run-detail-v2 .run-labels__add input::placeholder { color: var(--v2-faint); }
+#root .run-detail-v2 .run-labels__add input[aria-invalid="true"] { border-color: var(--v2-error); }
+#root .run-detail-v2 .run-labels__add input:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 1px; }
+
+#root .run-detail-v2 .run-labels__add button {
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--v2-accent);
+  color: var(--v2-on-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#root .run-detail-v2 .run-labels__add button:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; }
+
+/* The runner's other tags, one tap to put one on this run. */
+#root .run-detail-v2 .run-labels__suggest { display: flex; flex-direction: column; gap: 6px; }
+#root .run-detail-v2 .run-labels__suggest > span { color: var(--v2-faint); font-size: 0.75rem; }
+#root .run-detail-v2 .run-labels__suggest ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+
+#root .run-detail-v2 .run-labels__suggest button {
+  max-width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 1px dashed var(--v2-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--v2-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+#root .run-detail-v2 .run-labels__suggest button:hover { background: var(--v2-accent-soft); color: var(--v2-ink); }
+#root .run-detail-v2 .run-labels__suggest button:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 1px; }
+
+#root .run-detail-v2 .run-labels__foot { padding-top: 2px; }
+#root .run-detail-v2 .run-labels__state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+
+/* While it loads. */
+#root .run-detail-v2 .run-labels__skeleton { display: flex; flex-direction: column; gap: 10px; }
+#root .run-detail-v2 .run-labels__skeleton .page-skeleton__block { display: block; height: 36px; border-radius: 10px; }
+#root .run-detail-v2 .run-labels__skeleton .page-skeleton__block.is-short { width: 60%; height: 14px; border-radius: 6px; }
+
+@media (max-width: 720px) {
+  #root .run-detail-v2 .run-labels__type span { min-height: 44px; }
+  #root .run-detail-v2 .run-labels__add input,
+  #root .run-detail-v2 .run-labels__add button { height: 44px; }
+  /* 16px keeps a phone from zooming into the text box. */
+  #root .run-detail-v2 .run-labels__add input { font-size: 1rem; }
+}

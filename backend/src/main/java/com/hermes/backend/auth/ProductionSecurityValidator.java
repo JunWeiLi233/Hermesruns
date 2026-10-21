@@ -10,8 +10,12 @@ import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
@@ -24,6 +28,27 @@ public class ProductionSecurityValidator {
 
     @Value("${hermes.environment:development}")
     private String environment;
+
+    @Autowired
+    private Environment springEnvironment;
+
+    @Value("${app.security.force-https:false}")
+    private boolean forceHttps = true;
+
+    @Value("${spring.jpa.hibernate.ddl-auto:validate}")
+    private String ddlAuto = "validate";
+
+    @Value("${app.official-course.startup-seed.enabled:true}")
+    private boolean courseStartupSeedEnabled;
+
+    @Value("${RAILWAY_ENVIRONMENT_ID:}")
+    private String railwayEnvironmentId;
+
+    @Value("${RAILWAY_VOLUME_MOUNT_PATH:}")
+    private String railwayVolumeMountPath;
+
+    @Value("${app.course-map.upload-dir:course-map-images}")
+    private String courseMapUploadDirectory;
 
     @Value("${strava.client.id:}")
     private String stravaClientId;
@@ -94,6 +119,8 @@ public class ProductionSecurityValidator {
             return;
         }
         validateDatasource();
+        validateReadOnlyStartup();
+        validateCourseStorage();
         validateHsts();
         validateCorsOrigins();
         validatePublicBaseUrl();
@@ -109,21 +136,18 @@ public class ProductionSecurityValidator {
                     "HERMES_ENV=production: HERMES_ADMIN_MFA_ENABLED must be true.");
         }
         String rpId = normalize(adminMfaRpId);
-        if (rpId.isBlank() || "localhost".equals(rpId) || rpId.contains("*") || rpId.contains("://")) {
+        if (!isDnsDomain(rpId)) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: HERMES_WEBAUTHN_RP_ID must be a non-loopback DNS domain.");
         }
-        String[] origins = normalize(adminMfaAllowedOrigins).split(",");
-        if (origins.length == 0) {
-            throw new IllegalStateException(
-                    "HERMES_ENV=production: HERMES_WEBAUTHN_ALLOWED_ORIGINS is required.");
-        }
+        String[] origins = normalize(adminMfaAllowedOrigins).split(",", -1);
         for (String originValue : origins) {
             String origin = normalize(originValue);
-            if (origin.isBlank() || !origin.startsWith("https://") || origin.contains("*")
-                    || origin.contains("localhost") || origin.contains("127.0.0.1")) {
+            URI parsed = exactHttpsOrigin(origin, false);
+            if (parsed == null || !isDnsDomain(parsed.getHost())
+                    || !(parsed.getHost().equals(rpId) || parsed.getHost().endsWith("." + rpId))) {
                 throw new IllegalStateException(
-                        "HERMES_ENV=production: HERMES_WEBAUTHN_ALLOWED_ORIGINS must contain exact HTTPS origins only.");
+                        "HERMES_ENV=production: HERMES_WEBAUTHN_ALLOWED_ORIGINS must contain exact HTTPS origins within the RP domain.");
             }
         }
         if (!value(adminMfaBootstrapToken).isBlank() && value(adminMfaBootstrapToken).length() < 32) {
@@ -135,7 +159,10 @@ public class ProductionSecurityValidator {
                     "HERMES_ENV=production: HERMES_ADMIN_ACCESS_ENABLED must be true.");
         }
         String teamDomain = normalize(adminAccessTeamDomain);
-        if (!teamDomain.startsWith("https://") || !teamDomain.endsWith(".cloudflareaccess.com")) {
+        URI teamOrigin = exactHttpsOrigin(teamDomain, true);
+        if (teamOrigin == null || !isDnsDomain(teamOrigin.getHost())
+                || !teamOrigin.getHost().endsWith(".cloudflareaccess.com")
+                || (teamOrigin.getPort() != -1 && teamOrigin.getPort() != 443)) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: HERMES_ADMIN_ACCESS_TEAM_DOMAIN must be the HTTPS Cloudflare Access team domain.");
         }
@@ -176,16 +203,52 @@ public class ProductionSecurityValidator {
 
     private void validateDatasource() {
         String normalized = normalize(datasourceUrl);
-        if (normalized.startsWith("jdbc:h2:")) {
+        if (!normalized.startsWith("jdbc:postgresql://")) {
             throw new IllegalStateException(
-                    "HERMES_ENV=production: local H2 is not allowed. Configure APP_DB_URL/APP_DB_DRIVER for managed PostgreSQL.");
+                    "HERMES_ENV=production: configure APP_DB_URL/APP_DB_DRIVER for PostgreSQL.");
+        }
+    }
+
+    private void validateReadOnlyStartup() {
+        if (!"validate".equals(normalize(ddlAuto))) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: APP_JPA_DDL_AUTO must be validate; apply reviewed migrations before startup.");
+        }
+        if (courseStartupSeedEnabled) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: HERMES_OFFICIAL_COURSE_STARTUP_SEED_ENABLED must be false to preserve live routes.");
         }
     }
 
     private void validateHsts() {
+        if (!forceHttps) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: APP_FORCE_HTTPS must be true.");
+        }
         if (!hstsEnabled) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: enable HSTS by setting APP_ENABLE_HSTS=true behind HTTPS.");
+        }
+    }
+
+    private void validateCourseStorage() {
+        if (value(railwayEnvironmentId).isBlank()) {
+            return;
+        }
+        try {
+            Path mount = Path.of(value(railwayVolumeMountPath)).normalize();
+            if (!mount.isAbsolute() || mount.getParent() == null) {
+                throw new IllegalStateException(
+                        "HERMES_ENV=production: RAILWAY_VOLUME_MOUNT_PATH must identify a persistent volume mount.");
+            }
+            Path uploads = Path.of(value(courseMapUploadDirectory)).normalize();
+            if (!uploads.isAbsolute() || !uploads.startsWith(mount)) {
+                throw new IllegalStateException(
+                        "HERMES_ENV=production: HERMES_COURSE_MAP_UPLOAD_DIR must be inside the Railway volume mount.");
+            }
+        } catch (InvalidPathException exception) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: configure valid RAILWAY_VOLUME_MOUNT_PATH and HERMES_COURSE_MAP_UPLOAD_DIR paths.");
         }
     }
 
@@ -194,16 +257,12 @@ public class ProductionSecurityValidator {
         if (normalized.isBlank()) {
             return;
         }
-        String[] origins = normalized.split(",");
+        String[] origins = normalized.split(",", -1);
         for (String rawOrigin : origins) {
             String origin = normalize(rawOrigin);
-            if (origin.contains("localhost") || origin.contains("127.0.0.1")) {
+            if (exactHttpsOrigin(origin, false) == null || !isSafePublicBaseUrl(origin)) {
                 throw new IllegalStateException(
-                        "HERMES_ENV=production: APP_CORS_ALLOWED_ORIGINS must not include localhost origins.");
-            }
-            if (origin.startsWith("http://")) {
-                throw new IllegalStateException(
-                        "HERMES_ENV=production: APP_CORS_ALLOWED_ORIGINS must use HTTPS origins only.");
+                        "HERMES_ENV=production: APP_CORS_ALLOWED_ORIGINS must contain exact non-loopback HTTPS origins only.");
             }
         }
     }
@@ -213,11 +272,7 @@ public class ProductionSecurityValidator {
         if (normalized.isBlank()) {
             return;
         }
-        if (normalized.contains("localhost") || normalized.contains("127.0.0.1")) {
-            throw new IllegalStateException(
-                    "HERMES_ENV=production: APP_PUBLIC_BASE_URL must not point to localhost.");
-        }
-        if (!normalized.startsWith("https://")) {
+        if (!isSafePublicBaseUrl(value(publicBaseUrl).trim())) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: APP_PUBLIC_BASE_URL must use HTTPS.");
         }
@@ -478,7 +533,7 @@ public class ProductionSecurityValidator {
     }
 
     private String normalize(String value) {
-        return value == null ? "" : value.trim().toLowerCase();
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
 
     private String value(String value) {
@@ -486,6 +541,29 @@ public class ProductionSecurityValidator {
     }
 
     private boolean isProduction() {
-        return environment != null && "production".equalsIgnoreCase(environment.trim());
+        return (environment != null && "production".equalsIgnoreCase(environment.trim()))
+                || (springEnvironment != null && springEnvironment.matchesProfiles("production"));
+    }
+
+    private URI exactHttpsOrigin(String raw, boolean allowRootSlash) {
+        if (raw == null || raw.isBlank() || containsUnsafeUrlCharacter(raw)) {
+            return null;
+        }
+        try {
+            URI uri = new URI(raw);
+            String path = uri.getRawPath();
+            return "https".equals(uri.getScheme()) && uri.getHost() != null
+                    && uri.getUserInfo() == null && uri.getRawQuery() == null && uri.getRawFragment() == null
+                    && (uri.getPort() == -1 || (uri.getPort() > 0 && uri.getPort() <= 65535))
+                    && (path == null || path.isEmpty() || (allowRootSlash && "/".equals(path)))
+                    ? uri : null;
+        } catch (URISyntaxException exception) {
+            return null;
+        }
+    }
+
+    private boolean isDnsDomain(String host) {
+        return host != null && !host.endsWith(".localhost")
+                && host.matches("(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?");
     }
 }

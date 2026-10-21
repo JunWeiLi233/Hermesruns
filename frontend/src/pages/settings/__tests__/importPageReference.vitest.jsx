@@ -15,12 +15,12 @@ function t(key, values = {}) {
   return Object.entries(values).reduce((value, [name, replacement]) => value.replaceAll(`{${name}}`, String(replacement)), copy);
 }
 vi.mock('../../../contexts/I18nContext', () => ({ useI18n: () => ({ lang: state.lang, t }) }));
-vi.mock('../../../api', () => ({ apiFetch: vi.fn() }));
+vi.mock('../../../api', () => ({ subscribeWakeRetry: () => () => {}, apiFetch: vi.fn() }));
 vi.mock('../../../api/resourceCache', () => ({ cachedApiJson: async () => ({ displayName: 'Alex' }), invalidateResourceCache: vi.fn() }));
 vi.mock('../../../components/TopbarUserMenu', () => ({ default: () => null }));
 vi.mock('../../../components/TopbarNotifications', () => ({ default: () => null }));
 
-beforeEach(() => { state.lang = 'en'; apiFetch.mockReset(); apiFetch.mockResolvedValue({ ok: true }); });
+beforeEach(() => { state.lang = 'en'; apiFetch.mockReset(); apiFetch.mockResolvedValue({ ok: true, json: async () => ({ importedActivities: 2, skippedDuplicates: 0, skippedNonRuns: 0, rejectedFiles: [] }) }); });
 afterEach(cleanup);
 const file = (name) => new File(['activity'], name, { type: 'application/octet-stream' });
 function openPage() {
@@ -61,7 +61,7 @@ it('uploads mixed sources, clears the queue, reports success, and opens the run 
   fireEvent.drop(container.querySelector('.import-v2-drop'), { dataTransfer: { files: [file('coros.zip')] } });
   expect(container.querySelectorAll('.import-v2-file')).toHaveLength(2);
   await user.click(screen.getByRole('button', { name: 'Import 2 file(s)' }));
-  await waitFor(() => expect(container.querySelector('.import-page-v2-success')).toHaveTextContent('Imported 2 files'));
+  await waitFor(() => expect(screen.getByLabelText('Import result')).toHaveTextContent('Activities imported: 2'));
   const [endpoint, options] = apiFetch.mock.calls[0];
   expect(endpoint).toBe('/api/import/batch'); expect(options.method).toBe('POST');
   expect([...options.body.entries()].map(([field, entry]) => [field, entry.name])).toEqual([['exports', 'morning.fit'], ['coros', 'coros.zip']]);
@@ -80,18 +80,18 @@ it('keeps failed files available for retry and avoids displaying the previous su
     await user.click(screen.getByRole('button', { name: 'Import 1 file(s)' }));
   };
   await upload('first.fit');
-  await waitFor(() => expect(container.querySelector('.import-page-v2-success')).toBeInTheDocument());
-  apiFetch.mockResolvedValueOnce({ ok: false });
+  await waitFor(() => expect(screen.getByLabelText('Import result')).toBeInTheDocument());
+  apiFetch.mockResolvedValueOnce({ ok: false, json: async () => ({ error: en.profile.import_failed }) });
   await upload('retry.gpx');
   expect(await screen.findByRole('alert')).toHaveTextContent(en.profile.import_failed);
-  expect(container.querySelector('.import-page-v2-success')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Import result')).not.toBeInTheDocument();
   expect(container.querySelector('.import-v2-file')).toHaveTextContent('retry.gpx');
-  await user.click(screen.getByRole('button', { name: 'Import 1 file(s)' }));
-  await waitFor(() => expect(container.querySelector('.import-page-v2-success')).toBeInTheDocument());
+  await user.click(screen.getByRole('button', { name: 'Retry selected files' }));
+  await waitFor(() => expect(screen.getByLabelText('Import result')).toBeInTheDocument());
   expect(apiFetch).toHaveBeenCalledTimes(3);
 });
 
-it.each(['.import-page-v2-back', '.import-v2-cancel', '.import-page-v2-sync .is-strava', '.import-page-v2-sync .is-garmin'])('returns to Settings from %s', (selector) => {
+it.each(['.import-v2-cancel', '.import-page-v2-sync .is-strava', '.import-page-v2-sync .is-garmin'])('returns to Settings from %s', (selector) => {
   const { container } = openPage();
   fireEvent.click(container.querySelector(selector));
   expect(screen.getByRole('heading', { name: 'Settings destination' })).toBeInTheDocument();
@@ -104,6 +104,6 @@ it('renders the source guide and new feedback in Chinese', async () => {
   expect(container.querySelector('.import-page-v2-sync')).toHaveTextContent(zh.settings.import_v2_auto_sync);
   await user.upload(container.querySelector('input[type="file"]'), file('morning.fit'));
   await user.click(screen.getByRole('button', { name: t('profile.upload_file_count', { count: 1 }) }));
-  await waitFor(() => expect(container.querySelector('.import-page-v2-success')).toHaveTextContent(t('settings.import_v2_success', { count: 1 })));
+  await waitFor(() => expect(screen.getByLabelText('导入结果')).toHaveTextContent('导入 2 个活动'));
   expect(container.textContent).not.toMatch(/settings\.import_v2|profile\.import_|\{count\}/);
 });

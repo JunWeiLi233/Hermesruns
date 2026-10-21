@@ -1,0 +1,99 @@
+/* Profile is the spacing reference. These tokens combine its canvas and
+   .hd-content insets, so every page has one outer spacing owner. */
+:root {
+  --page-content-inline: calc(32px + clamp(20px, 3vw, 48px));
+  --page-content-top: 52px;
+  --page-content-bottom: 112px;
+}
+
+@media (max-width: 1180px) {
+  :root {
+    --page-content-inline: calc(20px + clamp(20px, 3vw, 48px));
+    --page-content-top: 50px;
+    --page-content-bottom: 100px;
+  }
+}
+@media (max-width: 1100px) and (min-width: 961px) and (pointer: coarse) {
+  :root { --page-content-inline: calc(14px + clamp(20px, 3vw, 48px)); }
+}
+@media (max-width: 960px) {
+  :root {
+    --page-content-inline: 30px;
+    --page-content-top: 28px;
+    --page-content-bottom: 88px;
+  }
+}
+@media (max-width: 760px) {
+  :root { --page-content-top: 38px; --page-content-bottom: 90px; }
+}
+@media (max-width: 640px) {
+  :root { --page-content-bottom: 82px; }
+}
+
+/* Layered important geometry wins over older unlayered route overrides even
+   when a route stylesheet loads later. Card/form spacing remains route-owned. */
+@layer hermes-page-spacing {
+  #root .runner-shell-main > .runner-shell-canvas,
+  #root .admin-command-shell,
+  .loading-design--page .loading-design__main,
+  .loading-design--page .loading-design__admin > main,
+  .loading-design--public > [aria-busy] > div > main,
+  #root .auth-page .auth-flow-shell,
+  .loading-design--auth > [aria-busy] > div {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: var(--page-content-top) var(--page-content-inline) var(--page-content-bottom) !important;
+  }
+
+  /* Remove a second page inset from layout wrappers, while retaining their
+     grids, gaps, backgrounds, and every card's own content padding. */
+  #root .runner-shell-canvas > :is(
+    .hd-content, .prediction-profile-content, .analysis-load-profile,
+    .analysis-profile-v2, .analysis-intensity-profile-content,
+    .analysis-coach-profile, .runs-dashboard-shell, .shoe-inventory-screen,
+    .race-center-content, .race-detail-layout, .add-shoes-catalog-workspace,
+    .add-shoes-shell, .mt-content
+  ),
+  #root .runner-shell-canvas .page-transition-shell > .team-page,
+  #root .runner-shell-canvas > .run-detail-page,
+  #root .runner-shell-canvas .run-detail-shell.run-detail-v2__shell {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Public documents and landing sections use the same outside frame. */
+  #root .legal-document {
+    padding: var(--page-content-top) var(--page-content-inline) var(--page-content-bottom) !important;
+  }
+  #root .legal-document > :is(header, main, footer) {
+    width: 100% !important;
+    max-width: none !important;
+    margin-inline: 0 !important;
+    padding-inline: 0 !important;
+  }
+  #root .landing-v3 .lv3-width {
+    width: calc(100% - var(--page-content-inline) * 2) !important;
+    max-width: none !important;
+    margin-inline: auto !important;
+    padding-inline: 0 !important;
+  }
+
+  /* The standalone heat layer fills the viewport; legacy map layouts keep the shared frame. */
+  #root .heatmap-page:not(.heatmap-page--simple) {
+    box-sizing: border-box !important;
+    width: calc(100% - var(--page-content-inline) * 2) !important;
+    height: calc(100dvh - var(--page-content-top) - var(--page-content-bottom) - var(--mobile-nav-space, 0px)) !important;
+    min-height: 0 !important;
+    margin: var(--page-content-top) var(--page-content-inline) var(--page-content-bottom) !important;
+  }
+
+  /* Match the loaded Profile rail boundary as well as its content inset. */
+  .loading-design--page .loading-design__rail { width: var(--runner-nav-collapsed-width, 96px) !important; }
+}

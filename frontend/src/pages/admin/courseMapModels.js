@@ -117,6 +117,13 @@ export function getCourseMapViewportFallback(item) {
   };
 }
 
+function optionalCourseMapNumber(value) {
+  if (typeof value !== 'number' && typeof value !== 'string') return undefined;
+  if (typeof value === 'string' && !value.trim()) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : undefined;
+}
+
 export function buildCourseMapAdminPayload(item) {
   const payload = {
     raceName: getCourseMapRaceName(item),
@@ -125,16 +132,16 @@ export function buildCourseMapAdminPayload(item) {
   const city = item?.city || item?.raceCity || item?.race?.city || '';
   const country = item?.country || item?.race?.country || '';
   const website = item?.officialWebsite || item?.website || item?.race?.officialWebsite || item?.race?.website || '';
-  const lat = item?.lat ?? item?.latitude ?? item?.race?.lat ?? item?.race?.latitude;
-  const lng = item?.lng ?? item?.longitude ?? item?.race?.lng ?? item?.race?.longitude;
-  const distanceKm = item?.distanceKm ?? item?.race?.distanceKm;
+  const lat = optionalCourseMapNumber(item?.lat ?? item?.latitude ?? item?.race?.lat ?? item?.race?.latitude);
+  const lng = optionalCourseMapNumber(item?.lng ?? item?.longitude ?? item?.race?.lng ?? item?.race?.longitude);
+  const distanceKm = optionalCourseMapNumber(item?.distanceKm ?? item?.race?.distanceKm);
 
   if (city) payload.city = city;
   if (country) payload.country = country;
   if (website) payload.website = website;
-  if (Number.isFinite(Number(lat))) payload.lat = Number(lat);
-  if (Number.isFinite(Number(lng))) payload.lng = Number(lng);
-  if (Number.isFinite(Number(distanceKm))) payload.distanceKm = Number(distanceKm);
+  if (lat !== undefined) payload.lat = lat;
+  if (lng !== undefined) payload.lng = lng;
+  if (distanceKm !== undefined && distanceKm > 0) payload.distanceKm = distanceKm;
 
   return payload;
 }
@@ -155,8 +162,13 @@ export function getCourseMapImageUrl(asset) {
   return asset?.previewImageUrl || asset?.imageUrl || asset?.sourceImageUrl || '';
 }
 
+export function isInteractiveCourseMapSource(asset) {
+  return ['admin-official-rtrt-map', 'admin-official-strava-route', 'admin-validated-umap-route'].includes(asset?.source);
+}
+
 export function hasAlignedCourseMapPreview(asset) {
   if (!asset || typeof asset !== 'object') return false;
+  if (asset.alignmentAccepted === false || asset.sourceAvailable === false) return false;
   const routePoints = Array.isArray(asset.routePoints) ? asset.routePoints : [];
   return Boolean(asset.overlayBounds) && routePoints.length > 1;
 }
@@ -181,6 +193,16 @@ export function getCourseMapPreviewConfidence(asset) {
 export function buildCourseMapRecommendation(pendingPreview, livePreview, t) {
   const pendingAligned = hasAlignedCourseMapPreview(pendingPreview);
   const liveAligned = hasAlignedCourseMapPreview(livePreview);
+
+  if (pendingPreview?.sourceAvailable === false) {
+    return {
+      tone: 'acquire',
+      title: t('dashboard.course_maps_recommendation_acquire_title'),
+      body: t('dashboard.course_maps_source_missing_error'),
+      cta: t('dashboard.course_maps_upload'),
+      action: 'upload',
+    };
+  }
 
   if (!pendingPreview && !livePreview) {
     return {

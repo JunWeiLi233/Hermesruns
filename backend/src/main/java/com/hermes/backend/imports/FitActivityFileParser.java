@@ -33,6 +33,15 @@ public class FitActivityFileParser implements ActivityFileParser {
 
     @Override
     public ParsedActivityData parse(String fileName, byte[] fileBytes) {
+        return parse(fileName, fileBytes, false);
+    }
+
+    @Override
+    public ParsedActivityData parseForExplorer(String fileName, byte[] fileBytes) {
+        return parse(fileName, fileBytes, true);
+    }
+
+    private ParsedActivityData parse(String fileName, byte[] fileBytes, boolean explorer) {
         validateFitIntegrity(fileBytes);
 
         FitActivityAccumulator accumulator = new FitActivityAccumulator();
@@ -49,7 +58,7 @@ public class FitActivityFileParser implements ActivityFileParser {
             throw new IllegalArgumentException("The FIT file is invalid or corrupted.", exception);
         }
 
-        return accumulator.toParsedActivityData(fileName);
+        return accumulator.toParsedActivityData(fileName, explorer);
     }
 
     private void validateFitIntegrity(byte[] fileBytes) {
@@ -67,6 +76,7 @@ public class FitActivityFileParser implements ActivityFileParser {
 
     private final class FitActivityAccumulator {
         private final List<ParsedTrackPoint> points = new ArrayList<>();
+        private final List<OriginalLap> originalLaps = new ArrayList<>();
         private LocalDateTime sessionStartTime;
         private LocalDateTime lapStartTime;
         private LocalDateTime activityTimestamp;
@@ -101,6 +111,9 @@ public class FitActivityFileParser implements ActivityFileParser {
         }
 
         private void onLap(LapMesg mesg) {
+            originalLaps.add(new OriginalLap(toLocalDateTime(mesg.getStartTime()), toLocalDateTime(mesg.getTimestamp()),
+                    nonnegativeFinite(mesg.getTotalElapsedTime()), nonnegativeFinite(mesg.getTotalTimerTime()),
+                    nonnegativeFinite(mesg.getTotalDistance()), mesg.getIntensity() == null ? null : mesg.getIntensity().name()));
             lapStartTime = firstNonNull(lapStartTime, toLocalDateTime(mesg.getStartTime()));
             lapDistanceMeters = firstPositive(lapDistanceMeters, toPositiveDouble(mesg.getTotalDistance()));
             lapDurationSeconds = firstPositive(lapDurationSeconds, toPositiveSeconds(mesg.getTotalTimerTime()));
@@ -172,8 +185,8 @@ public class FitActivityFileParser implements ActivityFileParser {
         }
 
         @SuppressWarnings("null")
-        private ParsedActivityData toParsedActivityData(String fileName) {
-            if (points.isEmpty()) {
+        private ParsedActivityData toParsedActivityData(String fileName, boolean explorer) {
+            if (points.isEmpty() && !explorer) {
                 throw new IllegalArgumentException(
                         "The FIT file does not contain any GPS coordinates, so a heatmap route cannot be created."
                 );
@@ -193,10 +206,11 @@ public class FitActivityFileParser implements ActivityFileParser {
                     durationSeconds(startTime, lastRecordTime)
             );
 
-            Double avgHr = sessionAvgHeartRate != null ? (double) sessionAvgHeartRate
-                    : (heartRateCount > 0 ? (double) heartRateSum / heartRateCount : null);
-            Double maxHr = sessionMaxHeartRate != null ? (double) sessionMaxHeartRate
-                    : (recordMaxHeartRate > 0 ? (double) recordMaxHeartRate : null);
+            // Keep every ternary branch boxed: primitive promotion otherwise unboxes a null missing-HR value.
+            Double avgHr = sessionAvgHeartRate != null ? Double.valueOf(sessionAvgHeartRate)
+                    : (heartRateCount > 0 ? Double.valueOf((double) heartRateSum / heartRateCount) : null);
+            Double maxHr = sessionMaxHeartRate != null ? Double.valueOf(sessionMaxHeartRate)
+                    : (recordMaxHeartRate > 0 ? Double.valueOf(recordMaxHeartRate) : null);
 
             return new ParsedActivityData(
                     resolveName(fileName, startTime),
@@ -206,8 +220,24 @@ public class FitActivityFileParser implements ActivityFileParser {
                     durationSeconds,
                     points,
                     avgHr,
-                    maxHr
+                    maxHr,
+                    sourceLaps(startTime),
+                    new ParsedActivityData.SourceMetadata(sportName, sportProfileName, null, null, null, "Z",
+                            durationSeconds(startTime, lastRecordTime))
             );
+        }
+
+        private List<com.hermes.backend.activity.analysis.SessionAnalysisSources.Lap> sourceLaps(LocalDateTime base) {
+            List<com.hermes.backend.activity.analysis.SessionAnalysisSources.Lap> result = new ArrayList<>();
+            for (OriginalLap lap : originalLaps) {
+                LocalDateTime end = lap.end();
+                if (end == null && lap.start() != null && lap.elapsedSeconds() != null)
+                    end = lap.start().plusSeconds(Math.round(lap.elapsedSeconds()));
+                result.add(new com.hermes.backend.activity.analysis.SessionAnalysisSources.Lap(
+                        "lap-" + (result.size() + 1), "unknown", lapElapsed(base, lap.start()), lapElapsed(base, end),
+                        lap.timerSeconds(), lap.distanceMeters(), lap.intensity()));
+            }
+            return List.copyOf(result);
         }
 
         private String resolveName(String fileName, LocalDateTime startTime) {
@@ -222,6 +252,19 @@ public class FitActivityFileParser implements ActivityFileParser {
 
             return preferredName + " " + startTime.toLocalDate();
         }
+    }
+
+    private record OriginalLap(LocalDateTime start, LocalDateTime end, Double elapsedSeconds,
+                               Double timerSeconds, Double distanceMeters, String intensity) {}
+
+    private Double nonnegativeFinite(Float value) {
+        return value != null && Float.isFinite(value) && value >= 0 ? value.doubleValue() : null;
+    }
+
+    private Integer lapElapsed(LocalDateTime base, LocalDateTime time) {
+        if (base == null || time == null) return null;
+        long seconds = Duration.between(base, time).getSeconds();
+        return seconds >= 0 && seconds <= Integer.MAX_VALUE ? (int)seconds : null;
     }
 
     private LocalDateTime toLocalDateTime(DateTime timestamp) {

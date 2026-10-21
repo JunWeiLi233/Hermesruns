@@ -1,3 +1,5 @@
+import { getActivityDateKey } from './timeZone.js';
+
 const DAYS_PER_WEEK = 7;
 const DEFAULT_WEEKS = 53;
 
@@ -22,7 +24,8 @@ function dateKey(date) {
 }
 
 function activityDate(activity) {
-  return startOfLocalDay(activity?.startTime || activity?.startDate || activity?.createdAt);
+  const key = getActivityDateKey(activity);
+  return key ? new Date(`${key}T12:00:00`) : null;
 }
 
 function activityDistanceKm(activity) {

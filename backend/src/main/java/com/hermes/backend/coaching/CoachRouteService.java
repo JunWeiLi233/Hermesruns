@@ -5,24 +5,30 @@ import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.runner.Runner;
-import java.time.LocalDate;
+import com.hermes.backend.routing.RouteHeatmapAnchorService;
 import java.util.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CoachRouteService {
 
-    private static final int SCHEDULE_ROUTE_ACTIVITY_LIMIT = 18;
-    private static final double ROUTE_CLUSTER_RADIUS_METERS = 900.0;
     private static final int ROUTE_PREVIEW_POINT_LIMIT = 40;
-    private static final double EARTH_RADIUS_METERS = 6_371_000.0;
 
     private final ActivityRepository activityRepository;
     private final ActivityPointRepository activityPointRepository;
+    private final RouteHeatmapAnchorService anchors;
 
     public CoachRouteService(ActivityRepository activityRepository, ActivityPointRepository activityPointRepository) {
+        this(activityRepository, activityPointRepository, null);
+    }
+
+    @Autowired
+    public CoachRouteService(ActivityRepository activityRepository, ActivityPointRepository activityPointRepository,
+            RouteHeatmapAnchorService anchors) {
         this.activityRepository = activityRepository;
         this.activityPointRepository = activityPointRepository;
+        this.anchors = anchors;
     }
 
     public CoachRouteRecommendationDto buildRouteRecommendation(
@@ -30,63 +36,89 @@ public class CoachRouteService {
             CoachScheduledWorkout adjustedToday,
             List<CoachScheduledWorkout> scheduleRows
     ) {
-        List<Long> recentActivityIds = activityRepository.findRecentIdsByRunnerAndActivityType(
-                runner.getId(),
-                ActivityType.RUN.name(),
-                SCHEDULE_ROUTE_ACTIVITY_LIMIT
-        );
-        if (recentActivityIds == null || recentActivityIds.isEmpty()) {
+        if (runner == null || runner.getId() == null) {
+            return null;
+        }
+        Double targetDistanceKm = positiveDistanceKm(adjustedToday);
+        if (targetDistanceKm == null) return null;
+        // Use the same complete personal GPS history as the heatmap, so a recent
+        // trip cannot replace the runner's densest familiar location.
+        RouteHeatmapAnchorService.RouteAnchor anchor = anchors == null
+                ? RouteHeatmapAnchorService.findDatabaseAnchor(activityPointRepository, runner.getId())
+                : anchors.findAnchor(runner);
+        if (anchor == null) {
             return null;
         }
 
-        Map<Long, Activity> activitiesById = new HashMap<>();
-        for (Activity activity : activityRepository.findAllById(recentActivityIds)) {
-            if (activity != null) {
-                activitiesById.put(activity.getId(), activity);
-            }
-        }
+        double minLat = Math.floor(anchor.startLat() / 0.001) * 0.001;
+        double minLng = Math.floor(anchor.startLng() / 0.001) * 0.001;
+        List<Long> routeIds = activityPointRepository.findHeatmapRouteActivityIds(runner.getId(), ActivityType.RUN.name(),
+                minLat, minLat + 0.001, minLng, minLng + 0.001, targetDistanceKm);
+        if (routeIds == null || routeIds.isEmpty()) return null;
+        List<Object[]> pointRows = activityPointRepository.findHeatmapPointsByActivityIds(routeIds);
 
-        Map<Long, List<RoutePointSample>> pointsByActivityId = new HashMap<>();
+        Set<Long> hotspotActivityIds = new LinkedHashSet<>();
         double minLatitude = Double.POSITIVE_INFINITY;
         double maxLatitude = Double.NEGATIVE_INFINITY;
         double minLongitude = Double.POSITIVE_INFINITY;
         double maxLongitude = Double.NEGATIVE_INFINITY;
-        for (Object[] row : activityPointRepository.findHeatmapPointsByActivityIds(recentActivityIds)) {
+        for (Object[] row : pointRows) {
             if (row == null || row.length < 5 || !(row[0] instanceof Number activityIdNumber)) {
                 continue;
             }
             long activityId = activityIdNumber.longValue();
-            if (!activitiesById.containsKey(activityId)) {
-                continue;
-            }
             double latitude = row[1] instanceof Number number ? number.doubleValue() : Double.NaN;
             double longitude = row[2] instanceof Number number ? number.doubleValue() : Double.NaN;
-            double distanceMeters = row[3] instanceof Number number ? number.doubleValue() : Double.NaN;
-            int elapsedSeconds = row[4] instanceof Number number ? number.intValue() : 0;
-            if (!Double.isFinite(latitude) || !Double.isFinite(longitude)) {
+            if (!isValidCoordinate(latitude, longitude)) {
                 continue;
             }
 
-            pointsByActivityId.computeIfAbsent(activityId, ignored -> new ArrayList<>())
-                    .add(new RoutePointSample(latitude, longitude, distanceMeters, elapsedSeconds));
+            if (anchor.containsPoint(latitude, longitude)) {
+                hotspotActivityIds.add(activityId);
+            }
             minLatitude = Math.min(minLatitude, latitude);
             maxLatitude = Math.max(maxLatitude, latitude);
             minLongitude = Math.min(minLongitude, longitude);
             maxLongitude = Math.max(maxLongitude, longitude);
         }
 
-        if (pointsByActivityId.isEmpty()) {
+        if (hotspotActivityIds.isEmpty()) {
             return null;
+        }
+
+        // Retain full traces only for runs through the hotspot, rather than
+        // allocating an extra sample object for every point of every trip.
+        Map<Long, List<RoutePointSample>> pointsByActivityId = new HashMap<>();
+        for (Object[] row : pointRows) {
+            if (row == null || row.length < 5 || !(row[0] instanceof Number activityIdNumber)
+                    || !hotspotActivityIds.contains(activityIdNumber.longValue())) {
+                continue;
+            }
+            double latitude = row[1] instanceof Number number ? number.doubleValue() : Double.NaN;
+            double longitude = row[2] instanceof Number number ? number.doubleValue() : Double.NaN;
+            if (!isValidCoordinate(latitude, longitude)) {
+                continue;
+            }
+            double distanceMeters = row[3] instanceof Number number ? number.doubleValue() : Double.NaN;
+            int elapsedSeconds = row[4] instanceof Number number ? number.intValue() : 0;
+            pointsByActivityId.computeIfAbsent(activityIdNumber.longValue(), ignored -> new ArrayList<>())
+                    .add(new RoutePointSample(latitude, longitude, distanceMeters, elapsedSeconds));
+        }
+
+        Map<Long, Activity> activitiesById = new HashMap<>();
+        for (Activity activity : activityRepository.findAllById(new ArrayList<>(hotspotActivityIds))) {
+            if (activity != null) {
+                activitiesById.put(activity.getId(), activity);
+            }
         }
 
         RouteBounds bounds = minLatitude == Double.POSITIVE_INFINITY
                 ? null
                 : new RouteBounds(minLatitude, minLongitude, maxLatitude, maxLongitude);
-        Double targetDistanceKm = resolveTargetRouteDistanceKm(adjustedToday, scheduleRows);
 
         List<RouteActivityCandidate> candidates = new ArrayList<>();
         int recentRank = 0;
-        for (Long activityId : recentActivityIds) {
+        for (Long activityId : hotspotActivityIds) {
             Activity activity = activitiesById.get(activityId);
             List<RoutePointSample> samples = pointsByActivityId.get(activityId);
             if (activity == null || samples == null || samples.size() < 2) {
@@ -94,13 +126,12 @@ public class CoachRouteService {
                 continue;
             }
             Double distanceKm = resolveActivityDistanceKm(activity, samples);
-            RouteCentroid centroid = buildCentroid(samples);
             CoachRoutePreviewDto preview = buildRoutePreview(samples);
-            if (preview == null || centroid == null) {
+            if (!hasPositiveDistance(distanceKm) || preview == null) {
                 recentRank += 1;
                 continue;
             }
-            candidates.add(new RouteActivityCandidate(activityId, distanceKm, recentRank, samples, centroid, preview));
+            candidates.add(new RouteActivityCandidate(distanceKm, recentRank, samples, preview));
             recentRank += 1;
         }
 
@@ -108,69 +139,47 @@ public class CoachRouteService {
             return null;
         }
 
-        List<RouteCluster> clusters = new ArrayList<>();
-        for (RouteActivityCandidate candidate : candidates) {
-            RouteCluster bestCluster = null;
-            double bestDistance = Double.POSITIVE_INFINITY;
-            for (RouteCluster cluster : clusters) {
-                double distance = haversineMeters(
-                        candidate.centroid().latitude(),
-                        candidate.centroid().longitude(),
-                        cluster.centroid().latitude(),
-                        cluster.centroid().longitude()
-                );
-                if (distance <= ROUTE_CLUSTER_RADIUS_METERS && distance < bestDistance) {
-                    bestCluster = cluster;
-                    bestDistance = distance;
-                }
-            }
-
-            if (bestCluster == null) {
-                bestCluster = new RouteCluster(new ArrayList<>(), candidate.centroid());
-                clusters.add(bestCluster);
-            }
-            bestCluster.add(candidate);
-        }
-
-        return clusters.stream()
-                .min(routeClusterComparator(targetDistanceKm))
-                .map(cluster -> toRouteRecommendation(cluster, bounds, targetDistanceKm))
-                .orElse(null);
-    }
-
-    private Double resolveTargetRouteDistanceKm(CoachScheduledWorkout adjustedToday, List<CoachScheduledWorkout> scheduleRows) {
-        Double todayDistanceKm = positiveDistanceKm(adjustedToday);
-        if (todayDistanceKm != null) {
-            return todayDistanceKm;
-        }
-
-        LocalDate today = adjustedToday != null && adjustedToday.getScheduledDate() != null
-                ? adjustedToday.getScheduledDate()
-                : LocalDate.now();
-        return scheduleRows == null ? null : scheduleRows.stream()
-                .filter(workout -> workout != null && workout.getScheduledDate() != null && workout.getScheduledDate().isAfter(today))
-                .map(this::positiveDistanceKm)
-                .filter(CoachRouteService::hasPositiveDistance)
-                .findFirst()
-                .orElse(null);
+        Comparator<RouteActivityCandidate> comparator = Comparator
+                .comparingDouble((RouteActivityCandidate candidate) -> distanceGapKm(targetDistanceKm, candidate.distanceKm()))
+                .thenComparingInt(RouteActivityCandidate::recentRank);
+        RouteActivityCandidate representative = candidates.stream().min(comparator).orElseThrow();
+        if (Math.abs(representative.distanceKm() - targetDistanceKm) > targetDistanceKm * 0.15) return null;
+        return new CoachRouteRecommendationDto(
+                deriveZoneKey(new RouteCentroid(anchor.startLat(), anchor.startLng()), bounds),
+                resolveRouteConfidence(targetDistanceKm, representative.distanceKm()),
+                targetDistanceKm,
+                representative.distanceKm(),
+                candidates.size(),
+                representative.preview(),
+                buildRouteWaypoints(representative.samples(), anchor)
+        );
     }
 
     private Double positiveDistanceKm(CoachScheduledWorkout workout) {
-        if (workout == null || workout.getPlannedDistanceKm() == null || workout.getPlannedDistanceKm() <= 0) {
+        if (workout == null || workout.getWorkoutType() == null
+                || workout.getWorkoutType() == CoachWorkoutType.REST
+                || workout.getWorkoutType() == CoachWorkoutType.CROSS_TRAIN
+                || !hasPositiveDistance(workout.getPlannedDistanceKm())) {
             return null;
         }
         return workout.getPlannedDistanceKm();
     }
 
     private static boolean hasPositiveDistance(Double distanceKm) {
-        return distanceKm != null && distanceKm > 0;
+        return distanceKm != null && Double.isFinite(distanceKm) && distanceKm > 0;
+    }
+
+    private static boolean isValidCoordinate(double latitude, double longitude) {
+        return Double.isFinite(latitude) && Double.isFinite(longitude)
+                && latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
+                && !(latitude == 0.0 && longitude == 0.0);
     }
 
     private Double resolveActivityDistanceKm(Activity activity, List<RoutePointSample> samples) {
-        if (activity.getDistanceKm() > 0) {
+        if (hasPositiveDistance(activity.getDistanceKm())) {
             return activity.getDistanceKm();
         }
-        if (activity.getDistanceMeters() != null && activity.getDistanceMeters() > 0) {
+        if (hasPositiveDistance(activity.getDistanceMeters())) {
             return activity.getDistanceMeters() / 1000.0;
         }
         RoutePointSample lastSample = samples.get(samples.size() - 1);
@@ -178,33 +187,6 @@ public class CoachRouteService {
             return lastSample.distanceMeters() / 1000.0;
         }
         return null;
-    }
-
-    private CoachRouteRecommendationDto toRouteRecommendation(RouteCluster cluster, RouteBounds bounds, Double targetDistanceKm) {
-        RouteActivityCandidate representative = cluster.representative(targetDistanceKm);
-        String confidence = resolveRouteConfidence(targetDistanceKm, representative.distanceKm());
-        return new CoachRouteRecommendationDto(
-                deriveZoneKey(cluster.centroid(), bounds),
-                confidence,
-                targetDistanceKm,
-                representative.distanceKm(),
-                cluster.candidates().size(),
-                representative.preview(),
-                buildRouteWaypoints(representative.samples())
-        );
-    }
-
-    private Comparator<RouteCluster> routeClusterComparator(Double targetDistanceKm) {
-        if (!hasPositiveDistance(targetDistanceKm)) {
-            return Comparator
-                    .comparingInt((RouteCluster cluster) -> cluster.recentActivityRank())
-                    .thenComparing(Comparator.comparingInt(RouteCluster::activityCount).reversed());
-        }
-
-        return Comparator
-                .comparingDouble((RouteCluster cluster) -> distanceGapKm(targetDistanceKm, cluster.representative(targetDistanceKm).distanceKm()))
-                .thenComparingInt(cluster -> cluster.representative(targetDistanceKm).recentRank())
-                .thenComparing(Comparator.comparingInt(RouteCluster::activityCount).reversed());
     }
 
     private static double distanceGapKm(Double targetDistanceKm, Double representativeDistanceKm) {
@@ -219,8 +201,8 @@ public class CoachRouteService {
             return "best-available";
         }
         double gapKm = Math.abs(representativeDistanceKm - targetDistanceKm);
-        double strongThresholdKm = Math.max(1.0, targetDistanceKm * 0.12);
-        double nearThresholdKm = Math.max(2.5, targetDistanceKm * 0.28);
+        double strongThresholdKm = targetDistanceKm * 0.12;
+        double nearThresholdKm = targetDistanceKm * 0.28;
         if (gapKm <= strongThresholdKm) {
             return "distance-match";
         }
@@ -230,28 +212,21 @@ public class CoachRouteService {
         return "best-available";
     }
 
-    private RouteCentroid buildCentroid(List<RoutePointSample> samples) {
-        if (samples == null || samples.isEmpty()) {
-            return null;
-        }
-        double sumLatitude = 0;
-        double sumLongitude = 0;
-        for (RoutePointSample sample : samples) {
-            sumLatitude += sample.latitude();
-            sumLongitude += sample.longitude();
-        }
-        return new RouteCentroid(sumLatitude / samples.size(), sumLongitude / samples.size());
-    }
-
-    private List<CoachRouteWaypointDto> buildRouteWaypoints(List<RoutePointSample> samples) {
+    private List<CoachRouteWaypointDto> buildRouteWaypoints(
+            List<RoutePointSample> samples, RouteHeatmapAnchorService.RouteAnchor anchor) {
         if (samples == null || samples.size() < 2) {
             return List.of();
         }
         int stride = Math.max(1, samples.size() / ROUTE_PREVIEW_POINT_LIMIT);
         List<CoachRouteWaypointDto> waypoints = new ArrayList<>();
-        for (int index = 0; index < samples.size(); index += stride) {
+        boolean hotspotIncluded = false;
+        for (int index = 0; index < samples.size(); index++) {
             RoutePointSample sample = samples.get(index);
-            waypoints.add(new CoachRouteWaypointDto(sample.latitude(), sample.longitude()));
+            boolean inHotspot = anchor.containsPoint(sample.latitude(), sample.longitude());
+            if (index % stride == 0 || (!hotspotIncluded && inHotspot)) {
+                waypoints.add(new CoachRouteWaypointDto(sample.latitude(), sample.longitude()));
+                hotspotIncluded |= inHotspot;
+            }
         }
 
         RoutePointSample lastSample = samples.get(samples.size() - 1);
@@ -343,15 +318,6 @@ public class CoachRouteService {
         return String.format(java.util.Locale.ROOT, "%.2f", value);
     }
 
-    private double haversineMeters(double latitudeA, double longitudeA, double latitudeB, double longitudeB) {
-        double deltaLatitude = Math.toRadians(latitudeB - latitudeA);
-        double deltaLongitude = Math.toRadians(longitudeB - longitudeA);
-        double a = Math.sin(deltaLatitude / 2.0) * Math.sin(deltaLatitude / 2.0)
-                + Math.cos(Math.toRadians(latitudeA)) * Math.cos(Math.toRadians(latitudeB))
-                * Math.sin(deltaLongitude / 2.0) * Math.sin(deltaLongitude / 2.0);
-        return EARTH_RADIUS_METERS * 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-
     private String deriveZoneKey(RouteCentroid centroid, RouteBounds bounds) {
         if (centroid == null || bounds == null) {
             return "core";
@@ -381,63 +347,9 @@ public class CoachRouteService {
     private record RouteBounds(double minLatitude, double minLongitude, double maxLatitude, double maxLongitude) {}
     private record RoutePreviewPoint(double x, double y) {}
     private record RouteActivityCandidate(
-            long activityId,
             Double distanceKm,
             int recentRank,
             List<RoutePointSample> samples,
-            RouteCentroid centroid,
             CoachRoutePreviewDto preview
     ) {}
-
-    private static final class RouteCluster {
-        private final List<RouteActivityCandidate> candidates;
-        private double sumLatitude;
-        private double sumLongitude;
-        private RouteCentroid centroid;
-
-        private RouteCluster(List<RouteActivityCandidate> candidates, RouteCentroid initialCentroid) {
-            this.candidates = candidates;
-            this.sumLatitude = 0.0;
-            this.sumLongitude = 0.0;
-            this.centroid = initialCentroid;
-        }
-
-        private void add(RouteActivityCandidate candidate) {
-            candidates.add(candidate);
-            sumLatitude += candidate.centroid().latitude();
-            sumLongitude += candidate.centroid().longitude();
-            centroid = new RouteCentroid(sumLatitude / candidates.size(), sumLongitude / candidates.size());
-        }
-
-        private List<RouteActivityCandidate> candidates() {
-            return candidates;
-        }
-
-        private RouteCentroid centroid() {
-            return centroid;
-        }
-
-        private int activityCount() {
-            return candidates.size();
-        }
-
-        private int recentActivityRank() {
-            return candidates.stream()
-                    .mapToInt(RouteActivityCandidate::recentRank)
-                    .min()
-                    .orElse(Integer.MAX_VALUE);
-        }
-
-        private RouteActivityCandidate representative(Double targetDistanceKm) {
-            Comparator<RouteActivityCandidate> comparator;
-            if (targetDistanceKm != null && targetDistanceKm > 0) {
-                comparator = Comparator
-                        .comparingDouble((RouteActivityCandidate candidate) -> distanceGapKm(targetDistanceKm, candidate.distanceKm()))
-                        .thenComparingInt(RouteActivityCandidate::recentRank);
-            } else {
-                comparator = Comparator.comparingInt(RouteActivityCandidate::recentRank);
-            }
-            return candidates.stream().min(comparator).orElseThrow();
-        }
-    }
 }

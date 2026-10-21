@@ -10,6 +10,10 @@ import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import PageSkeleton from '../../components/PageSkeleton';
 import { buildHeatmapRenderPointPool, isValidGpsCoordinate } from './heatmapRenderPointPool';
 import { buildHeatmapViewportPointPool } from './heatmapViewportPointPool';
+import { loadRecordedRoutes, paintRecordedRouteLines } from './recordedRouteLines';
+import HeatmapExplorer from './HeatmapExplorer.jsx';
+import './heatmap-explorer.css';
+import './heatmap-simple.css';
 import {
   HEATMAP_CACHE_STORE_NAME,
   HEATMAP_CACHE_MAX_AGE_MS,
@@ -220,7 +224,7 @@ function formatCoordinate(value, positiveSuffix, negativeSuffix) {
   return `${Math.abs(value).toFixed(3)}\u00b0${suffix}`;
 }
 
-export default function Heatmap() {
+export default function Heatmap({simple = false}) {
   const { isAuthenticated, authHydrated, email: authEmail } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -230,6 +234,16 @@ export default function Heatmap() {
   const [heatmapState, setHeatmapState] = useState('loading');
   const [heatmapReloadToken, setHeatmapReloadToken] = useState(0);
   const [mapMountFailed, setMapMountFailed] = useState(false);
+  const [mapRevision, setMapRevision] = useState(0);
+  const [routeLoadState, setRouteLoadState] = useState('idle');
+  const [explorerOptions, setExplorerOptions] = useState({ activityIds: null, color: 'speed', opacity: 0.85, showTracks: true, basemap: 'dark' });
+  const explorerOptionsRef = useRef(explorerOptions);
+
+  useEffect(() => {
+    explorerOptionsRef.current = explorerOptions;
+    dotOverlayRef.current?.setBasemap?.(explorerOptions.basemap);
+    dotOverlayRef.current?.syncRouteDots?.('full');
+  }, [explorerOptions]);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -240,11 +254,13 @@ export default function Heatmap() {
   const latestPreviewRenderPointsRef = useRef([]);
   const latestFullRenderPointsRef = useRef([]);
   const latestViewportRenderPointsRef = useRef(null);
+  const recordedRoutesRef = useRef([]);
+  const recordedRouteCacheRef = useRef({ owner: null, routes: new Map() });
   const hasRenderableDataRef = useRef(false);
   const lastCacheKeyRef = useRef(null);
 
   useEffect(() => {
-    if (!authHydrated) {
+    if (simple || !authHydrated) {
       return;
     }
     if (!isAuthenticated) {
@@ -270,7 +286,7 @@ export default function Heatmap() {
     return () => {
       cancelled = true;
     };
-  }, [authHydrated, isAuthenticated, navigate]);
+  }, [authHydrated, isAuthenticated, navigate, simple]);
 
   useEffect(() => {
     if (!authHydrated || !isAuthenticated) return undefined;
@@ -379,6 +395,40 @@ export default function Heatmap() {
   const hasBounds = Boolean(bounds);
 
   useEffect(() => {
+    if (!simple || !authHydrated || !isAuthenticated) return undefined;
+    if (recordedRouteCacheRef.current.owner !== authEmail) {
+      recordedRouteCacheRef.current = { owner: authEmail, routes: new Map() };
+      recordedRoutesRef.current = [];
+    }
+    const cache = recordedRouteCacheRef.current.routes;
+    const ids = [...new Set(points.map(point => Number(point.activityId))
+      .filter(id => Number.isSafeInteger(id) && id > 0))];
+    const publish = () => {
+      recordedRoutesRef.current = ids.map(id => cache.get(String(id))).filter(Boolean);
+      dotOverlayRef.current?.syncRouteDots?.('full');
+    };
+    publish();
+    const missing = ids.filter(id => !cache.has(String(id)));
+    if (!missing.length) { setRouteLoadState('ready'); return undefined; }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), HEATMAP_REQUEST_TIMEOUT_MS);
+    let cancelled = false;
+    setRouteLoadState('loading');
+    loadRecordedRoutes(missing, {
+      signal: controller.signal, fetchJson: apiJson,
+      onBatch: batch => {
+        if (cancelled) return;
+        for (const route of batch) cache.set(route.activityId, route);
+        publish();
+      },
+    }).then(() => {
+      if (!cancelled) setRouteLoadState(controller.signal.aborted ? 'error' : 'ready');
+    }).catch(() => { if (!cancelled) setRouteLoadState('error'); })
+      .finally(() => window.clearTimeout(timeout));
+    return () => { cancelled = true; controller.abort(); window.clearTimeout(timeout); };
+  }, [simple, authHydrated, isAuthenticated, authEmail, points, heatmapReloadToken]);
+
+  useEffect(() => {
     boundsRef.current = bounds;
   }, [bounds]);
 
@@ -403,7 +453,7 @@ export default function Heatmap() {
   }, [heatmap?.diagnostics?.complete, points]);
 
   useEffect(() => {
-    if (!mapRef.current || !boundsRef.current || !hasBounds || heatmapState !== 'ready') return undefined;
+    if (!mapRef.current || (!simple && (!boundsRef.current || !hasBounds)) || heatmapState !== 'ready') return undefined;
 
     let disposed = false;
     async function mountMap() {
@@ -435,6 +485,8 @@ export default function Heatmap() {
           maxBounds: [[-85.051129, -180], [85.051129, 180]],
           maxBoundsViscosity: 1.0,
         });
+        L.control.attribution({ position: 'bottomright', prefix: false }).addTo(map);
+        if (!boundsRef.current) map.setView([20, 0], 2);
 
         // CARTO basemaps now reject anonymous tile requests with an "API KEY
         // REQUIRED" watermark, and third-party tile hosts (Esri included) are
@@ -475,6 +527,7 @@ export default function Heatmap() {
         let fallbackBaseTileLayer = null;
         const activateOsmFallback = () => {
           if (fallbackBaseTileLayer || disposed) return;
+          if (explorerOptionsRef.current.basemap === 'streets') return;
           fallbackBaseTileLayer = new HeatmapTileLayer(
             `${backendBase}/api/maps/tiles/{z}/{x}/{y}.png`,
             {
@@ -489,6 +542,21 @@ export default function Heatmap() {
         baseTileLayer.on('tileerror', activateOsmFallback);
         baseTileLayer.addTo(map);
         labelsTileLayer.addTo(map);
+        let streetTileLayer = null;
+        const setBasemap = (basemap) => {
+          if (basemap === 'streets') {
+            if (!streetTileLayer) streetTileLayer = new HeatmapTileLayer(`${backendBase}/api/maps/tiles/{z}/{x}/{y}.png`, {
+              ...darkTileOptions, maxNativeZoom: 19, className: 'heatmap-page-street-tile-layer',
+              attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            });
+            baseTileLayer.remove(); labelsTileLayer.remove(); fallbackBaseTileLayer?.remove();
+            streetTileLayer.addTo(map);
+          } else {
+            streetTileLayer?.remove(); baseTileLayer.addTo(map); labelsTileLayer.addTo(map);
+            fallbackBaseTileLayer?.addTo(map);
+            labelsTileLayer.bringToFront();
+          }
+        };
 
         const dotCanvas = L.DomUtil.create('canvas', 'heatmap-page-dot-canvas leaflet-zoom-animated');
         dotCanvas.setAttribute('aria-hidden', 'true');
@@ -583,10 +651,10 @@ export default function Heatmap() {
           context.beginPath();
           context.arc(projectedPoint.x, projectedPoint.y, scaledRadius, 0, Math.PI * 2);
           context.fillStyle = style.fillColor;
-          context.globalAlpha = style.fillOpacity;
+          context.globalAlpha = style.fillOpacity * explorerOptionsRef.current.opacity;
           context.fill();
           if (renderMode === 'full' && scaledRadius >= 1.4) {
-            context.globalAlpha = style.opacity;
+            context.globalAlpha = style.opacity * explorerOptionsRef.current.opacity;
             context.lineWidth = style.weight * radiusScale;
             context.strokeStyle = style.color;
             context.stroke();
@@ -598,6 +666,16 @@ export default function Heatmap() {
           // Keep the painted frame attached to Leaflet's transform until the
           // camera settles, including resize and data refresh requests.
           if (disposed || isZoomingMap) return;
+
+          const options = explorerOptionsRef.current;
+          if (!options.showTracks) {
+            cancelFullDraw();
+            dotContext.save();
+            dotContext.setTransform(1, 0, 0, 1, 0, 0);
+            dotContext.clearRect(0, 0, dotCanvas.width, dotCanvas.height);
+            dotContext.restore();
+            return;
+          }
 
           const zoom = map.getZoom();
           const center = map.getCenter();
@@ -627,6 +705,20 @@ export default function Heatmap() {
             bufferCanvas.height = canvasHeight;
           }
 
+          if (simple) {
+            cancelFullDraw();
+            commitCanvasLayout();
+            dotContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+            dotContext.clearRect(0, 0, paddedSize.x, paddedSize.y);
+            const count = paintRecordedRouteLines(dotContext, recordedRoutesRef.current,
+              coordinate => map.latLngToLayerPoint(coordinate).subtract(canvasLayerOrigin));
+            dotCanvas.dataset.renderMode = 'routes';
+            dotCanvas.dataset.renderZoom = String(zoom);
+            dotCanvas.dataset.routeSegments = String(count);
+            onPaintComplete?.();
+            return;
+          }
+
           const paddedSouthEast = layerTopLeft.add(paddedSize);
           const paddedBounds = L.latLngBounds(
             map.layerPointToLatLng(layerTopLeft),
@@ -639,7 +731,10 @@ export default function Heatmap() {
           const bootstrapPoints = renderMode === 'preview'
             ? latestPreviewRenderPointsRef.current
             : latestFullRenderPointsRef.current;
-          const viewport = latestViewportRenderPointsRef.current;
+          // Spatial refinement chooses representatives across all runs. Use the
+          // global sample for filters so another run's representative cannot
+          // displace the matching run's sampled points.
+          const viewport = options.activityIds ? null : latestViewportRenderPointsRef.current;
           // Refined GPS replaces the coarse sample inside its covered area;
           // the global pool still supplies coverage while panning elsewhere.
           const renderPoints = viewport ? [
@@ -655,18 +750,26 @@ export default function Heatmap() {
           // into one frame and smear dots away from their true positions.
           const projectedCandidates = [];
           for (const point of renderPoints) {
+            if (options.activityIds && !options.activityIds.has(String(point.activityId))) continue;
             if (!isValidGpsCoordinate(point?.latitude, point?.longitude)) continue;
             if (point.latitude < south || point.latitude > north || point.longitude < west || point.longitude > east) continue;
             const projected = map.latLngToLayerPoint([point.latitude, point.longitude]).subtract(canvasLayerOrigin);
             const world = map.project([point.latitude, point.longitude], zoom);
             projectedCandidates.push({
               x: projected.x, y: projected.y, worldX: world.x, worldY: world.y,
-              activityId: point.activityId, visitCount: point.visitCount, visualSpeedRatio: point.visualSpeedRatio,
+              activityId: point.activityId, visitCount: options.activityIds ? 0 : point.visitCount, visualSpeedRatio: point.visualSpeedRatio,
             });
           }
           const projectedPoints = buildHeatmapViewportPointPool(projectedCandidates,
             renderMode === 'preview' ? HEATMAP_PREVIEW_RENDER_POINT_LIMIT : HEATMAP_FULL_RENDER_POINT_LIMIT)
-            .map((point) => ({ ...point, style: getGpsDotStyle(point.visualSpeedRatio, point.densityVisits) }));
+            .map((point) => {
+              const style = getGpsDotStyle(point.visualSpeedRatio, point.densityVisits);
+              if (options.color === 'frequency') {
+                const visits = point.densityVisits || 1;
+                style.color = style.fillColor = visits >= 10 ? '#ffdc6b' : visits >= 4 ? '#ff803e' : '#e23b42';
+              }
+              return { ...point, style };
+            });
           if (renderMode !== 'full' || projectedPoints.length <= HEATMAP_FULL_DRAW_CHUNK_SIZE) {
             commitCanvasLayout();
             dotContext.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -798,7 +901,7 @@ export default function Heatmap() {
         };
         const scheduleViewportRequest = () => {
           cancelViewportRequest();
-          if (disposed || isZoomingMap) return;
+          if (simple || disposed || isZoomingMap) return;
           viewportTimerId = window.setTimeout(loadViewport, HEATMAP_VIEWPORT_DEBOUNCE_MS);
         };
 
@@ -867,6 +970,7 @@ export default function Heatmap() {
 
         dotOverlayRef.current = {
           syncRouteDots: scheduleRouteDots,
+          setBasemap,
           zoomBy,
           refreshViewport: () => {
             viewportCache.clear();
@@ -902,6 +1006,8 @@ export default function Heatmap() {
         scheduleViewportRequest();
 
         mapInstanceRef.current = map;
+        setBasemap(explorerOptionsRef.current.basemap);
+        setMapRevision((value) => value + 1);
         setMapMountFailed(false);
       } catch {
         if (!disposed) {
@@ -923,7 +1029,7 @@ export default function Heatmap() {
         mapInstanceRef.current = null;
       }
     };
-  }, [hasBounds, heatmapState]);
+  }, [hasBounds, heatmapState, simple]);
   const initials = (profile?.displayName || profile?.email?.split('@')[0] || 'H').trim().slice(0, 1).toUpperCase();
   const pointCount = Number(heatmap?.pointCount || 0);
   const centerLatitude = bounds ? (bounds.minLatitude + bounds.maxLatitude) / 2 : null;
@@ -969,10 +1075,27 @@ export default function Heatmap() {
   const showMapOverlays = heatmapState === 'ready' && pointCount > 0 && !mapMountFailed;
   const recenterStatusLabel = showMapOverlays ? centerLabel : t('heatmap.loading');
 
+  if (simple) return <main className="heatmap-page heatmap-page--simple" aria-label={t('profile.dashboard_nav_heatmap')}>
+    <div className="heatmap-page-map-shell">
+      <div ref={mapRef} className="heatmap-page-map-canvas" role="region" aria-label={t('heatmapExplorer.simpleMapLabel')}/>
+      <button className="heatmap-simple-home" type="button" onClick={() => navigate('/profile')} aria-label={t('profile.dashboard_nav_dashboard')} title={t('profile.dashboard_nav_dashboard')}><AppIcon name="dashboard"/></button>
+      <nav className="heatmap-simple-controls" aria-label={t('profile.dashboard_nav_heatmap')}>
+        <button type="button" onClick={() => zoomMap(1)} disabled={!mapRevision || mapMountFailed} aria-label={t('heatmap.page_zoom_in')} title={t('heatmap.page_zoom_in')}>+</button>
+        <button type="button" onClick={() => zoomMap(-1)} disabled={!mapRevision || mapMountFailed} aria-label={t('heatmap.page_zoom_out')} title={t('heatmap.page_zoom_out')}>−</button>
+        <button type="button" onClick={recenterMap} disabled={!bounds || mapMountFailed} aria-label={t('heatmap.page_recenter')} title={t('heatmap.page_recenter')}><AppIcon name="map"/></button>
+      </nav>
+      {heatmapState === 'loading' && <p className="heatmap-simple-status" role="status">{t('heatmap.loading')}</p>}
+      {heatmapState === 'ready' && routeLoadState === 'loading' && <p className="heatmap-simple-status" role="status">{t('heatmapExplorer.routesLoading')}</p>}
+      {heatmapState === 'ready' && routeLoadState === 'error' && <div className="heatmap-simple-status" role="alert">{t('heatmapExplorer.routesError')} <button type="button" onClick={() => setHeatmapReloadToken(value => value + 1)}>{t('heatmapExplorer.retry')}</button></div>}
+      {(heatmapState === 'error' || mapMountFailed) && <div className="heatmap-simple-status" role="alert">{t('analysis.stitch_load_error')} <button type="button" onClick={() => setHeatmapReloadToken(value => value + 1)}>{t('heatmapExplorer.retry')}</button></div>}
+      {heatmapState === 'ready' && !pointCount && <p className="heatmap-simple-status" role="status">{t('heatmap.empty')}</p>}
+    </div>
+  </main>;
+
   if (heatmapState === 'loading') return <PageSkeleton variant="heatmap" />;
 
   return (
-    <main className="heatmap-page">
+    <main className="heatmap-page heatmap-page--explorer" data-map-style={explorerOptions.basemap}>
       <div className="heatmap-page-map-shell">
         <div ref={mapRef} className="heatmap-page-map-canvas" />
         <div className="heatmap-page-map-vignette" aria-hidden="true" />
@@ -984,7 +1107,7 @@ export default function Heatmap() {
             onClick={() => navigate('/profile')}
             title={t('profile.dashboard_nav_dashboard')}
           >
-            <HermesLogo dark />
+            <HermesLogo tone="auto" />
             <span>{t('heatmap.page_kicker')}</span>
           </button>
 
@@ -1016,6 +1139,7 @@ export default function Heatmap() {
 
         {showMapOverlays ? (
           <>
+            <HeatmapExplorer key={authEmail} points={points} mapRef={mapInstanceRef} mapRevision={mapRevision} account={authEmail} timeZone={profile?.timeZone} reloadToken={heatmapReloadToken} onChange={setExplorerOptions} />
             <nav className="heatmap-page-utility-rail" aria-label={t('profile.dashboard_nav_heatmap')}>
               {quickLinks.map((item) => (
                 <button
@@ -1061,9 +1185,12 @@ export default function Heatmap() {
             </nav>
 
             <aside className="heatmap-page-legend-card">
-              <span className="heatmap-page-card-kicker">{t('heatmap.page_legend_title')}</span>
+              <span className="heatmap-page-card-kicker">{explorerOptions.color === 'frequency' ? t('heatmapExplorer.frequency') : t('heatmap.page_legend_title')}</span>
               <div className="heatmap-page-legend-scale" role="list" aria-label={t('heatmap.page_legend_title')}>
-                {speedLegendBands.map((band) => (
+                {(explorerOptions.color === 'frequency' ? [
+                  { key: 'few', label: t('heatmapExplorer.fewerVisits'), color: '#e23b42' },
+                  { key: 'many', label: t('heatmapExplorer.moreVisits'), color: '#ffdc6b' },
+                ] : speedLegendBands).map((band) => (
                   <div key={band.key} className="heatmap-page-legend-band" role="listitem">
                     <span className="heatmap-page-legend-band-label">{band.label}</span>
                     <span

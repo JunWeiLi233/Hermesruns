@@ -1,43 +1,4 @@
-/* HERMES wordmark �?bold navy, tight kerning (matches brand asset) */
-
-.hermes-logo {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4em;
-    font-family: var(--font-display);
-    line-height: 1;
-    white-space: nowrap;
-}
-
-.hermes-logo__icon {
-    width: 1.08em;
-    height: 1.08em;
-    flex-shrink: 0;
-    display: block;
-    border-radius: 0.2em;
-}
-
-.hermes-logo__word {
-    font-weight: 800;
-    letter-spacing: -0.08em;
-    color: var(--brand-ink);
-    text-transform: uppercase;
-}
-
-.hermes-logo__mark {
-    margin-left: 0.14em;
-    font-weight: 800;
-    letter-spacing: -0.05em;
-    color: var(--brand-accent);
-}
-
-.hermes-logo--dark .hermes-logo__word {
-    color: #ffffff;
-}
-
-.hermes-logo--dark .hermes-logo__mark {
-    color: var(--brand-accent);
-}
+@import '../brand.css';
 
 .top-nav .logo .hermes-logo,
 .nav-brand .hermes-logo {

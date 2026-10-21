@@ -6,7 +6,7 @@ import { apiFetch } from '../api';
 import { invalidateResourceCache } from '../api/resourceCache';
 import ImportActivityModal from './ImportActivityModal';
 
-vi.mock('../api', () => ({ apiFetch: vi.fn() }));
+vi.mock('../api', () => ({ apiFetch: vi.fn(), subscribeWakeRetry: () => () => {} }));
 vi.mock('../api/resourceCache', () => ({ invalidateResourceCache: vi.fn() }));
 
 const t = (key, params = {}) => {
@@ -17,7 +17,7 @@ const file = (name) => new File(['activity'], name, { type: 'application/octet-s
 const input = () => screen.getByLabelText(/Drop FIT\/GPX files/);
 const renderModal = (props = {}) => render(<ImportActivityModal isOpen onClose={vi.fn()} onImported={vi.fn()} t={t} {...props} />);
 
-beforeEach(() => { apiFetch.mockReset(); apiFetch.mockResolvedValue({ ok: true }); });
+beforeEach(() => { apiFetch.mockReset(); apiFetch.mockResolvedValue({ ok: true, json: async () => ({ importedActivities: 3, skippedDuplicates: 0, skippedNonRuns: 0, rejectedFiles: [] }) }); });
 afterEach(cleanup);
 
 describe('ImportActivityModal', () => {
@@ -44,7 +44,23 @@ describe('ImportActivityModal', () => {
     ]);
     expect(invalidateResourceCache).toHaveBeenCalledWith('/api/activities');
     expect(invalidateResourceCache.mock.invocationCallOrder[0]).toBeLessThan(onImported.mock.invocationCallOrder[0]);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Import result')).toHaveTextContent('Activities imported: 3');
+    await user.click(screen.getByRole('button', { name: 'Done' }));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('accepts gzipped workout files, as in a Strava export, and labels them by what they hold', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    expect(input()).toHaveAttribute('accept', expect.stringContaining('.gz'));
+    await user.upload(input(), [file('12345.fit.gz'), file('678.gpx.gz'), file('plain.gz')]);
+    expect(screen.getAllByRole('listitem').map((item) => item.querySelector('.import-v2-file-ext').textContent)).toEqual(['FIT', 'GPX', 'GZ']);
+    await user.click(screen.getByRole('button', { name: 'Import 3 file(s)' }));
+    await waitFor(() => expect(apiFetch).toHaveBeenCalledOnce());
+    expect([...apiFetch.mock.calls[0][1].body.entries()].map(([field, entry]) => [field, entry.name])).toEqual([
+      ['exports', '12345.fit.gz'], ['exports', '678.gpx.gz'], ['exports', 'plain.gz'],
+    ]);
   });
 
   it('freezes the queue and blocks closing or submitting twice during upload', async () => {
@@ -64,10 +80,10 @@ describe('ImportActivityModal', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
     expect(apiFetch).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
-    resolveUpload({ ok: false });
+    resolveUpload({ ok: false, json: async () => ({ error: t('profile.import_failed') }) });
     expect(await screen.findByRole('alert')).toHaveTextContent(t('profile.import_failed'));
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Import 1 file(s)' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Retry selected files' })).toBeEnabled();
   });
 
   it('lets users remove and clear files, and opens with a fresh queue', async () => {

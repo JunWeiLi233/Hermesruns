@@ -1,6 +1,14 @@
+import { resolveCoachReadinessScore, resolveCoachReadinessLabel, resolveCoachWeeklyTarget } from '../../utils/personalizedCoachPlan';
+import RecommendationEvidence from '../../components/RecommendationEvidence';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
+import VersionedPlanRoute, { useVersionedPlan } from '../training-plan/VersionedPlanRoute';
+import { SchedulePlanTools, usePublishedCalendar, planWorkoutUrl } from '../training-plan/TrainingPlan';
+import { asCoachWorkout } from '../training-plan/publishedWorkout';
+import {ScheduleAuthoringTools,useAuthoredCalendar,AuthoredWeekProvider,AuthoredDayEntries} from '../../features/training/integrated/PageTools';
+import { authoredOn, asAuthoredWorkout } from '../training-plan/authoredWorkout';
+import { addDays, mondayOf } from '../training-plan/planApi';
 import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson, apiFetch } from '../../api';
@@ -17,17 +25,27 @@ import { formatDistance } from '../../utils/format';
 import { resolveAssignedCoach } from '../../utils/coachIdentity';
 import { buildScheduleTargetBlockModel } from '../../utils/scheduleMarathonBlock';
 import { getTodayRunRecommendation } from '../../utils/todayRun';
+import { localizedReason } from '../../utils/personalizedCoachPlan';
 import { formatPlannedDuration, prettifyWorkoutType } from '../../utils/coach/presentation.js';
 import { computeVdotTrend } from '../../utils/vdot';
-import { buildWeeklyCoachSummaryModel } from '../../utils/scheduleCoachSummary';
+import { buildWeeklyCoachSummaryModel, selectNextSessionForWeek } from '../../utils/scheduleCoachSummary';
 import { buildScheduleRecoverySignals } from '../../utils/scheduleRecoverySignals';
 import {
   extractRouteWaypoints,
+  isRouteNearAnchor,
   isRouteRecommendationUsable,
+  normalizeRouteAnchor,
   normalizeRouteWaypoint,
+  resolveDailyRouteDistanceKm,
 } from '../../utils/routeRecommendation';
 import TopbarNotifications from '../../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
+import { accountWeekStart, activitySortTime, addCalendarDays, calendarDate, getActivityDateKey } from '../../utils/timeZone';
+import { useAccountDate } from '../../hooks/useAccountDate';
+import useRecommendationRevision from '../../hooks/useRecommendationRevision';
+import { planReadOnly } from '../../utils/trainingPlanCache';
+import { getSafeImageUrl } from '../../utils/safeImageUrl';
+import scheduleSessionPhoto from '../../assets/schedule-session.jpg';
 
 
 function resolveRunDistanceKm(run) {
@@ -35,15 +53,6 @@ function resolveRunDistanceKm(run) {
   if (km > 0) return km;
   const meters = Number(run?.distanceMeters || 0);
   return meters > 0 ? meters / 1000 : 0;
-}
-
-function startOfIsoWeek(date) {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  const day = copy.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  copy.setDate(copy.getDate() + diff);
-  return copy;
 }
 
 function formatScheduleTargetDate(dateValue, lang) {
@@ -95,44 +104,9 @@ function scheduleTag(workoutType, s) {
 
 function buildReadinessModel(recommendationBundle, coachState, t) {
   const recommendation = recommendationBundle?.recommendation;
-  const metrics = recommendationBundle?.metrics || {};
-  const tone = recommendationBundle?.tone?.key || 'easy';
-  let score = 82;
+  const score = resolveCoachReadinessScore({ state: coachState });
 
-  if (tone === 'quality') score += 8;
-  if (tone === 'easy') score -= 4;
-  if (tone === 'recovery') score -= 12;
-  if (tone === 'restart') score -= 18;
-
-  if (metrics.acwr != null) {
-    if (metrics.acwr >= 0.9 && metrics.acwr <= 1.15) score += 6;
-    if (metrics.acwr > 1.2) score -= 8;
-    if (metrics.acwr < 0.75) score -= 4;
-  }
-
-  if (metrics.recoveryHours > 24) score -= 12;
-  else if (metrics.recoveryHours > 12) score -= 6;
-  else if (metrics.recoveryHours <= 8) score += 4;
-
-  if (coachState?.sleepDataSupported === true && coachState?.readinessSleep != null) {
-    if (coachState.readinessSleep >= 80) score += 6;
-    else if (coachState.readinessSleep < 60) score -= 8;
-  }
-
-  const restingDelta = coachState?.baselineRestingHr != null && coachState?.lastNightRestingHr != null
-    ? coachState.lastNightRestingHr - coachState.baselineRestingHr
-    : null;
-  if (restingDelta != null) {
-    if (restingDelta <= -2) score += 4;
-    if (restingDelta >= 5) score -= 8;
-  }
-
-  score = Math.max(42, Math.min(96, Math.round(score)));
-
-  let label = t('profile.dashboard_readiness_ready');
-  if (score >= 90) label = t('profile.dashboard_readiness_peaking');
-  else if (score <= 55) label = t('profile.dashboard_readiness_reset');
-  else if (score <= 72) label = t('profile.dashboard_readiness_build');
+  const label = resolveCoachReadinessLabel({ state: coachState }, t);
 
   return {
     score,
@@ -141,7 +115,7 @@ function buildReadinessModel(recommendationBundle, coachState, t) {
   };
 }
 
-function buildWeekSchedule(schedule, runs, weekStart, t, s, lang, unit, todayWorkout) {
+function buildWeekSchedule(schedule, runs, weekStart, t, s, lang, unit, todayWorkout, todayKey, timeZone) {
   const scheduleMap = new Map();
   (Array.isArray(schedule) ? schedule : []).forEach((entry) => {
     if (entry?.scheduledDate) {
@@ -149,20 +123,15 @@ function buildWeekSchedule(schedule, runs, weekStart, t, s, lang, unit, todayWor
     }
   });
 
-  const now = new Date();
-  const todayKey = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 10);
-
   return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(weekStart);
-    date.setDate(weekStart.getDate() + index);
-    const key = date.toISOString().slice(0, 10);
+    const key = addCalendarDays(weekStart, index);
+    const date = calendarDate(key);
     const entry = scheduleMap.get(key) || (todayWorkout?.scheduledDate === key ? todayWorkout : null);
     const dayRuns = runs.filter((run) => {
-      const started = new Date(run.startTime || run.startDate || 0);
-      return !Number.isNaN(started.getTime()) && started.toISOString().slice(0, 10) === key;
+      return getActivityDateKey(run, timeZone) === key;
     });
     const completedKm = dayRuns.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
-    const title = entry ? prettifyWorkoutType(entry.workoutType, t) : s('open_slot');
+    const title = entry?.authored?entry.title:entry?.publishedType?t(`training_plan.${entry.publishedType==='RUN_WALK'?'RUN_WALK_KIND':entry.publishedType}`):entry ? prettifyWorkoutType(entry.workoutType, t) : s('open_slot');
     const detail = entry?.plannedDistanceKm
       ? formatDistance(entry.plannedDistanceKm, 1, lang, unit)
       : entry?.plannedDurationMinutes
@@ -174,14 +143,14 @@ function buildWeekSchedule(schedule, runs, weekStart, t, s, lang, unit, todayWor
       : entry?.workoutType === 'LONG_RUN'
         ? 'peak'
         : entry?.workoutType === 'REST'
-          ? 'recovery'
-          : 'default';
+          ? 'rest'
+          : entry?.workoutType === 'RECOVERY' ? 'recovery' : 'default';
 
     return {
       key,
-      dayLabel: date.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { weekday: 'short' }).slice(0, 3).toUpperCase(),
+      dayLabel: date.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { weekday: 'short', timeZone: 'UTC' }).slice(0, 3).toUpperCase(),
       title,
-      tag: scheduleTag(entry?.workoutType, s),
+      tag: entry?.authored?t('training_integration.authoredWorkout'):scheduleTag(entry?.workoutType, s),
       detail,
       entry,
       completedKm,
@@ -189,14 +158,6 @@ function buildWeekSchedule(schedule, runs, weekStart, t, s, lang, unit, todayWor
       tone,
     };
   });
-}
-
-function pickNextSession(schedule, todayKey) {
-  return (Array.isArray(schedule) ? schedule : []).find((entry) => {
-    if (!entry?.scheduledDate) return false;
-    if (entry.scheduledDate < todayKey) return false;
-    return String(entry.workoutType || '').toUpperCase() !== 'REST';
-  }) || null;
 }
 
 function pickCurrentGear(shoes) {
@@ -239,15 +200,15 @@ function buildPlannedRoutePreview(waypoints) {
   };
 }
 
-function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm) {
+function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm, anchor) {
+  if (!anchor || !(targetDistanceKm > 0)) return null;
   const candidates = (Array.isArray(plannedRoutes) ? plannedRoutes : [])
     .map((route) => {
       const actualDistanceKm = Number(route?.actualDistanceKm || 0);
-      const routeTargetDistanceKm = Number(route?.targetDistanceKm || actualDistanceKm || 0);
       const waypoints = extractRouteWaypoints(route);
       const preview = waypoints ? buildPlannedRoutePreview(route?.waypoints) : null;
-      const desiredDistanceKm = Number(targetDistanceKm || routeTargetDistanceKm || actualDistanceKm);
-      if (!isRouteRecommendationUsable(route, desiredDistanceKm)) return null;
+      const desiredDistanceKm = targetDistanceKm;
+      if (!isRouteRecommendationUsable(route, desiredDistanceKm) || !isRouteNearAnchor(route, anchor)) return null;
       const distanceGapKm = Math.abs(actualDistanceKm - desiredDistanceKm);
       const distanceAccuracy = Number(route?.distanceAccuracy || (desiredDistanceKm > 0 ? actualDistanceKm / desiredDistanceKm : 1));
       const createdAt = new Date(route?.createdAt || 0).getTime();
@@ -260,6 +221,7 @@ function selectPlannedRouteRecommendation(plannedRoutes, targetDistanceKm) {
         preview,
         waypoints,
         source: 'planner',
+        anchorSource: route.anchorSource,
         actualDistanceKm,
         distanceGapKm,
         distanceAccuracy,
@@ -304,25 +266,26 @@ function getRouteConfidenceLabel(routeRecommendation, s, unit, lang) {
     return s('routeConfidence.waiting');
   }
 
-  const targetDistance = Number(routeRecommendation.targetDistanceKm || 0) > 0
-    ? formatDistance(routeRecommendation.targetDistanceKm, 1, lang, unit)
-    : null;
-
-  if (!targetDistance) {
-    return s('routeConfidence.built_from_history');
-  }
-
-  switch (routeRecommendation.confidence) {
-    case 'distance-match':
-      return s('routeConfidence.distance_match', { distance: targetDistance });
-    case 'near-match':
-      return s('routeConfidence.near_match', { distance: targetDistance });
-    default:
-      return s('routeConfidence.best_recent', { distance: targetDistance });
-  }
+  const distanceKm = Number(routeRecommendation.representativeDistanceKm ?? routeRecommendation.actualDistanceKm);
+  return Number.isFinite(distanceKm) && distanceKm > 0
+    ? s('route_recorded_distance', { distance: formatDistance(distanceKm, 1, lang, unit) })
+    : s('routeConfidence.built_from_history');
 }
 
-export default function Schedule() {
+export default function ScheduleRoute() {
+  return <VersionedPlanRoute variant="schedule"><Schedule /></VersionedPlanRoute>;
+}
+
+function Schedule() {
+  const recommendationRevision = useRecommendationRevision();
+  const selection=useVersionedPlan();
+  const activePlan=selection.data?.plan;
+  const [selectedWeek,setSelectedWeek]=useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showSessionDetails, setShowSessionDetails] = useState(false);
+  const planDate=selection.data?.localDate||new Date().toISOString().slice(0,10);
+  const publishedWeek=selectedWeek||mondayOf(activePlan?(planDate<activePlan.inputs.startDate?activePlan.inputs.startDate:planDate>activePlan.inputs.endDate?activePlan.inputs.endDate:planDate):planDate);
+  const published=usePublishedCalendar(activePlan,publishedWeek);
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
@@ -332,23 +295,26 @@ export default function Schedule() {
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [profile, setProfile] = useState(null);
+  const todayKey = useAccountDate(activePlan?.inputs.timeZone||profile?.timeZone);
+  const weekStart = activePlan ? publishedWeek : selectedWeek || accountWeekStart(todayKey);
+  const authored=useAuthoredCalendar(weekStart);
+  const authoredToday=authoredOn(authored.events,todayKey).length>0;
   const [runs, setRuns] = useState([]);
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
   const [coachSchedule, setCoachSchedule] = useState([]);
   const [shoes, setShoes] = useState([]);
   const [plannedRoutes, setPlannedRoutes] = useState([]);
+  const [routeAnchor, setRouteAnchor] = useState(null);
   const [loadState, setLoadState] = useState('loading');
   const [autoPlanning, setAutoPlanning] = useState(false);
-  const [recentRunFallback, setRecentRunFallback] = useState(null);
+  const [loadedRecommendationRevision, setLoadedRecommendationRevision] = useState(null);
 
   const routeMapRef = useRef(null);
-  const routeMapInstanceRef = useRef(null);
   const didAutoPlanRef = useRef(false);
-  const startPointCacheRef = useRef(null);
-  const didRecentRunFetchRef = useRef(false);
 
   useEffect(() => {
+    if(authored.loading)return;
     if (!isAuthenticated) {
       navigate('/login');
       return;
@@ -357,34 +323,45 @@ export default function Schedule() {
     let cancelled = false;
 
     async function loadSchedule() {
-      setLoadState('loading');
+      // Background calendar/source refreshes must not unmount an open authoring tool.
+      // The account-keyed route provider remounts this component when credentials change.
+      setLoadState(current=>current==='ready'?'ready':'loading');
       try {
-        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData, plannedRouteData] = await Promise.all([
-          cachedApiJson('/api/profile/me'),
-          cachedApiJson('/api/activities'),
+        const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData, plannedRouteData, anchorData] = await Promise.all([
+          cachedApiJson('/api/profile/me').catch(error=>{if(activePlan)return null;throw error;}),
+          cachedApiJson('/api/activities').catch(error=>{if(activePlan)return [];throw error;}),
           apiJson('/api/coach/state').catch(() => null),
-          apiJson('/api/coach/today').catch(() => null),
-          apiJson('/api/coach/schedule?days=14').catch(() => []),
+          selection.allowLegacy&&!authoredToday?apiJson('/api/coach/today').catch(() => null):null,
+          selection.allowLegacy?apiJson('/api/coach/schedule?days=14').catch(() => []):[],
           apiJson('/api/shoes').catch(() => []),
           apiJson('/api/route/plan/recent').catch(() => []),
+          apiJson('/api/route/plan/anchor').catch(() => null),
         ]);
 
         if (cancelled) return;
 
         const list = Array.isArray(activitiesData) ? activitiesData : [];
-        list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+        list.sort((a, b) => activitySortTime(b) - activitySortTime(a));
 
         setProfile(profileData);
         setRuns(list);
         setCoachState(coachStateData && typeof coachStateData === 'object' ? coachStateData : null);
-        setCoachToday(coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
-        setCoachSchedule(Array.isArray(coachScheduleData) ? coachScheduleData : []);
+        setCoachToday(activePlan?{state:coachStateData,today:asCoachWorkout(selection.data.workout)}:coachTodayData && typeof coachTodayData === 'object' ? coachTodayData : null);
+        const currentSchedule = Array.isArray(coachTodayData?.schedule) && coachTodayData.schedule.length > 0
+          ? coachTodayData.schedule : Array.isArray(coachScheduleData) ? coachScheduleData : [];
+        const sharedSchedule = new Map((Array.isArray(coachTodayData?.weekSchedule) ? coachTodayData.weekSchedule : [])
+          .map(entry => [entry.scheduledDate, entry]));
+        currentSchedule.forEach(entry => sharedSchedule.set(entry.scheduledDate, entry));
+        if (coachTodayData?.today?.scheduledDate) sharedSchedule.set(coachTodayData.today.scheduledDate, coachTodayData.today);
+        setCoachSchedule([...sharedSchedule.values()]);
         setShoes(Array.isArray(shoeData) ? shoeData : []);
         setPlannedRoutes(Array.isArray(plannedRouteData) ? plannedRouteData : []);
+        setRouteAnchor(normalizeRouteAnchor(anchorData));
+        setLoadedRecommendationRevision(recommendationRevision);
         setLoadState('ready');
       } catch {
         if (!cancelled) {
-          setLoadState('error');
+          setLoadState(current=>current==='ready'?'ready':'error');
         }
       }
     }
@@ -393,11 +370,11 @@ export default function Schedule() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, todayKey, selection.allowLegacy, selection.data, activePlan,authored.loading,authoredToday, recommendationRevision]);
 
   const recommendationBundle = useMemo(
-    () => getTodayRunRecommendation({ runs, t, lang, unit, coachPayload: coachToday }),
-    [runs, t, lang, unit, coachToday],
+    () => getTodayRunRecommendation({ runs, t, lang, unit, coachPayload: coachToday, timeZone: profile?.timeZone, todayKey }),
+    [runs, t, lang, unit, coachToday, profile?.timeZone, todayKey],
   );
   const vdotTrend = useMemo(
     () => computeVdotTrend(runs),
@@ -405,31 +382,37 @@ export default function Schedule() {
   );
 
   const readiness = useMemo(
-    () => buildReadinessModel(recommendationBundle, coachState, t),
-    [recommendationBundle, coachState, t],
+    () => buildReadinessModel(recommendationBundle, coachToday?.state || coachState, t),
+    [recommendationBundle, coachToday, coachState, t],
   );
 
-  const weekStart = useMemo(() => startOfIsoWeek(new Date()), []);
-  const todayKey = useMemo(() => new Date().toISOString().slice(0, 10), []);
-
   const weekSchedule = useMemo(
-    () => buildWeekSchedule(coachSchedule, runs, weekStart, t, s, lang, unit, coachToday?.today),
-    [coachSchedule, runs, weekStart, t, s, lang, unit, coachToday],
+    () => {
+      const prescribed=activePlan?(published.data?.weeks||[]).flatMap(w=>w.days).map(asCoachWorkout):[
+        ...coachSchedule.filter(entry=>!authoredOn(authored.events,entry.scheduledDate).length),
+        ...[...new Set(authored.events.filter(e=>e.state!=='cancelled').map(e=>e.date))].map(date=>asAuthoredWorkout(authoredOn(authored.events,date))),
+      ];
+      return buildWeekSchedule(prescribed, runs, weekStart, t, s, lang, unit, coachToday?.today, todayKey, activePlan?.inputs.timeZone||profile?.timeZone);
+    },
+    [activePlan,published.data,authored.events,coachSchedule, runs, weekStart, t, s, lang, unit, coachToday, todayKey, profile?.timeZone],
   );
 
   const targetVolumeKm = useMemo(
-    () => weekSchedule.reduce((sum, day) => sum + Number(day.entry?.plannedDistanceKm || 0), 0),
-    [weekSchedule],
+    () => resolveCoachWeeklyTarget(coachToday, weekStart, accountWeekStart(todayKey),
+      weekSchedule.reduce((sum, day) => sum + Number(day.entry?.plannedDistanceKm || 0), 0)),
+    [weekSchedule, coachToday, weekStart, todayKey],
   );
+  const prescribedMinutes=weekSchedule.reduce((sum,day)=>sum+Number(day.entry?.plannedDurationMinutes||0),0);
 
   const completedVolumeKm = useMemo(
-    () => weekSchedule.reduce((sum, day) => sum + Number(day.completedKm || 0), 0),
-    [weekSchedule],
+    () => coachToday?.plan?.weeklyBudgets?.find(week => week.start === weekStart)?.completedKm
+      ?? weekSchedule.reduce((sum, day) => sum + Number(day.completedKm || 0), 0),
+    [weekSchedule, coachToday, weekStart],
   );
 
   const nextSession = useMemo(
-    () => pickNextSession(coachSchedule, todayKey),
-    [coachSchedule, todayKey],
+    () => selectNextSessionForWeek(activePlan||authored.events.some(e=>e.state!=='cancelled')?weekSchedule.map(d=>d.entry).filter(Boolean):coachSchedule, todayKey, weekStart),
+    [activePlan,authored.events,weekSchedule,coachSchedule, todayKey, weekStart],
   );
 
   const currentGear = useMemo(
@@ -437,7 +420,7 @@ export default function Schedule() {
     [shoes],
   );
 
-  const activeBlock = coachState?.activeBlock || null;
+  const activeBlock = activePlan?null:coachState?.activeBlock || null;
   const targetBlock = useMemo(
     () => buildScheduleTargetBlockModel(activeBlock),
     [activeBlock],
@@ -451,11 +434,11 @@ export default function Schedule() {
   }), [lang, t]);
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
 
-  const heroTitle = targetBlock.hasActiveBlock
+  const heroTitle = activePlan?.title || (targetBlock.hasActiveBlock
     ? targetBlock.isMarathonBlock
       ? s('hero_title_marathon')
       : s('hero_title_block')
-    : s('hero_title');
+    : s('hero_title'));
   const raceTargetDistanceLabel = targetBlock.raceDistanceKm != null
     ? formatDistance(targetBlock.raceDistanceKm, 1, lang, unit)
     : null;
@@ -470,24 +453,61 @@ export default function Schedule() {
     () => getScheduleCountdownLabel(targetBlock.countdownDays, s),
     [targetBlock.countdownDays, s],
   );
-  const heroSummary = [
-    targetBlock.hasTargetRace && raceTargetDistanceLabel
-      ? { label: s('hero_target_distance'), value: raceTargetDistanceLabel }
-      : null,
-    targetCountdownLabel
-      ? { label: s('hero_countdown'), value: targetCountdownLabel }
-      : null,
-    targetRaceDateLabel
-      ? { label: s('hero_race_day'), value: targetRaceDateLabel }
-      : null,
-  ].filter(Boolean);
+  const heroDescription = targetBlock.hasActiveBlock
+    ? [s('phase_label', { week: targetBlock.weekIndex || 1 }), targetBlock.name,
+      raceTargetDistanceLabel, targetRaceDateLabel, targetCountdownLabel].filter(Boolean).join(' · ')
+    : s('week_intro');
+  const weekDateLabel = new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
+    month: 'short', day: 'numeric', timeZone: 'UTC',
+  }).formatRange(calendarDate(weekStart), calendarDate(addCalendarDays(weekStart, 6)));
+  const changeWeek = (date) => {
+    setSelectedWeek(date);
+    setSelectedDate(date);
+    setShowSessionDetails(false);
+  };
 
-  const nextSessionTitle = nextSession
+  const nextSessionTitle = nextSession?.authored?nextSession.title:activePlan ? (nextSession?t(`training_plan.${nextSession.publishedType==='RUN_WALK'?'RUN_WALK_KIND':nextSession.publishedType}`):t('training_plan.restHelp')) : nextSession
     ? prettifyWorkoutType(nextSession.workoutType, t)
     : recommendationBundle.recommendation.title;
 
-  const nextSessionCopy = nextSession?.notes
-    || recommendationBundle.recommendation.purpose;
+  const nextSessionCopy = nextSession?.authored?`${t('training_integration.authoredWorkout')} · ${formatPlannedDuration(nextSession.plannedDurationMinutes)}`:activePlan ? (nextSession?`${activePlan.title} · ${t(`training_plan.${nextSession.phase}`)}`:t('training_plan.restHelp')) : nextSession
+    ? nextSession.notes || localizedReason(nextSession.reasonCode, t, {
+      sessionNeutral: nextSession.scheduledDate > todayKey,
+    })
+    : recommendationBundle.recommendation.purpose;
+  const selectedDay = weekSchedule.find((day) => day.key === selectedDate);
+  const featuredDay = selectedDay || weekSchedule.find((day) => day.key === nextSession?.scheduledDate)
+    || (!nextSession ? weekSchedule.find((day) => day.isToday) : null);
+  useEffect(() => {
+    // Keep the initially displayed day selected when background replanning changes the next run.
+    if (loadState === 'ready' && featuredDay) setSelectedDate(current => current || featuredDay.key);
+  }, [loadState, featuredDay]);
+  const featuredEntry = selectedDay ? selectedDay.entry : nextSession;
+  const featuredTitle = selectedDay ? selectedDay.title : nextSessionTitle;
+  const featuredCopy = selectedDay
+    ? selectedDay.entry?.notes || (selectedDay.entry?.authored
+      ? t('training_integration.authoredWorkout')
+      : selectedDay.entry?.publishedType
+        ? selectedDay.entry.workoutType === 'REST'
+          ? t('training_plan.restHelp')
+          : [activePlan?.title, selectedDay.entry.phase ? t(`training_plan.${selectedDay.entry.phase}`) : null].filter(Boolean).join(' · ')
+        : selectedDay.entry
+          ? localizedReason(selectedDay.entry.reasonCode, t, { sessionNeutral: !selectedDay.isToday })
+          : s('open_slot_copy'))
+    : nextSessionCopy;
+  const featuredDate = selectedDay?.key || nextSession?.scheduledDate || todayKey;
+  const featuredIsToday = featuredDate === todayKey;
+  const featuredCompletedRun = runs.find((run) => getActivityDateKey(run, activePlan?.inputs.timeZone || profile?.timeZone) === featuredDate);
+  const featuredMeta = [featuredEntry?.plannedDistanceKm > 0
+    ? formatDistance(featuredEntry.plannedDistanceKm, 1, lang, unit)
+    : featuredEntry?.plannedDurationMinutes > 0 ? formatPlannedDuration(featuredEntry.plannedDurationMinutes) : null,
+  featuredEntry ? scheduleTag(featuredEntry.workoutType, s) : null].filter(Boolean).join(' · ');
+  const openFeaturedSession = () => {
+    if (activePlan && featuredEntry?.id) navigate(planWorkoutUrl(activePlan.id, featuredEntry.id));
+    else if (featuredCompletedRun?.id) navigate(`/runs/${featuredCompletedRun.id}`);
+    else if (featuredIsToday) navigate('/today-run');
+    else setShowSessionDetails((current) => !current);
+  };
   const weeklyAcwr = recommendationBundle.metrics?.acwr ?? null;
   const weeklyAcwrLabel = weeklyAcwr != null ? weeklyAcwr.toFixed(2) : '--';
   const weeklyCoachSummary = useMemo(
@@ -496,8 +516,9 @@ export default function Schedule() {
       acwr: weeklyAcwr,
       targetBlock,
       nextSessionTitle,
+      coachPayload: coachToday,
     }),
-    [nextSessionTitle, targetBlock, vdotTrend, weeklyAcwr],
+    [coachToday, nextSessionTitle, targetBlock, vdotTrend, weeklyAcwr],
   );
 
   const weeklySummaryTrendLine = useMemo(() => {
@@ -515,6 +536,13 @@ export default function Schedule() {
 
   const weeklySummaryLoadLine = useMemo(() => {
     switch (weeklyCoachSummary.loadState) {
+      case 'planner':
+        return s('weekly_summary_load_planner', {
+          reason: localizedReason(weeklyCoachSummary.plannerReasonCode, t, {
+            planContext: weeklyCoachSummary.plannerReasonIsPlan,
+            sessionNeutral: true,
+          }),
+        });
       case 'low':
         return s('weekly_summary_load_low', { acwr: weeklyAcwrLabel });
       case 'optimal':
@@ -526,7 +554,7 @@ export default function Schedule() {
       default:
         return s('weekly_summary_load_unknown');
     }
-  }, [s, weeklyAcwrLabel, weeklyCoachSummary.loadState]);
+  }, [s, t, weeklyAcwrLabel, weeklyCoachSummary.loadState, weeklyCoachSummary.plannerReasonCode, weeklyCoachSummary.plannerReasonIsPlan]);
 
   const weeklySummaryFocusLine = useMemo(() => {
     if (weeklyCoachSummary.focusMode === 'target-race') {
@@ -578,6 +606,8 @@ export default function Schedule() {
 
   const weeklySummaryLoadValue = useMemo(() => {
     switch (weeklyCoachSummary.loadState) {
+      case 'planner':
+        return s('weekly_summary_load_value_planner');
       case 'low':
         return s('weekly_summary_load_value_low', { acwr: weeklyAcwrLabel });
       case 'optimal':
@@ -613,25 +643,46 @@ export default function Schedule() {
     coachState,
     t: s,
   });
-  const targetRouteDistanceKm = Number(
-    nextSession?.plannedDistanceKm
-      || coachToday?.today?.plannedDistanceKm
-      || targetBlock.currentLongRunKm
-      || 0,
-  );
+  const dailyRouteWorkout = activePlan
+    ? asCoachWorkout(selection.data?.workout)
+    : authoredToday ? asAuthoredWorkout(authoredOn(authored.events, todayKey)) : coachToday?.today;
+  const runningHistoryStart = addCalendarDays(todayKey, -27);
+  const routeInputsCurrent = loadedRecommendationRevision === recommendationRevision && loadState === 'ready' && !selection.refreshing;
+  const targetRouteDistanceKm = routeInputsCurrent ? resolveDailyRouteDistanceKm({
+    workout: dailyRouteWorkout,
+    todayKey,
+    explicitPlan: Boolean(activePlan),
+    hasRunningHistory: runs.some((run) => {
+      const dateKey = getActivityDateKey(run, profile?.timeZone);
+      const date = calendarDate(dateKey);
+      const distanceKm = resolveRunDistanceKm(run);
+      return (!run.activityType || run.activityType === 'RUN')
+        && Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === dateKey
+        && dateKey >= runningHistoryStart && dateKey <= todayKey
+        && Number.isFinite(distanceKm) && distanceKm > 0;
+    }),
+  }) : null;
   const plannedRouteRecommendation = useMemo(
-    () => selectPlannedRouteRecommendation(plannedRoutes, targetRouteDistanceKm),
-    [plannedRoutes, targetRouteDistanceKm],
+    () => selectPlannedRouteRecommendation(plannedRoutes, targetRouteDistanceKm, routeAnchor),
+    [plannedRoutes, targetRouteDistanceKm, routeAnchor],
   );
-  const routeRecommendation = plannedRouteRecommendation || recentRunFallback || coachToday?.routeRecommendation || null;
+  const historyRoute = coachToday?.routeRecommendation;
+  const routeRecommendation = plannedRouteRecommendation
+    || (targetRouteDistanceKm > 0 && historyRoute
+      && isRouteRecommendationUsable({ ...historyRoute, actualDistanceKm: historyRoute.representativeDistanceKm ?? historyRoute.actualDistanceKm }, targetRouteDistanceKm, { requireStreetGraph: false })
+      && isRouteNearAnchor(historyRoute, routeAnchor) ? historyRoute : null);
   const routeRecommendationSource = routeRecommendation?.source === 'planner'
     ? 'planner'
-    : routeRecommendation?.source === 'recent-run'
-      ? 'recent-run'
-      : 'history';
-  const routeWaypoints = (Array.isArray(routeRecommendation?.waypoints) ? routeRecommendation.waypoints : [])
-    .map(normalizeRouteWaypoint)
-    .filter(Boolean);
+    : routeRecommendation ? 'history' : null;
+  const noRunningToday = routeInputsCurrent && ['REST', 'CROSS_TRAIN'].includes(dailyRouteWorkout?.workoutType);
+  const routeUnavailableCopy = noRunningToday ? s('route_rest_hint')
+    : targetRouteDistanceKm > 0 ? s('route_no_match_hint') : s('signal_no_data');
+  const routeWaypoints = useMemo(
+    () => (Array.isArray(routeRecommendation?.waypoints) ? routeRecommendation.waypoints : [])
+      .map(normalizeRouteWaypoint)
+      .filter(Boolean),
+    [routeRecommendation],
+  );
   const hasRoutePreview = Boolean(routeWaypoints && routeWaypoints.length >= 2);
   const routeSketch = routeRecommendation?.preview || null;
   const routeSketchStartX = Number(routeSketch?.startX ?? routeSketch?.start?.[0]);
@@ -645,290 +696,101 @@ export default function Schedule() {
     ? routeRecommendationSource === 'planner'
       ? s('route_planner_title')
       : getRouteZoneLabel(routeRecommendation.zoneKey, s)
-    : targetBlock.name || s('default_route_name');
-  const routeAnchoredRuns = routeRecommendationSource === 'planner'
-    ? s('route_planner_source')
-    : routeRecommendationSource === 'recent-run'
-      ? s('route_planner_source_recent_run', { date: routeRecommendation?.runDateLabel || '' })
-      : getRouteAnchoredRunsLabel(routeRecommendation, s);
+    : noRunningToday ? t('today_run.personalized_distance_rest') : s('planned_route');
+  const routeAnchoredRuns = !routeRecommendation ? routeUnavailableCopy : routeRecommendationSource === 'planner'
+    ? s(routeRecommendation.anchorSource === 'heatmap-hotspot' ? 'route_planner_source_heatmap' : 'route_planner_source')
+    : getRouteAnchoredRunsLabel(routeRecommendation, s);
   const routeConfidenceLabel = routeRecommendationSource === 'planner' && routeRecommendation?.actualDistanceKm
     ? s('route_planner_accuracy', {
       distance: formatDistance(routeRecommendation.actualDistanceKm, 1, lang, unit),
     })
-    : routeRecommendationSource === 'recent-run' && routeRecommendation?.actualDistanceKm
-      ? s('route_planner_accuracy', {
-        distance: formatDistance(routeRecommendation.actualDistanceKm, 1, lang, unit),
-      })
-      : getRouteConfidenceLabel(routeRecommendation, s, unit, lang);
-  const routeTargetDistanceKm = Number(
-    routeRecommendation?.targetDistanceKm
-      || targetRouteDistanceKm
-      || 0,
-  );
+    : getRouteConfidenceLabel(routeRecommendation, s, unit, lang);
+  const routeTargetDistanceKm = targetRouteDistanceKm;
   const routeTargetDistanceLabel = routeTargetDistanceKm > 0
     ? formatDistance(routeTargetDistanceKm, 1, lang, unit)
     : null;
-  const routeTargetContextLabel = targetBlock.isMarathonBlock
-    ? s('route_target_marathon')
-    : s('route_target_block');
   const routeFallbackDistanceBadge = routeTargetDistanceKm > 0
     ? formatDistance(routeTargetDistanceKm, 1, lang, unit)
-    : s('no_distance');
+    : noRunningToday ? t('today_run.personalized_distance_rest') : s('no_distance');
   const routeFallbackStatus = routeRecommendation ? routeConfidenceLabel : routeAnchoredRuns;
   const routeFallbackBadges = [
     routeFallbackDistanceBadge,
-    routeRecommendation ? routeAnchoredRuns : nextSessionTitle,
+    routeRecommendation ? routeAnchoredRuns : noRunningToday ? null : nextSessionTitle,
     targetBlock.hasTargetRace && raceTargetDistanceLabel
       ? raceTargetDistanceLabel
       : targetBlock.weekIndex
         ? s('phase_label', { week: targetBlock.weekIndex || 1 })
         : null,
   ].filter(Boolean);
-  const routePlannerInsights = routeRecommendationSource === 'planner'
-    ? [
-      getRouteElevationPreferenceLabel(routeRecommendation.elevationPreference, s),
-      s('route_planner_safety'),
-      routeConfidenceLabel,
-    ]
-    : [
-      routeTargetDistanceLabel ? s('route_planner_target', { distance: routeTargetDistanceLabel }) : null,
-      s('route_elevation_rolling'),
-      s('route_planner_safety_pending'),
-    ].filter(Boolean);
   const coachTargetValue = [raceTargetDistanceLabel, targetRaceDateLabel].filter(Boolean).join(' / ');
 
-  // Auto-plan: fire once when load is ready AND no saved planned routes exist.
-  // Derives start lat/lng from /api/activities/{id}/points because the activity
-  // payload does not expose top-level lat/lng — only routePreview with normalised
-  // viewBox coords.
+  // Plan from the personal heatmap hotspot and today's supported prescription.
   useEffect(() => {
-    if (loadState !== 'ready') return;
-    if (plannedRoutes.length > 0) return;
-    if (didAutoPlanRef.current) return;
-    if (!isAuthenticated) return;
+    if (!routeInputsCurrent || !isAuthenticated || planReadOnly()) return;
+    if (!routeAnchor || plannedRouteRecommendation || !(targetRouteDistanceKm > 0) || targetRouteDistanceKm > 50) return;
 
-    // Find the most recent run that has GPS-backed route data
-    const startCandidateRun = runs.find((r) => r?.routePreview && r?.id != null);
-    if (!startCandidateRun) return;
-
-    didAutoPlanRef.current = true;
-    setAutoPlanning(true);
-
-    const rawTarget = Number(
-      nextSession?.plannedDistanceKm
-        || coachToday?.today?.plannedDistanceKm
-        || targetBlock?.currentLongRunKm
-        || 0,
-    );
-    const targetDistanceKm = Math.min(50, Math.max(1, rawTarget > 0 ? rawTarget : 5));
-
-    // Derive elevation preference from last 5 runs (median gain/km)
+    const targetDistanceKm = targetRouteDistanceKm;
     const recentWithElevation = runs
-      .filter((r) => Number(r.distanceKm || 0) > 0 && Number(r.elevationGainMeters || r.totalElevationGain || 0) > 0)
+      .filter((run) => resolveRunDistanceKm(run) > 0 && Number(run.elevationGainMeters ?? run.totalElevationGain) > 0)
       .slice(0, 5);
-    let elevationPreference = 'rolling';
-    if (recentWithElevation.length > 0) {
-      const gainPerKmValues = recentWithElevation.map((r) => {
-        const dist = Number(r.distanceKm || 1);
-        const gain = Number(r.elevationGainMeters || r.totalElevationGain || 0);
-        return gain / dist;
-      });
-      gainPerKmValues.sort((a, b) => a - b);
-      const median = gainPerKmValues[Math.floor(gainPerKmValues.length / 2)];
-      if (median < 6) elevationPreference = 'flat';
-      else if (median > 12) elevationPreference = 'hilly';
-      else elevationPreference = 'rolling';
-    }
+    const gains = recentWithElevation.map((run) => (
+      Number(run.elevationGainMeters ?? run.totalElevationGain) / resolveRunDistanceKm(run)
+    )).filter(Number.isFinite).sort((a, b) => a - b);
+    const median = gains.length ? gains[Math.floor(gains.length / 2)] : null;
+    const elevationPreference = median === null ? 'rolling' : median < 6 ? 'flat' : median > 12 ? 'hilly' : 'rolling';
+    const requestKey = [todayKey, targetDistanceKm, routeAnchor.lat, routeAnchor.lng, elevationPreference].join(':');
+    if (didAutoPlanRef.current === requestKey) return;
+    didAutoPlanRef.current = requestKey;
 
-    const resolveStartPoint = () => {
-      if (startPointCacheRef.current) {
-        return Promise.resolve(startPointCacheRef.current);
-      }
-      return apiJson(`/api/activities/${startCandidateRun.id}/points`)
-        .then((points) => {
-          const first = Array.isArray(points) ? points[0] : null;
-          if (!first) return null;
-          const lat = Number(first.latitude);
-          const lng = Number(first.longitude);
-          if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat === 0 || lng === 0) {
-            return null;
-          }
-          // Cache full points list so the recent-run fallback effect can reuse it
-          const pt = { lat, lng, _fullPoints: Array.isArray(points) ? points : null };
-          startPointCacheRef.current = pt;
-          return pt;
-        })
-        .catch((err) => {
-          console.warn('[Schedule] auto-plan points fetch failed:', err.message);
-          return null;
-        });
-    };
-
-    resolveStartPoint()
-      .then((pt) => {
-        if (!pt) {
-          setAutoPlanning(false);
-          return;
-        }
-        return apiFetch('/api/route/plan', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            startLat: pt.lat,
-            startLng: pt.lng,
-            targetDistanceKm,
-            elevationPreference,
-          }),
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error(`auto-plan HTTP ${res.status}`);
-            return res.json();
-          })
-          .then((newRoute) => {
-            if (isRouteRecommendationUsable(newRoute, targetDistanceKm)) {
-              setPlannedRoutes((prev) => [newRoute, ...prev]);
-            }
-          })
-          .catch((err) => {
-            console.warn('[Schedule] auto-plan failed:', err.message);
-          })
-          .finally(() => {
-            setAutoPlanning(false);
-          });
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadState, plannedRoutes.length, isAuthenticated]);
-
-  // Recent-run fallback: when no plannedRoutes, immediately build a recommendation
-  // from the most recent run's GPS points so the Leaflet map renders right away.
-  // Re-uses the same /api/activities/{id}/points fetch (cached in startPointCacheRef)
-  // that the auto-plan effect already uses for its start coord.
-  useEffect(() => {
-    if (loadState !== 'ready') return;
-    if (plannedRoutes.length > 0) return;
-    if (didRecentRunFetchRef.current) return;
-    if (!isAuthenticated) return;
-
-    const startCandidateRun = runs.find((r) => r?.routePreview && r?.id != null);
-    if (!startCandidateRun) return;
-
-    didRecentRunFetchRef.current = true;
-
-    const resolvePoints = () => {
-      if (startPointCacheRef.current?._fullPoints) {
-        return Promise.resolve(startPointCacheRef.current._fullPoints);
-      }
-      return apiJson(`/api/activities/${startCandidateRun.id}/points`)
-        .then((points) => {
-          if (!Array.isArray(points) || points.length < 2) return null;
-          // Cache both first-point (for auto-plan) and full points list
-          const first = points[0];
-          const lat = Number(first.latitude);
-          const lng = Number(first.longitude);
-          if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-            startPointCacheRef.current = { lat, lng, _fullPoints: points };
-          }
-          return points;
-        })
-        .catch((err) => {
-          console.warn('[Schedule] recent-run points fetch failed:', err.message);
-          return null;
-        });
-    };
-
-    resolvePoints().then((points) => {
-      if (!Array.isArray(points) || points.length < 2) return;
-
-      // Decimate to ~100 points — keep first and last exactly
-      const MAX_WAYPOINTS = 100;
-      let decimated;
-      if (points.length <= MAX_WAYPOINTS) {
-        decimated = points;
-      } else {
-        const step = Math.floor(points.length / (MAX_WAYPOINTS - 1));
-        const sampled = [];
-        for (let i = 0; i < points.length - 1; i += step) {
-          sampled.push(points[i]);
-        }
-        sampled.push(points[points.length - 1]);
-        decimated = sampled;
-      }
-
-      const waypoints = decimated
-        .map((p) => {
-          const lat = Number(p.latitude);
-          const lng = Number(p.longitude);
-          return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
-        })
-        .filter(Boolean);
-
-      if (waypoints.length < 2) return;
-
-      const preview = buildPlannedRoutePreview(waypoints);
-      const runDistanceKm = resolveRunDistanceKm(startCandidateRun);
-      const rawTarget = Number(
-        nextSession?.plannedDistanceKm
-          || coachToday?.today?.plannedDistanceKm
-          || 0,
-      );
-      const targetDistanceKm = rawTarget > 0 ? rawTarget : runDistanceKm;
-      if (!isRouteRecommendationUsable({
-        actualDistanceKm: runDistanceKm,
-        waypoints,
-      }, targetDistanceKm, { requireStreetGraph: false })) {
-        return;
-      }
-
-      // Format date for the source label
-      const runDate = new Date(startCandidateRun.startTime || startCandidateRun.startDate || 0);
-      const runDateLabel = Number.isNaN(runDate.getTime())
-        ? ''
-        : runDate.toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
-          month: 'short',
-          day: 'numeric',
-        });
-
-      setRecentRunFallback({
-        source: 'recent-run',
-        zoneKey: 'core',
-        confidence: 'built_from_history',
-        waypoints,
-        preview,
-        actualDistanceKm: runDistanceKm,
+    const controller = new AbortController();
+    setAutoPlanning(true);
+    apiFetch('/api/route/plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify({
+        startLat: routeAnchor.lat,
+        startLng: routeAnchor.lng,
         targetDistanceKm,
-        activityCount: 1,
-        elevationGainMeters: Number(startCandidateRun.elevationGainMeters || startCandidateRun.totalElevationGain || 0),
-        estimatedTimeMinutes: 0,
-        elevationPreference: 'rolling',
-        distanceGapKm: Math.abs(runDistanceKm - targetDistanceKm),
-        distanceAccuracy: targetDistanceKm > 0 ? runDistanceKm / targetDistanceKm : 1,
-        createdAt: runDate.getTime() || 0,
-        runDateLabel,
+        elevationPreference,
+        anchorSource: 'heatmap-hotspot',
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error('Route planning failed: ' + response.status);
+        return response.json();
+      })
+      .then((newRoute) => {
+        if (controller.signal.aborted) return;
+        setAutoPlanning(false);
+        if (isRouteRecommendationUsable(newRoute, targetDistanceKm) && isRouteNearAnchor(newRoute, routeAnchor)) {
+          setPlannedRoutes((previous) => [{ ...newRoute, anchorSource: 'heatmap-hotspot' }, ...previous]);
+        }
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) console.warn('[Schedule] auto-plan failed:', error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setAutoPlanning(false);
       });
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadState, plannedRoutes.length, isAuthenticated]);
+
+    return () => {
+      controller.abort();
+      setAutoPlanning(false);
+      if (didAutoPlanRef.current === requestKey) didAutoPlanRef.current = null;
+    };
+  }, [routeInputsCurrent, isAuthenticated, routeAnchor, plannedRouteRecommendation, targetRouteDistanceKm, todayKey, runs, recommendationRevision]);
 
   // Leaflet map effect for the route card
   useEffect(() => {
-    if (!routeMapRef.current) return;
-    if (!routeWaypoints || routeWaypoints.length < 2) {
-      if (routeMapInstanceRef.current) {
-        routeMapInstanceRef.current.remove();
-        routeMapInstanceRef.current = null;
-      }
-      return;
-    }
-
-    if (routeMapInstanceRef.current) {
-      // Already initialized — rebuild for new waypoints
-      routeMapInstanceRef.current.remove();
-      routeMapInstanceRef.current = null;
-    }
+    const routeMapHost = routeMapRef.current;
+    if (loadState !== 'ready' || !routeMapHost || routeWaypoints.length < 2) return;
+    let cancelled = false;
+    let createdMap = null;
 
     import('leaflet').then((L) => {
-      if (!routeMapRef.current) return;
-      const map = L.map(routeMapRef.current, {
+      if (cancelled || routeMapRef.current !== routeMapHost) return;
+      const map = L.map(routeMapHost, {
         zoomControl: false,
         scrollWheelZoom: false,
         dragging: false,
@@ -938,6 +800,7 @@ export default function Schedule() {
         keyboard: false,
         attributionControl: true,
       });
+      createdMap = map;
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap contributors',
         maxZoom: 18,
@@ -966,16 +829,13 @@ export default function Schedule() {
       }).addTo(map);
 
       map.fitBounds(polyline.getBounds(), { padding: [16, 16] });
-      routeMapInstanceRef.current = map;
     });
 
     return () => {
-      if (routeMapInstanceRef.current) {
-        routeMapInstanceRef.current.remove();
-        routeMapInstanceRef.current = null;
-      }
+      cancelled = true;
+      createdMap?.remove();
     };
-  }, [routeWaypoints]);
+  }, [loadState, routeWaypoints]);
 
   if (loadState === 'loading') {
     return <PageSkeleton variant="schedule" />;
@@ -1058,53 +918,51 @@ export default function Schedule() {
           <section className={`schedule-plan-hero${targetBlock.hasActiveBlock ? ' is-block-active' : ''}${targetBlock.isMarathonBlock ? ' is-marathon-block' : ''}`}>
             <div className="schedule-plan-hero-copy">
               <h1>{heroTitle}</h1>
-              {heroSummary.length > 0 ? (
-                <div className="schedule-plan-hero-summary">
-                  {heroSummary.map((item) => (
-                    <div key={item.label} className="schedule-plan-hero-summary-chip">
-                      <span>{item.label}</span>
-                      <strong>{item.value}</strong>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <p className="schedule-plan-hero-description">{heroDescription}</p>
+              {activePlan&&<p role="note">{t('training_plan.experimentalNotice')}</p>}
             </div>
-
-            <div className="schedule-plan-hero-metrics">
-              <div>
-                <span>{s('target_volume')}</span>
-                <strong>{formatDistance(targetVolumeKm, 1, lang, unit)}</strong>
+            <div className="schedule-plan-volume">
+              <div className="schedule-plan-volume-labels">
+                <span>{s(weekStart === accountWeekStart(todayKey) ? 'this_week' : 'week_volume')}</span>
+                <p><strong>{formatDistance(completedVolumeKm, 1, lang, unit)}</strong><span> / {s('volume_planned', { distance: targetVolumeKm > 0 || !prescribedMinutes ? formatDistance(targetVolumeKm, 1, lang, unit) : formatPlannedDuration(prescribedMinutes) })}</span></p>
               </div>
-              <div>
-                <span>{s('completed_volume')}</span>
-                <strong>{formatDistance(completedVolumeKm, 1, lang, unit)}</strong>
+              <div className="schedule-plan-volume-track" role="progressbar" aria-label={s('completed_volume')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={targetVolumeKm > 0 ? Math.min(100, Math.round(completedVolumeKm / targetVolumeKm * 100)) : 0}>
+                <span style={{ width: `${targetVolumeKm > 0 ? Math.min(100, completedVolumeKm / targetVolumeKm * 100) : 0}%` }} />
               </div>
-            </div>
-
-            <div className="schedule-plan-hero-pulse" aria-hidden="true">
-              <svg viewBox="0 0 100 100">
-                <path d="M0 50 Q 25 20 50 50 T 100 50" />
-                <path d="M0 60 Q 25 30 50 60 T 100 60" />
-                <path d="M0 40 Q 25 10 50 40 T 100 40" />
-              </svg>
             </div>
           </section>
 
-          <section className="schedule-plan-week-grid">
+          <RecommendationEvidence payload={coachToday} weekStart={weekStart} workout={featuredEntry} />
+          <section className="schedule-plan-calendar" aria-label={s('week_calendar')}>
+            <div className="schedule-plan-calendar-toolbar">
+              <div className="schedule-plan-week-nav">
+                <button type="button" aria-label={t('training_plan.previous')} disabled={Boolean(activePlan && weekStart <= activePlan.inputs.startDate)} onClick={() => changeWeek(addCalendarDays(weekStart, -7))}>‹</button>
+                <h2>{weekDateLabel}</h2>
+                <button type="button" aria-label={t('training_plan.nextWeek')} disabled={Boolean(activePlan && addDays(weekStart, 6) >= activePlan.inputs.endDate)} onClick={() => changeWeek(addCalendarDays(weekStart, 7))}>›</button>
+                {weekStart !== accountWeekStart(todayKey) && <button type="button" className="schedule-plan-current-week" onClick={() => changeWeek(null)}>{s('this_week')}</button>}
+              </div>
+              <ScheduleAuthoringTools />
+            </div>
+          {activePlan&&authored.events.some(e=>e.state!=='cancelled')&&<p role="status">{t('training_integration.generatedPriority')}</p>}
+          {activePlan&&<div className="tp-ui tp-embedded schedule-plan-published-status">{published.error&&<p role="alert">{t('training_plan.error')} <button type="button" onClick={published.reload}>{t('training_plan.retry')}</button></p>}{published.loading&&<p role="status">{t('training_plan.loading')}</p>}{published.data&&<p>{t('training_plan.trainingOnly')}: {published.data.weeks.map(w=>[w.trainingDistanceM!=null?formatDistance(w.trainingDistanceM/1000,1,lang,unit):null,w.trainingDurationS!=null?formatPlannedDuration(w.trainingDurationS/60):null].filter(Boolean).join(' · ')).join(' · ')} · {t('training_plan.actual')}: {formatDistance(published.data.actualDistanceM/1000,1,lang,unit)} · {t('training_plan.actualDuration')}: {formatPlannedDuration(published.data.actualDurationS/60)}</p>}{published.data?.unknownDateCount>0&&<p>{t('training_plan.unknownDate')}</p>}</div>}
+          <AuthoredWeekProvider source={authored}><section className="schedule-plan-week-grid">
             {weekSchedule.map((day) => {
               const isLongRunAnchor = targetBlock.hasActiveBlock && String(day.entry?.workoutType || '').toUpperCase() === 'LONG_RUN';
               const isReadinessDeferred = Boolean(day.entry?.readinessAdjusted && day.entry?.mutatedFrom);
               return (
                 <article
                   key={day.key}
-                  className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}${isLongRunAnchor ? ' is-marathon-anchor' : ''}${isReadinessDeferred ? ' is-readiness-deferred' : ''}`}
+                  aria-label={day.key}
+                  className={`schedule-plan-day schedule-plan-day--${day.tone}${day.isToday ? ' is-today' : ''}${day.key === (selectedDate || featuredDay?.key) ? ' is-selected' : ''}${isLongRunAnchor ? ' is-marathon-anchor' : ''}${isReadinessDeferred ? ' is-readiness-deferred' : ''}`}
                 >
-                  {day.isToday ? <span className="schedule-plan-day-today-badge">{s('today_badge')}</span> : null}
-                  <div>
+                  <button type="button" className="schedule-plan-day-select" aria-pressed={day.key === (selectedDate || featuredDay?.key)} aria-controls="schedule-featured-session" onClick={() => { setSelectedDate(day.key); setShowSessionDetails(false); }}>
                     <div className="schedule-plan-day-head">
-                      <p className="schedule-plan-day-label">{day.dayLabel}</p>
-                      {isLongRunAnchor ? <span className="schedule-plan-day-anchor">{s('long_run_anchor')}</span> : null}
+                      <span className="schedule-plan-day-label">{day.dayLabel} {Number(day.key.slice(-2))}</span>
+                      {day.isToday ? <span className="schedule-plan-day-today-badge">{s('today_badge')}</span> : day.completedKm > 0 ? <span className="schedule-plan-day-check" aria-label={s('completed_volume')}>✓</span> : null}
                     </div>
+                    <span className="schedule-plan-day-rule" aria-hidden="true" />
+                    <span className="schedule-plan-day-title">{day.title}</span>
+                    <span className="schedule-plan-day-distance">{day.entry?.workoutType === 'REST' ? '—' : day.detail}</span>
                     {isReadinessDeferred && (
                       <span className="schedule-plan-day-deferred-badge">
                         {s('readinessDeferred.badge', {
@@ -1113,22 +971,33 @@ export default function Schedule() {
                         })}
                       </span>
                     )}
-                    <p className="schedule-plan-day-tag">{day.tag}</p>
-                  </div>
-                  <div>
-                    <h2>{day.title}</h2>
-                    <p>{day.detail}</p>
+                    {day.completedKm > 0 && <span className="schedule-plan-day-done">{s('distance_done', { distance: formatDistance(day.completedKm, 1, lang, unit) })}</span>}
+                    <span className="schedule-plan-day-tag">{isLongRunAnchor ? s('long_run_anchor') : day.tag}</span>
+                  </button>
+                  <div className="schedule-plan-day-extras">
+                    {activePlan&&day.entry&&<><p>{t(`training_plan.${day.entry.state}`)}</p><button type="button" onClick={()=>navigate(planWorkoutUrl(activePlan.id,day.entry.id))}>{t('training_plan.details')}</button></>}
+                    {activePlan&&authoredOn(authored.events,day.key).length>0&&<h3>{t('training_integration.otherScheduled')}</h3>}<AuthoredDayEntries date={day.key} source={authored}/>
                   </div>
                 </article>
               );
             })}
+          </section></AuthoredWeekProvider>
           </section>
+
+          <details className="schedule-plan-management" open={Boolean(new URLSearchParams(window.location.search).get('planView')) || undefined}>
+            <summary>{t('training_plan.title')}</summary>
+            <SchedulePlanTools />
+          </details>
 
           <section className="schedule-plan-bottom-grid">
             <div className="schedule-plan-left-rail">
-              <div className="schedule-plan-dual-grid">
-                <article className="schedule-plan-readiness-card">
-                  <h3>{s('readiness_title')}</h3>
+                <article className="schedule-plan-next-card" id="schedule-featured-session" aria-label={s('selected_session')}>
+                  <div className="schedule-plan-next-content">
+                    <span>{featuredIsToday ? s('today_badge') : calendarDate(featuredDate).toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' })}</span>
+                    <h3>{featuredTitle}</h3>
+                    {featuredMeta && <div className="schedule-plan-session-meta">{featuredMeta}</div>}
+                    <p>{featuredCopy}</p>
+                    <div className="schedule-plan-readiness-card">
                   <div className="schedule-plan-readiness-ring">
                     <svg viewBox="0 0 220 220" aria-hidden="true">
                       <circle cx="110" cy="110" r="92" className="schedule-plan-readiness-track" />
@@ -1137,32 +1006,32 @@ export default function Schedule() {
                         cy="110"
                         r="92"
                         className="schedule-plan-readiness-progress"
-                        style={{ strokeDasharray: 578, strokeDashoffset: 578 - ((578 * readiness.score) / 100) }}
+                        style={{ strokeDasharray: 578, strokeDashoffset: 578 - ((578 * (readiness.score ?? 0)) / 100) }}
                       />
                     </svg>
                     <div className="schedule-plan-readiness-center">
-                      <strong>{readiness.score}</strong>
-                      <span>{readiness.label}</span>
+                      <strong>{readiness.score ?? '—'}</strong>
                     </div>
                   </div>
-                  <p>{readiness.copy}</p>
-                </article>
-
-                <article className="schedule-plan-next-card">
-                  <div className="schedule-plan-next-bg" />
-                  <div className="schedule-plan-next-overlay" />
-                  <div className="schedule-plan-next-content">
-                    <span>{t('schedule.next_up')}</span>
-                    
-                    <h3>{nextSessionTitle}</h3>
-                    <p>{nextSessionCopy}</p>
-                    <button type="button" aria-label={s('view_drills')} onClick={() => navigate('/today-run')}>
-                      {s('view_drills')}
+                  <div className="schedule-plan-readiness-copy"><span>{s('readiness_title')}</span><strong>{readiness.label}</strong><p>{s('readiness_context')}</p></div>
+                    </div>
+                    <div className="schedule-plan-session-actions">
+                    <button type="button" className="schedule-plan-session-primary" onClick={openFeaturedSession}>
+                      {featuredIsToday ? s('view_drills') : featuredCompletedRun?.id ? s('open_run') : s('open_session')}
                       <AppIcon name="arrow_forward" className="runner-dashboard-side-link-icon" />
                     </button>
+                    <button type="button" className="schedule-plan-session-details" aria-expanded={showSessionDetails} aria-controls="schedule-session-details" onClick={() => setShowSessionDetails((current) => !current)}>{t('training_plan.details')}</button>
+                    </div>
+                    {showSessionDetails && <div className="schedule-plan-session-expanded" id="schedule-session-details">
+                      <strong>{calendarDate(featuredDate).toLocaleDateString(lang === 'zh-CN' ? 'zh-CN' : 'en-US', { dateStyle: 'full', timeZone: 'UTC' })}</strong>
+                      <p>{featuredMeta || s('open_slot_copy')}</p>
+                      {featuredEntry?.plannedDurationMinutes > 0 && <p>{formatPlannedDuration(featuredEntry.plannedDurationMinutes)}</p>}
+                      {featuredDay?.completedKm > 0 && <p>{s('distance_done', { distance: formatDistance(featuredDay.completedKm, 1, lang, unit) })}</p>}
+                      <p>{featuredCopy}</p>
+                    </div>}
                   </div>
+                  <div className="schedule-plan-session-photo" aria-hidden="true"><img src={scheduleSessionPhoto} alt="" /></div>
                 </article>
-              </div>
 
               <article className={`schedule-plan-route-card${hasRoutePreview ? ' has-route-preview' : ' is-route-fallback'}`}>
                 <div className="schedule-plan-route-map" role="region" aria-label={s('planned_route')}>
@@ -1203,28 +1072,21 @@ export default function Schedule() {
                 </div>
                 <div className="schedule-plan-route-content">
                   <div>
-                    <span>{s('planned_route')}</span>
+                    <span>{s(routeRecommendationSource === 'history' ? 'route_history_label' : 'planned_route')}</span>
                     <h3>{routeTitle}</h3>
                     <div className="schedule-plan-route-meta">
                       <span>{routeAnchoredRuns}</span>
-                      <span>{routeConfidenceLabel}</span>
                     </div>
-                    <div className="schedule-plan-route-insight" aria-label={s('route_planner_insights')}>
-                      {routePlannerInsights.map((insight) => (
-                        <span key={insight}>{insight}</span>
-                      ))}
-                    </div>
-                    {targetBlock.hasActiveBlock && routeTargetDistanceLabel ? (
-                      <div className="schedule-plan-route-target">
-                        <div className="schedule-plan-route-target-metric">
-                          <span>{s('route_target_label')}</span>
-                          <strong>{routeTargetDistanceLabel}</strong>
-                        </div>
-                        <p>{routeTargetContextLabel}</p>
-                      </div>
-                    ) : null}
+                    <dl className="schedule-plan-route-insight schedule-plan-route-facts" aria-label={s('route_planner_insights')}>
+                      {(routeTargetDistanceLabel || dailyRouteWorkout?.workoutType === 'REST') && <div className="schedule-plan-route-target"><dt>{s('route_target_label')}</dt><dd className="schedule-plan-route-distance">{routeTargetDistanceLabel || t('today_run.personalized_distance_rest')}</dd></div>}
+                      <div><dt>{s('route_length')}</dt><dd className="schedule-plan-route-distance">{routeRecommendation?.actualDistanceKm || routeRecommendation?.representativeDistanceKm
+                        ? formatDistance(Number(routeRecommendation.actualDistanceKm || routeRecommendation.representativeDistanceKm), 1, lang, unit)
+                        : s('signal_no_data')}</dd></div>
+                      <div><dt>{s('route_elevation')}</dt><dd>{routeRecommendationSource === 'planner' ? getRouteElevationPreferenceLabel(routeRecommendation.elevationPreference, s) : s('signal_no_data')}</dd></div>
+                      <div><dt>{s('route_roads')}</dt><dd>{noRunningToday ? '—' : s(routeRecommendationSource === 'planner' ? 'route_planner_safety' : routeRecommendation ? 'route_history_hint' : 'route_planner_safety_pending')}</dd></div>
+                    </dl>
                   </div>
-                  <button type="button" className="schedule-plan-watch-btn" onClick={() => navigate('/today-run')}>
+                  <button type="button" className="schedule-plan-watch-btn" disabled={!(targetRouteDistanceKm > 0) || !hasRoutePreview} onClick={() => navigate('/today-run')}>
                     {s('sync_to_watch')}
                   </button>
                 </div>
@@ -1258,24 +1120,6 @@ export default function Schedule() {
                       <strong>{weeklySummaryFocusValue}</strong>
                     </div>
                   </div>
-                </div>
-
-                <div className="schedule-plan-coach-copy">
-                  <h4>{s('coach_quote')}</h4>
-                  <p>
-                    {targetBlock.hasTargetRace
-                      ? s('coach_body_target_block', {
-                        week: targetBlock.weekIndex || 1,
-                        longRun: longRunAnchorLabel,
-                        raceDistance: raceTargetDistanceLabel || '--',
-                      })
-                      : activeBlock
-                        ? s('coach_body_block', {
-                          week: activeBlock.weekIndex || 1,
-                          longRun: activeBlock.currentLongRunKm?.toFixed?.(1) || activeBlock.currentLongRunKm || '--',
-                        })
-                      : s('coach_body_default')}
-                  </p>
                 </div>
 
                 {targetBlock.hasActiveBlock ? (
@@ -1317,19 +1161,19 @@ export default function Schedule() {
                 </div>
 
                 <button type="button" className="schedule-plan-secondary-btn" onClick={() => navigate('/analysis')}>
-                  {s('detailed_biometrics')}
+                  {s('detailed_biometrics')} <span aria-hidden="true">→</span>
                 </button>
               </article>
 
               <article className="schedule-plan-gear-card">
-                <h3>{s('current_gear')}</h3>
+                <div className="schedule-plan-gear-head"><h3>{s('current_gear')}</h3><button type="button" onClick={() => navigate('/shoes')}>{t('profile.dashboard_nav_shoes')} <span aria-hidden="true">→</span></button></div>
                 <div className="schedule-plan-gear-row">
-                  <div className="schedule-plan-gear-thumb" />
+                  <div className="schedule-plan-gear-thumb">{getSafeImageUrl(currentGear?.photoUrl) ? <img src={getSafeImageUrl(currentGear.photoUrl)} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : <AppIcon name="shoe_outline" />}</div>
                   <div>
                     <strong>{currentGear ? `${currentGear.brand || ''} ${currentGear.model || ''}`.trim() : s('gear_fallback')}</strong>
                     <p>
                       {currentGear
-                        ? `${Math.round(Number(currentGear.currentDistanceKm || 0))} km / ${Math.round(Number(currentGear.maxDistanceKm || 650))} km`
+                        ? s('gear_distance', { current: formatDistance(Number(currentGear.currentDistanceKm || 0), 0, lang, unit), max: formatDistance(Number(currentGear.maxDistanceKm || 650), 0, lang, unit) })
                         : s('gear_missing')}
                     </p>
                   </div>
@@ -1338,8 +1182,8 @@ export default function Schedule() {
                   <span
                     style={{
                       width: currentGear
-                        ? `${Math.max(8, Math.min(100, Math.round((Number(currentGear.currentDistanceKm || 0) / Math.max(1, Number(currentGear.maxDistanceKm || 650))) * 100)))}%`
-                        : '24%',
+                        ? `${Math.max(0, Math.min(100, Math.round((Number(currentGear.currentDistanceKm || 0) / Math.max(1, Number(currentGear.maxDistanceKm || 650))) * 100)))}%`
+                        : '0%',
                     }}
                   />
                 </div>

@@ -24,7 +24,8 @@ public class ImportController {
 
     private static final long MAX_UPLOAD_BYTES = 20L * 1024L * 1024L; // 20MB
     private static final int MAX_BATCH_FILES = 50;
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("gpx", "tcx", "fit", "zip");
+    private static final Set<String> WORKOUT_EXTENSIONS = Set.of("gpx", "tcx", "fit");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("gpx", "tcx", "fit", "zip", "gz");
 
     public ImportController(AuthService authService, ActivityImportService activityImportService) {
         this.authService = authService;
@@ -59,6 +60,15 @@ public class ImportController {
         String ext = original.substring(dot + 1).trim().toLowerCase(Locale.ROOT);
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
             throw new IllegalArgumentException("Unsupported upload file type.");
+        }
+        if ("gz".equals(ext)) {
+            // Only a gzipped workout file (run.fit.gz); a bare .gz or a gzipped anything-else is not importable.
+            String inner = original.substring(0, dot);
+            int innerDot = inner.lastIndexOf('.');
+            String innerExt = innerDot < 0 ? "" : inner.substring(innerDot + 1).trim().toLowerCase(Locale.ROOT);
+            if (!WORKOUT_EXTENSIONS.contains(innerExt)) {
+                throw new IllegalArgumentException("Unsupported upload file type.");
+            }
         }
     }
 
@@ -119,16 +129,16 @@ public class ImportController {
         List<MultipartFile> c = coros != null ? coros : List.of();
         List<MultipartFile> h = huawei != null ? huawei : List.of();
 
-        boolean any = g.stream().anyMatch(f -> f != null && !f.isEmpty())
-                || c.stream().anyMatch(f -> f != null && !f.isEmpty())
-                || h.stream().anyMatch(f -> f != null && !f.isEmpty());
+        boolean any = g.stream().anyMatch(f -> f != null)
+                || c.stream().anyMatch(f -> f != null)
+                || h.stream().anyMatch(f -> f != null);
         if (!any) {
             return error(HttpStatus.BAD_REQUEST, "Please choose at least one GPX, TCX, FIT, or ZIP file.");
         }
 
-        long totalFiles = g.stream().filter(f -> f != null && !f.isEmpty()).count()
-                + c.stream().filter(f -> f != null && !f.isEmpty()).count()
-                + h.stream().filter(f -> f != null && !f.isEmpty()).count();
+        long totalFiles = g.stream().filter(f -> f != null).count()
+                + c.stream().filter(f -> f != null).count()
+                + h.stream().filter(f -> f != null).count();
         if (totalFiles > MAX_BATCH_FILES) {
             return error(HttpStatus.BAD_REQUEST,
                     "Batch limit is " + MAX_BATCH_FILES + " files. Please split your import into smaller batches.");
@@ -137,7 +147,7 @@ public class ImportController {
         ImportResult aggregate = ImportResult.empty("IMPORT", "Batch import completed.");
 
         for (MultipartFile file : g) {
-            if (file == null || file.isEmpty()) continue;
+            if (file == null) continue;
             String filename = safeFilename(file);
             try {
                 validateUploadFile(file, "GARMIN");
@@ -149,7 +159,7 @@ public class ImportController {
             }
         }
         for (MultipartFile file : c) {
-            if (file == null || file.isEmpty()) continue;
+            if (file == null) continue;
             String filename = safeFilename(file);
             try {
                 validateUploadFile(file, "COROS");
@@ -161,7 +171,7 @@ public class ImportController {
             }
         }
         for (MultipartFile file : h) {
-            if (file == null || file.isEmpty()) continue;
+            if (file == null) continue;
             String filename = safeFilename(file);
             try {
                 validateUploadFile(file, "HUAWEI");
@@ -174,7 +184,14 @@ public class ImportController {
         }
 
         if (aggregate.importedActivities() == 0 && !aggregate.rejectedFiles().isEmpty()) {
-            return error(HttpStatus.BAD_REQUEST, aggregate.rejectedFiles().get(0));
+            // Keep the legacy error string while preserving the complete batch outcome.
+            Map<String, Object> response = new HashMap<>();
+            response.put("error", aggregate.rejectedFiles().get(0));
+            response.put("importedActivities", aggregate.importedActivities());
+            response.put("skippedDuplicates", aggregate.skippedDuplicates());
+            response.put("skippedNonRuns", aggregate.skippedNonRuns());
+            response.put("rejectedFiles", aggregate.rejectedFiles());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
         }
 
         return ResponseEntity.ok(aggregate);

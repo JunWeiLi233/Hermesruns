@@ -43,6 +43,7 @@ class AiUsageServiceTests {
         runner.setEmail("test@hermes.com");
         runner.setAiDailyScansUsed(0);
         runner.setAiDailyResetDate(LocalDate.now());
+        org.mockito.Mockito.lenient().when(runnerRepository.findByIdForUpdate(1L)).thenReturn(java.util.Optional.of(runner));
         return runner;
     }
 

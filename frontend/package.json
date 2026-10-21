@@ -9,9 +9,11 @@
     "build:debug": "node scripts/run-vite-build.mjs --minify=false --cssMinify=false",
     "lint": "eslint .",
     "test": "npm run typecheck && npm run test:unit && npm run test:contracts",
-    "test:contracts": "node scripts/run-tests.mjs",
+    "test:contracts": "node scripts/run-tests.mjs && node --test scripts/prerender-public-pages.test.mjs",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
+    "test:public-performance": "node --test scripts/public-page-performance.test.mjs scripts/prerender-public-pages.test.mjs",
+    "test:public-geo": "node --test scripts/public-geo.test.mjs",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview"
   },

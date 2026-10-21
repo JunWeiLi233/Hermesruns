@@ -54,6 +54,12 @@ public class LoginController {
     private final RecaptchaVerifier recaptchaVerifier;
     private final AdminMfaService adminMfaService;
     private final AdminAccessGateway adminAccessGateway;
+    private List<com.hermes.backend.runner.RunnerRegistrationGuard> registrationGuards = List.of();
+
+    @Autowired(required = false)
+    void setRegistrationGuards(List<com.hermes.backend.runner.RunnerRegistrationGuard> guards) {
+        registrationGuards = List.copyOf(guards);
+    }
 
     @Value("${app.billing.public-base-url:http://localhost:8080}")
     private String publicBaseUrl;
@@ -143,7 +149,11 @@ public class LoginController {
             }
             return beginAdminMfa(runner, "PASSWORD", request);
         }
-        String token = authService.issueSessionToken(runner);
+        final String token;
+        try { token = authService.issueSessionToken(runner); }
+        catch (IllegalStateException unavailable) {
+            return error(HttpStatus.UNAUTHORIZED, "Invalid password/username");
+        }
         log.info("Auth login success ip={} runnerId={} role={}", ip, runner.getId(), runner.getRole());
         ResponseEntity.BodyBuilder response = ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, "no-store");
@@ -328,6 +338,10 @@ public class LoginController {
         Runner runner;
         if (existingByEmail.isPresent()) {
             runner = existingByEmail.get();
+            try { registrationGuards.forEach(guard -> guard.beforeRecycling(runner.getId())); }
+            catch (org.springframework.web.server.ResponseStatusException unavailable) {
+                return error(HttpStatus.valueOf(unavailable.getStatusCode().value()), "Account cleanup is still in progress.");
+            }
             recycleDeletedRunnerForSignup(runner, normalizedEmail, rawPassword);
         } else {
             runner = new Runner();

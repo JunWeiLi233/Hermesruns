@@ -1414,7 +1414,7 @@
     border: 1px solid rgba(229, 226, 225, 0.12);
     border-radius: 32px;
     background:
-        radial-gradient(circle at top right, rgba(252, 76, 2, 0.14), transparent 28%),
+        radial-gradient(circle at top right, rgba(240, 117, 97, 0.14), transparent 28%),
         linear-gradient(145deg, rgba(28, 27, 27, 0.96), rgba(17, 17, 17, 0.94));
     box-shadow: 0 24px 52px rgba(0, 0, 0, 0.22);
     text-align: left;
@@ -1448,8 +1448,8 @@
     height: 54px;
     place-items: center;
     border-radius: 18px;
-    background: rgba(252, 76, 2, 0.14);
-    color: rgba(252, 76, 2, 0.86);
+    background: rgba(240, 117, 97, 0.16);
+    color: #f07561;
     font-size: 2rem;
 }
 
@@ -1474,7 +1474,7 @@
 }
 
 .runner-dashboard-empty-steps span {
-    color: rgba(252, 76, 2, 0.9);
+    color: #f07561;
     font-family: var(--font-mono, "SFMono-Regular", Consolas, monospace);
     font-size: 0.78rem;
     font-weight: 800;
@@ -1522,7 +1522,7 @@
 }
 
 .runner-dashboard-empty-cta--primary {
-    background: linear-gradient(135deg, #fc4c02, #e34402);
+    background: var(--brand-accent, #a0392a);
     color: #fff;
 }
 

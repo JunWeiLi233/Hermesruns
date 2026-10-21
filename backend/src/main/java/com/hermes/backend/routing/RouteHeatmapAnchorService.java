@@ -16,12 +16,32 @@ import org.springframework.stereotype.Service;
 public class RouteHeatmapAnchorService {
 
     private static final Duration ANCHOR_CACHE_TTL = Duration.ofMinutes(15);
-    private static final String ANCHOR_CACHE_NAMESPACE = "route-anchor";
+    private static final String ANCHOR_CACHE_NAMESPACE = "route-anchor-density-v2";
 
     private static final double CELL_DEGREES = 0.001;
 
     private final ActivityPointRepository activityPointRepository;
     private final TtlCacheStore cacheStore;
+
+    public String sourceRevision(Long runnerId) {
+        return cacheStore.get("route-source-revision", runnerId.toString(), String.class).orElse("");
+    }
+
+    @org.springframework.transaction.event.TransactionalEventListener(phase = org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void runIngested(com.hermes.backend.activity.ActivityIngestedEvent event) {
+        invalidate(event.runnerId());
+    }
+
+    @org.springframework.transaction.event.TransactionalEventListener(phase = org.springframework.transaction.event.TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void pointsStored(com.hermes.backend.activity.ActivityPointsStoredEvent event) {
+        invalidate(event.runnerId());
+    }
+
+    private void invalidate(Long runnerId) {
+        if (runnerId == null) return;
+        cacheStore.evict(ANCHOR_CACHE_NAMESPACE, runnerId + ":" + ActivityType.RUN.name());
+        cacheStore.put("route-source-revision", runnerId.toString(), java.util.UUID.randomUUID().toString(), Duration.ofDays(7));
+    }
 
     public RouteHeatmapAnchorService(ActivityPointRepository activityPointRepository, TtlCacheStore cacheStore) {
         this.activityPointRepository = activityPointRepository;
@@ -32,24 +52,32 @@ public class RouteHeatmapAnchorService {
         if (runner == null || runner.getId() == null) {
             return null;
         }
-        // findAnchor aggregates every GPS point of every run into grid cells, so
-        // the selected anchor is cached per runner and activity type for a short TTL.
+        // SQL counts the entire GPS history, but only one observed point enters
+        // the application heap. Cache it per runner and activity type.
         String cacheKey = runner.getId() + ":" + ActivityType.RUN.name();
         RouteAnchor cached = cacheStore.get(ANCHOR_CACHE_NAMESPACE, cacheKey, RouteAnchor.class).orElse(null);
         if (cached != null) {
             return cached;
         }
-        RouteAnchor anchor = selectAnchor(activityPointRepository.findAllHeatmapPointsByRunnerAndType(
-                runner.getId(),
-                ActivityType.RUN.name()
-        ));
+        RouteAnchor anchor = findDatabaseAnchor(activityPointRepository, runner.getId());
         if (anchor != null) {
             cacheStore.put(ANCHOR_CACHE_NAMESPACE, cacheKey, anchor, ANCHOR_CACHE_TTL);
         }
         return anchor;
     }
 
-    static RouteAnchor selectAnchor(List<Object[]> pointRows) {
+    public static RouteAnchor findDatabaseAnchor(ActivityPointRepository points, long runnerId) {
+        List<Object[]> rows = points.findDensestHeatmapAnchor(runnerId, ActivityType.RUN.name());
+        if (rows == null || rows.isEmpty() || rows.get(0).length < 4) return null;
+        Object[] row = rows.get(0);
+        Double latitude = toFiniteDouble(row[0]);
+        Double longitude = toFiniteDouble(row[1]);
+        if (!isValidCoordinate(latitude, longitude) || !(row[2] instanceof Number activities)
+                || !(row[3] instanceof Number count)) return null;
+        return new RouteAnchor(latitude, longitude, activities.intValue(), count.intValue());
+    }
+
+    public static RouteAnchor selectAnchor(List<Object[]> pointRows) {
         if (pointRows == null || pointRows.isEmpty()) {
             return null;
         }
@@ -80,7 +108,7 @@ public class RouteHeatmapAnchorService {
                 best = candidate;
             }
         }
-        return best == null ? null : best.toAnchor();
+        return best == null ? null : best.toAnchor(pointRows);
     }
 
     private static boolean isValidCoordinate(Double latitude, Double longitude) {
@@ -89,7 +117,8 @@ public class RouteHeatmapAnchorService {
                 && latitude >= -90
                 && latitude <= 90
                 && longitude >= -180
-                && longitude <= 180;
+                && longitude <= 180
+                && !(latitude == 0.0 && longitude == 0.0);
     }
 
     private static Long toLong(Object value) {
@@ -115,6 +144,11 @@ public class RouteHeatmapAnchorService {
     }
 
     public record RouteAnchor(double startLat, double startLng, int activityCount, int pointCount) {
+        public boolean containsPoint(double latitude, double longitude) {
+            return isValidCoordinate(latitude, longitude)
+                    && Math.floor(latitude / CELL_DEGREES) == Math.floor(startLat / CELL_DEGREES)
+                    && Math.floor(longitude / CELL_DEGREES) == Math.floor(startLng / CELL_DEGREES);
+        }
     }
 
     private record CellKey(long latitudeBucket, long longitudeBucket) implements Comparable<CellKey> {
@@ -146,22 +180,44 @@ public class RouteHeatmapAnchorService {
         }
 
         private boolean isPreferredOver(HeatmapCell other) {
-            if (activityIds.size() != other.activityIds.size()) {
-                return activityIds.size() > other.activityIds.size();
-            }
             if (pointCount != other.pointCount) {
                 return pointCount > other.pointCount;
+            }
+            if (activityIds.size() != other.activityIds.size()) {
+                return activityIds.size() > other.activityIds.size();
             }
             return key.compareTo(other.key) < 0;
         }
 
-        private RouteAnchor toAnchor() {
-            return new RouteAnchor(
-                    latitudeSum / pointCount,
-                    longitudeSum / pointCount,
-                    activityIds.size(),
-                    pointCount
-            );
+        private RouteAnchor toAnchor(List<Object[]> pointRows) {
+            double centerLatitude = latitudeSum / pointCount;
+            double centerLongitude = longitudeSum / pointCount;
+            double longitudeScale = Math.cos(Math.toRadians(centerLatitude));
+            double closestDistance = Double.POSITIVE_INFINITY;
+            RouteAnchor anchor = null;
+            for (Object[] row : pointRows) {
+                if (row == null || row.length < 3 || toLong(row[0]) == null) {
+                    continue;
+                }
+                Double latitude = toFiniteDouble(row[1]);
+                Double longitude = toFiniteDouble(row[2]);
+                if (!isValidCoordinate(latitude, longitude)
+                        || Math.floor(latitude / CELL_DEGREES) != key.latitudeBucket()
+                        || Math.floor(longitude / CELL_DEGREES) != key.longitudeBucket()) {
+                    continue;
+                }
+                double latitudeOffset = latitude - centerLatitude;
+                double longitudeOffset = (longitude - centerLongitude) * longitudeScale;
+                double distance = latitudeOffset * latitudeOffset + longitudeOffset * longitudeOffset;
+                if (distance < closestDistance
+                        || (Double.compare(distance, closestDistance) == 0 && anchor != null
+                        && (latitude < anchor.startLat()
+                        || (Double.compare(latitude, anchor.startLat()) == 0 && longitude < anchor.startLng())))) {
+                    closestDistance = distance;
+                    anchor = new RouteAnchor(latitude, longitude, activityIds.size(), pointCount);
+                }
+            }
+            return anchor;
         }
     }
 }

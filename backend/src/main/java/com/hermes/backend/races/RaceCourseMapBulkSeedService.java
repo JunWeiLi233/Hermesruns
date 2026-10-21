@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -86,6 +87,7 @@ public class RaceCourseMapBulkSeedService {
     private final RaceCourseMapGeometryService geometryService;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate;
+    private volatile Map<String, CatalogRace> catalogIndexByRaceId;
 
     public RaceCourseMapBulkSeedService(
             RaceCourseMapAssetRepository assetRepository,
@@ -1618,6 +1620,39 @@ public class RaceCourseMapBulkSeedService {
         if (Files.isRegularFile(relative)) return relative;
         Path absolute = Paths.get("frontend", "src", "data", "worldRaceCatalog.json").toAbsolutePath().normalize();
         return absolute;
+    }
+
+    /**
+     * Resolve a race id against the server-side catalog the seeder already uses. Returns empty
+     * when the catalog is unavailable or the id is unknown, so callers can refuse to write
+     * catalog identity that came from a request instead of a trusted catalog entry.
+     */
+    public Optional<CatalogRace> findCatalogRace(String raceId) {
+        if (raceId == null || raceId.isBlank()) {
+            return Optional.empty();
+        }
+        Map<String, CatalogRace> index = catalogIndexByRaceId;
+        if (index == null) {
+            index = loadCatalogIndex();
+            catalogIndexByRaceId = index;
+        }
+        return Optional.ofNullable(index.get(raceId.trim()));
+    }
+
+    private Map<String, CatalogRace> loadCatalogIndex() {
+        try {
+            List<CatalogRace> races = readCatalog(defaultCatalogPath());
+            Map<String, CatalogRace> built = new HashMap<>();
+            for (CatalogRace race : races) {
+                if (race != null && race.id() != null && !race.id().isBlank()) {
+                    built.putIfAbsent(race.id(), race);
+                }
+            }
+            return Map.copyOf(built);
+        } catch (RuntimeException unavailable) {
+            logger.warn("race catalog unavailable for trusted lookup: {}", unavailable.getMessage());
+            return Map.of();
+        }
     }
 
     public record CatalogRace(

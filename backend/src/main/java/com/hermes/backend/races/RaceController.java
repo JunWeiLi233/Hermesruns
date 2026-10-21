@@ -173,6 +173,7 @@ public class RaceController {
         if (runnerOptional.isEmpty()) {
             return unauthorized();
         }
+        Runner runner = runnerOptional.get();
         try {
             if (name == null || name.trim().isBlank()) {
                 return error(HttpStatus.BAD_REQUEST, "Race name is required.");
@@ -180,10 +181,19 @@ public class RaceController {
             InputSanitizer.rejectControlAndHtmlChars(name, "name");
             InputSanitizer.rejectControlAndHtmlChars(city, "city");
             InputSanitizer.rejectControlAndHtmlChars(country, "country");
-            RaceCourseMapResult result =
-                    raceId == null || raceId.isBlank()
-                            ? raceCourseMapService.resolveCourseMap(name, city, country, website, lat, lng, distanceKm)
-                            : raceCourseMapService.resolveCourseMapWithStorage(raceId, name, city, country, website, lat, lng, distanceKm);
+            // Only an administrator may seed catalog identity from request values. A runner
+            // request for a race id is resolved against the server-side catalog, and an unknown
+            // id is served read-only instead of creating a globally visible catalog row.
+            RaceCourseMapResult result;
+            if (raceId == null || raceId.isBlank()) {
+                result = raceCourseMapService.resolveCourseMap(name, city, country, website, lat, lng, distanceKm);
+            } else if (authService.isAdmin(runner)) {
+                result = raceCourseMapService.resolveCourseMapWithStorage(
+                        raceId, name, city, country, website, lat, lng, distanceKm);
+            } else {
+                result = raceCourseMapService.resolveCourseMapWithStorageForRunner(
+                        raceId, name, city, country, website, lat, lng, distanceKm);
+            }
             Map<String, Object> payload = toRunnerCourseMapPayload(result);
             return ResponseEntity.ok(payload);
         } catch (IllegalArgumentException error) {

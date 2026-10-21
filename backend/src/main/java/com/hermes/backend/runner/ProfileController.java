@@ -97,6 +97,27 @@ public class ProfileController {
         return ResponseEntity.ok(profileService.updateDisplayName(runner, normalizedDisplayName));
     }
 
+    /**
+     * Sets the time zone the runner trains in (an IANA id such as America/New_York). It is stored for the
+     * analysis features that turn the UTC times in imported files into the runner's own calendar day;
+     * nothing reads it yet except the profile and the data export.
+     */
+    @PatchMapping("/profile/me/time-zone")
+    public ResponseEntity<?> updateTimeZone(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestBody UpdateTimeZoneRequest request
+    ) {
+        Optional<Runner> runnerOptional = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runnerOptional.isEmpty()) {
+            return unauthorized();
+        }
+        String timeZone = request == null || request.timeZone() == null ? "" : request.timeZone().trim();
+        if (timeZone.isEmpty() || timeZone.length() > 64 || !java.time.ZoneId.getAvailableZoneIds().contains(timeZone)) {
+            return error(HttpStatus.BAD_REQUEST, "Time zone must be an IANA zone id such as America/New_York.");
+        }
+        return ResponseEntity.ok(profileService.updateTimeZone(runnerOptional.get(), timeZone));
+    }
+
     @PutMapping(value = "/profile/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> updateAvatar(
             @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
@@ -278,6 +299,9 @@ public class ProfileController {
     }
 
     public record UpdateDisplayNameRequest(String displayName) {
+    }
+
+    public record UpdateTimeZoneRequest(String timeZone) {
     }
 
     public record ProfilePreferencesRequest(String mantra, Boolean weeklyDigestEnabled) {

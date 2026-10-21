@@ -2,10 +2,138 @@ package com.hermes.backend.auth;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.mock.env.MockEnvironment;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ProductionSecurityValidatorTests {
+
+    @Test
+    void productionProfileEnforcesSecurityWithoutHermesEnvironmentFlag() {
+        ProductionSecurityValidator validator = secureProductionValidator();
+        ReflectionTestUtils.setField(validator, "environment", "development");
+        ReflectionTestUtils.setField(validator, "springEnvironment",
+                new MockEnvironment().withProperty("spring.profiles.active", "production,sleep"));
+        ReflectionTestUtils.setField(validator, "adminMfaEnabled", false);
+        assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_ADMIN_MFA_ENABLED");
+    }
+
+    @Test
+    void developmentStillAllowsLocalConfiguration() {
+        ProductionSecurityValidator validator = new ProductionSecurityValidator();
+        ReflectionTestUtils.setField(validator, "environment", "development");
+        validator.validate();
+    }
+
+    @Test
+    void productionRequiresHttpsEnforcement() {
+        ProductionSecurityValidator validator = secureProductionValidator();
+        ReflectionTestUtils.setField(validator, "forceHttps", false);
+        assertThatThrownBy(validator::validate).hasMessageContaining("APP_FORCE_HTTPS");
+    }
+
+    @Test
+    void productionRejectsAutomaticSchemaMutation() {
+        for (String ddl : new String[] {"update", "create", "create-drop", "none", ""}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "ddlAuto", ddl);
+            assertThatThrownBy(validator::validate).hasMessageContaining("APP_JPA_DDL_AUTO");
+        }
+    }
+
+    @Test
+    void productionRejectsAutomaticCourseReseeding() {
+        ProductionSecurityValidator validator = secureProductionValidator();
+        ReflectionTestUtils.setField(validator, "courseStartupSeedEnabled", true);
+        assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_OFFICIAL_COURSE_STARTUP_SEED_ENABLED");
+    }
+
+    @Test
+    void railwayProductionRequiresPersistentCourseStorage() {
+        ProductionSecurityValidator validator = secureProductionValidator();
+        ReflectionTestUtils.setField(validator, "railwayEnvironmentId", "production-environment");
+        assertThatThrownBy(validator::validate).hasMessageContaining("RAILWAY_VOLUME_MOUNT_PATH");
+    }
+
+    @Test
+    void railwayProductionRejectsCourseStorageOutsideMountedVolume() {
+        for (String directory : new String[] {"course-map-images", "/tmp/course-map-images",
+                "/data/../tmp/course-map-images", "/data-other/course-map-images"}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "railwayEnvironmentId", "production-environment");
+            ReflectionTestUtils.setField(validator, "railwayVolumeMountPath", "/data");
+            ReflectionTestUtils.setField(validator, "courseMapUploadDirectory", directory);
+            assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_COURSE_MAP_UPLOAD_DIR");
+        }
+    }
+
+    @Test
+    void railwayProductionAllowsCourseStorageWithinMountedVolume() {
+        ProductionSecurityValidator validator = secureProductionValidator();
+        ReflectionTestUtils.setField(validator, "railwayEnvironmentId", "production-environment");
+        ReflectionTestUtils.setField(validator, "railwayVolumeMountPath", "/data");
+        ReflectionTestUtils.setField(validator, "courseMapUploadDirectory", "/data/course-map-images");
+        validator.validate();
+    }
+
+    @Test
+    void productionRequiresPostgresqlDatasource() {
+        for (String url : new String[] {"", "jdbc:h2:mem:dev", "jdbc:mysql://db/hermes"}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "datasourceUrl", url);
+            assertThatThrownBy(validator::validate).hasMessageContaining("APP_DB_URL");
+        }
+    }
+
+    @Test
+    void productionRejectsMalformedOrLoopbackRelyingPartyIds() {
+        for (String rpId : new String[] {"localhost.", "127.0.0.2", "[::1]", "admin", "admin.hermes.test:443",
+                "user@admin.hermes.test", "admin.hermes.test/path", "admin..hermes.test"}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "adminMfaRpId", rpId);
+            assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_WEBAUTHN_RP_ID");
+        }
+    }
+
+    @Test
+    void productionRequiresExactWebauthnOriginsBoundToRelyingParty() {
+        for (String origin : new String[] {"https://attacker.example", "https://admin.hermes.test.evil.example",
+                "https://user@admin.hermes.test", "https://admin.hermes.test/path", "https://admin.hermes.test/",
+                "https://admin.hermes.test?next=evil", "https://admin.hermes.test#fragment", "https://[::1]",
+                "https://admin.hermes.test:99999", "https://admin.hermes.test,"}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "adminMfaAllowedOrigins", origin);
+            assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_WEBAUTHN_ALLOWED_ORIGINS");
+        }
+    }
+
+    @Test
+    void productionAllowsOriginWithinParentRelyingPartyDomain() {
+        ProductionSecurityValidator validator = secureProductionValidator();
+        ReflectionTestUtils.setField(validator, "adminMfaRpId", "hermes.test");
+        validator.validate();
+    }
+
+    @Test
+    void productionRejectsMalformedCloudflareIssuer() {
+        for (String issuer : new String[] {"https://user@hermes.cloudflareaccess.com",
+                "https://evil.example/path/hermes.cloudflareaccess.com", "https://hermes.cloudflareaccess.com:8443",
+                "https://hermes.cloudflareaccess.com/path", "https://hermes.cloudflareaccess.com?query=yes"}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "adminAccessTeamDomain", issuer);
+            assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_ADMIN_ACCESS_TEAM_DOMAIN");
+        }
+    }
+
+    @Test
+    void productionRejectsNonOriginCorsEntries() {
+        for (String origin : new String[] {"*", "null", "https://user@app.hermes.test", "https://app.hermes.test/path",
+                "https://app.hermes.test#fragment", "https://app.hermes.test,", "https://[::1]"}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "corsAllowedOrigins", origin);
+            assertThatThrownBy(validator::validate).hasMessageContaining("APP_CORS_ALLOWED_ORIGINS");
+        }
+    }
 
     @Test
     void productionRequiresRecaptchaSecretWhenSignupWouldOtherwiseSkipVerification() {

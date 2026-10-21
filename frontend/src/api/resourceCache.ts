@@ -6,11 +6,10 @@
 // Semantics (deliberately simple):
 // - Only URLs explicitly listed in TTL_BY_PREFIX are cached; anything else
 //   (and any non-GET call) passes straight through to apiJson untouched.
-// - Cache keys include the authenticated account (hermes_email) so data is
-//   never served across accounts.
+// - Cache keys include the account, credential and language so a response
+//   cannot leak into a successor session or a different language.
 // - Only successful apiJson resolutions are cached. Errors propagate exactly
-//   as apiJson produces them (including the 401 UNAUTHORIZED_EVENT flow) and
-//   are never stored.
+//   as apiJson produces them and are never stored.
 // - Every value handed to a caller (TTL hit or dedupe subscriber) is a deep
 //   copy, so pages that sort/mutate their payloads (e.g. Races/Schedule sort
 //   activities in place) cannot poison the cache or sibling subscribers.
@@ -41,19 +40,29 @@ interface CacheEntry {
   storedAt: number;
 }
 
+interface InflightRequest {
+  promise: Promise<unknown>;
+  controller: AbortController;
+  subscribers: number;
+}
+
 const cache = new Map<string, CacheEntry>();
-const inflightRequests = new Map<string, Promise<unknown>>();
+const inflightRequests = new Map<string, InflightRequest>();
 
 function ttlForUrl(url: string): number | null {
   for (const [prefix, ttlMs] of TTL_BY_PREFIX) {
-    if (url.startsWith(prefix)) return ttlMs;
+    if (url === prefix || url.startsWith(`${prefix}/`) || url.startsWith(`${prefix}?`)) return ttlMs;
   }
   return null;
 }
 
 function readAccountScope(): string | null {
   try {
-    return localStorage.getItem(EMAIL_STORAGE_KEY);
+    const email = localStorage.getItem(EMAIL_STORAGE_KEY);
+    if (email == null) return null;
+    const language = localStorage.getItem('hermes_lang')
+      || navigator.languages?.[0] || navigator.language || 'en';
+    return JSON.stringify([email, localStorage.getItem('hermes_jwt'), language]);
   } catch {
     return null;
   }
@@ -76,6 +85,33 @@ function clonePayload<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function readForSubscriber<T>(entry: InflightRequest, key: string, signal?: AbortSignal | null): Promise<T> {
+  entry.subscribers += 1;
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return false;
+      settled = true;
+      signal?.removeEventListener('abort', onAbort);
+      entry.subscribers -= 1;
+      if (entry.subscribers === 0) {
+        if (inflightRequests.get(key) === entry) inflightRequests.delete(key);
+        entry.controller.abort();
+      }
+      return true;
+    };
+    const onAbort = () => {
+      if (finish()) reject(signal?.reason ?? new DOMException('Aborted', 'AbortError'));
+    };
+    signal?.addEventListener('abort', onAbort, { once: true });
+    entry.promise.then((value) => clonePayload(value) as T).then((value) => {
+      if (finish()) resolve(value);
+    }, (error: unknown) => {
+      if (finish()) reject(error);
+    });
+  });
+}
+
 /**
  * apiJson wrapper with per-account in-memory caching and request dedupe for
  * the hot read endpoints. Fresh (within TTL) responses are served from
@@ -83,10 +119,16 @@ function clonePayload<T>(value: T): T {
  * Errors are never cached and propagate unchanged.
  */
 export async function cachedApiJson<T = unknown>(url: string, options: RequestInit = {}): Promise<T> {
+  if (options.signal?.aborted) {
+    throw options.signal.reason ?? new DOMException('Aborted', 'AbortError');
+  }
   const method = (options.method || 'GET').toUpperCase();
   const ttlMs = ttlForUrl(url);
   const scope = readAccountScope();
-  if (method !== 'GET' || ttlMs == null || scope == null) {
+  // Custom headers, credentials or cache directives may change the response.
+  // Keep those requests outside the default representation's cache.
+  const customOptions = Object.keys(options).some((key) => key !== 'method' && key !== 'signal');
+  if (method !== 'GET' || ttlMs == null || scope == null || customOptions) {
     return apiJson<T>(url, options);
   }
 
@@ -98,29 +140,31 @@ export async function cachedApiJson<T = unknown>(url: string, options: RequestIn
 
   const existing = inflightRequests.get(key);
   if (existing) {
-    return (existing as Promise<T>).then((value) => clonePayload(value));
+    return readForSubscriber<T>(existing, key, options.signal);
   }
 
-  let request: Promise<T>;
-  request = apiJson<T>(url, options)
+  // A caller's cancellation belongs to that subscriber. Passing its signal
+  // to the shared fetch would also cancel readers mounted on another page.
+  const entry: InflightRequest = { promise: Promise.resolve(), controller: new AbortController(), subscribers: 0 };
+  entry.promise = apiJson<T>(url, { ...options, signal: entry.controller.signal })
     .then((value) => {
       // Guard against storing a response that landed after its entry was
       // invalidated/cleared mid-flight.
-      if (inflightRequests.get(key) === request) {
+      if (inflightRequests.get(key) === entry) {
         cache.set(key, { value: clonePayload(value), storedAt: Date.now() });
       }
       return value;
     })
     .finally(() => {
-      if (inflightRequests.get(key) === request) {
+      if (inflightRequests.get(key) === entry) {
         inflightRequests.delete(key);
       }
     });
-  inflightRequests.set(key, request);
+  inflightRequests.set(key, entry);
   // The shared network promise never escapes: every subscriber (including
   // the initiator) awaits its own deep copy, so one consumer's mutations
   // cannot leak into the cache or sibling subscribers.
-  return request.then((value) => clonePayload(value));
+  return readForSubscriber<T>(entry, key, options.signal);
 }
 
 /**

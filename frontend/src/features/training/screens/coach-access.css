@@ -1,0 +1,140 @@
+#root .icu-design:has(.coach-access-card) {
+  --ca-surface: #fff;
+  --ca-ink: #1c1917;
+  --ca-muted: #625c56;
+  --ca-faint: #78716c;
+  --ca-line: rgba(28, 25, 23, .07);
+  --ca-input: rgba(28, 25, 23, .14);
+  --ca-fill: rgba(28, 25, 23, .035);
+  --ca-accent: #a0392a;
+  --ca-accent-fill: rgba(160, 57, 42, .05);
+  --ca-danger-line: rgba(160, 57, 42, .3);
+  --ca-track: #d5d5d5;
+  --ca-success: #1e7535;
+  --ca-success-fill: #e4f1e8;
+  --ca-warning: #806016;
+  --ca-warning-fill: #f6f0df;
+}
+#root .icu-design[data-theme="dark"]:has(.coach-access-card) {
+  --ca-surface: #242321;
+  --ca-ink: #f8f4ef;
+  --ca-muted: #c0b8ad;
+  --ca-faint: #aaa298;
+  --ca-line: rgba(255, 248, 238, .1);
+  --ca-input: rgba(255, 248, 238, .22);
+  --ca-fill: rgba(255, 255, 255, .04);
+  --ca-accent: #ffb4a7;
+  --ca-accent-fill: rgba(255, 180, 167, .07);
+  --ca-danger-line: rgba(255, 180, 167, .4);
+  --ca-track: #5c5955;
+  --ca-success: #a0dbb2;
+  --ca-success-fill: #243f2c;
+  --ca-warning: #ebcf87;
+  --ca-warning-fill: #44391f;
+}
+#root .icu-design.hermes-training-integrated.coach-access-settings {
+  width: 100%;
+  max-width: 880px;
+  margin-inline: auto;
+  gap: 18px;
+  color: var(--ca-ink);
+}
+#root .icu-design .coach-access-heading { display: grid; gap: 6px; padding: 0 4px; }
+#root .icu-design .coach-access-heading h2 { font: italic 800 clamp(26px, 3vw, 32px)/1.1 var(--font-display, Manrope, sans-serif); letter-spacing: -.03em; color: var(--ca-ink); }
+#root .icu-design .coach-access-heading p { max-width: 62ch; font-size: 14px; line-height: 1.5; color: var(--ca-muted); }
+/* The runner shell's legacy glass rules also match "-card-heading". Keep the
+   reference surfaces and headers flat when mounted inside the real Settings. */
+#root .icu-design .coach-access-card { min-width: 0; padding: 24px 28px; border: 0; border-radius: 20px; background: var(--ca-surface); color: var(--ca-ink); box-shadow: none; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; font-weight: 400; font-style: normal; letter-spacing: normal; text-transform: none; }
+#root .icu-design .coach-access-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; border: 0; background: transparent; box-shadow: none; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+#root .icu-design .coach-access-card-heading h3 { margin: 0; font: italic 800 21px/1.3 var(--font-display, Manrope, sans-serif); letter-spacing: -.02em; color: var(--ca-ink); }
+#root .icu-design .coach-access-copy { display: flex; flex-direction: column; min-width: 0; gap: 3px; overflow-wrap: anywhere; }
+#root .icu-design .coach-access-copy strong { color: var(--ca-ink); font-size: 14px; line-height: 1.4; font-weight: 700; }
+#root .icu-design .coach-access-copy > span { color: var(--ca-muted); font-size: 12.5px; line-height: 1.45; font-weight: 400; font-style: normal; letter-spacing: normal; text-transform: none; }
+#root .icu-design .coach-access-switch-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: center; min-height: 72px; padding: 12px 0; border-top: 1px solid var(--ca-line); cursor: pointer; font-weight: 400; text-transform: none; letter-spacing: normal; }
+#root .icu-design .coach-access-switch-row .coach-access-copy strong { font-size: 14.5px; }
+#root .icu-design .coach-access-switch-row .coach-access-copy > span { font-size: 13px; }
+#root .icu-design .coach-access-switch { display: grid; position: relative; flex: none; place-items: center; width: 44px; height: 44px; }
+#root .icu-design .coach-access-switch input { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+#root .icu-design .coach-access-switch > span { width: 44px; height: 26px; padding: 3px; border-radius: 999px; background: var(--ca-track); transition: background-color .15s; }
+#root .icu-design .coach-access-switch > span::after { content: ''; display: block; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0003; transition: transform .15s; }
+#root .icu-design .coach-access-switch input:checked + span { background: var(--ca-accent); }
+#root .icu-design .coach-access-switch input:checked + span::after { transform: translateX(18px); }
+#root .icu-design .coach-access-switch input:focus-visible + span { outline: 2px solid var(--ca-accent); outline-offset: 4px; }
+#root .icu-design .coach-access-switch input:disabled { cursor: wait; }
+#root .icu-design .coach-access-switch input:disabled + span { opacity: .6; }
+#root .icu-design .coach-access-grants { padding-top: 14px; border-top: 1px solid var(--ca-line); }
+#root .icu-design .coach-access-grants-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+#root .icu-design .coach-access-grants-heading h4 { margin: 0; color: var(--ca-muted); font-family: var(--font-body, sans-serif); font-size: 12px; line-height: 1.5; font-style: normal; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+#root .icu-design .coach-access-grants-heading > span { color: var(--ca-faint); font-size: 12px; }
+#root .icu-design .coach-access-person-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px; min-width: 0; min-height: 64px; padding: 12px 0; }
+#root .icu-design .coach-access-person { display: flex; flex: 1 1 220px; align-items: center; gap: 12px; min-width: 0; }
+#root .icu-design .coach-access-avatar { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 50%; background: #1c1917; color: #fff; font-size: 13px; font-weight: 800; }
+#root .icu-design .coach-access-avatar-group { border-radius: 10px; background: #5f8f7e; }
+#root .icu-design .coach-access-team-link { color: var(--ca-faint); font-size: 12px; text-decoration: none; }
+#root .icu-design .coach-access-team-link:hover { color: var(--ca-accent); text-decoration: underline; }
+#root .icu-design .coach-access-revoke-all { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px 16px; margin-top: 8px; padding: 14px 16px; background: var(--ca-accent-fill); border-radius: 14px; }
+#root .icu-design .coach-access-revoke-all > p, #root .icu-design .coach-access-revoke-all > strong { flex: 1 1 280px; color: var(--ca-muted); font-size: 13px; line-height: 1.45; }
+#root .icu-design .coach-access-revoke-all > strong { color: var(--ca-ink); }
+#root .icu-design .coach-access-revoke-all .coach-access-button { min-height: 36px; padding: 8px 14px; font-size: 13px; }
+#root .icu-design .coach-access-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; }
+#root .icu-design .coach-access-button { display: inline-flex; justify-content: center; align-items: center; flex: none; min-height: 32px; padding: 6px 12px; border: 1px solid var(--ca-input); border-radius: 999px; background: transparent; color: var(--ca-muted); font-size: 12.5px; line-height: 1.4; font-weight: 700; white-space: normal; text-align: center; cursor: pointer; transition: background-color .15s; }
+#root .icu-design .coach-access-button:hover { background: var(--ca-fill); }
+#root .icu-design .coach-access-button-danger { color: var(--ca-accent); border-color: var(--ca-danger-line); }
+#root .icu-design .coach-access-button-danger:hover { background: var(--ca-accent-fill); }
+#root .icu-design .coach-access-button-ink { background: var(--ca-ink); color: var(--ca-surface); border-color: var(--ca-ink); }
+#root .icu-design .coach-access-button-ink:hover { background: var(--ca-ink); opacity: .85; }
+#root .icu-design .coach-access-button-accent { background: var(--ca-accent); color: var(--ca-surface); border-color: transparent; }
+#root .icu-design .coach-access-button-accent:hover { background: var(--ca-accent); opacity: .9; }
+#root .icu-design .coach-access-button-text { border-color: transparent; }
+#root .icu-design .coach-access-button:disabled { cursor: not-allowed; opacity: .45; }
+#root .icu-design .coach-access-request .coach-access-card-heading { margin-bottom: 4px; }
+#root .icu-design .coach-access-subtitle { color: var(--ca-muted); font-size: 13px; line-height: 1.5; }
+#root .icu-design .coach-access-request form { display: grid; gap: 16px; margin-top: 16px; }
+#root .icu-design .coach-access-field { display: grid; gap: 8px; color: var(--ca-ink); font-weight: 400; letter-spacing: normal; text-transform: none; }
+#root .icu-design .coach-access-field > span, #root .icu-design .coach-access-levels legend { font-size: 13px; line-height: 1.4; font-weight: 700; text-transform: none; letter-spacing: normal; }
+#root .icu-design .coach-access-field select { width: 100%; height: 46px; margin: 0; padding: 0 12px; border: 1px solid var(--ca-input); border-radius: 12px; background: var(--ca-surface); box-shadow: none; color: var(--ca-ink); font-size: 15px; }
+#root .icu-design .coach-access-field select:has(option:checked[value=""]) { color: var(--ca-faint); }
+#root .icu-design .coach-access-levels { min-width: 0; margin: 0; padding: 0; border: 0; }
+#root .icu-design .coach-access-levels legend { margin: 0 0 8px; padding: 0; color: var(--ca-ink); }
+#root .icu-design .coach-access-levels > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+#root .icu-design .coach-access-level { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid var(--ca-input); border-radius: 14px; cursor: pointer; font-weight: 400; letter-spacing: normal; text-transform: none; }
+#root .icu-design .coach-access-level:has(input:checked) { border-color: var(--ca-accent); box-shadow: inset 0 0 0 .5px var(--ca-accent); background: var(--ca-accent-fill); }
+#root .icu-design .coach-access-level input { appearance: auto; flex: none; width: 18px; height: 18px; margin: 1px 0 0; accent-color: var(--ca-accent); }
+#root .icu-design .coach-access-level .coach-access-copy strong { font-size: 14.5px; }
+#root .icu-design .coach-access-request-footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+#root .icu-design .coach-access-request-footer > button { margin-left: auto; min-height: 42px; padding: 10px 20px; font-size: 14px; }
+#root .icu-design .coach-access-tabs { display: flex; padding: 3px; border-radius: 10px; background: var(--ca-fill); }
+#root .icu-design .coach-access-tabs button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 30px; padding: 4px 12px; border: 0; border-radius: 8px; background: transparent; color: var(--ca-muted); font-size: 12.5px; font-weight: 700; }
+#root .icu-design .coach-access-tabs button[aria-selected="true"] { background: var(--ca-surface); color: var(--ca-ink); box-shadow: 0 1px 3px #0002; }
+#root .icu-design .coach-access-count { display: grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #a0392a; color: #fff; font-size: 10.5px; }
+#root .icu-design .coach-access-switch-muted { min-height: 62px; margin-bottom: 14px; padding: 12px 14px; border: 0; border-radius: 14px; background: var(--ca-fill); }
+#root .icu-design .coach-access-switch-muted .coach-access-copy strong { font-size: 13.5px; }
+#root .icu-design .coach-access-switch-muted .coach-access-copy > span { font-size: 12.5px; }
+#root .icu-design .coach-access-relationships .coach-access-person-row { min-height: 68px; border-top: 1px solid var(--ca-line); }
+#root .icu-design .coach-access-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#root .icu-design .coach-access-status { display: inline-flex; padding: 2px 8px; border-radius: 999px; color: var(--ca-muted); background: var(--ca-fill); font-size: 11px; line-height: 1.45; font-weight: 700; }
+#root .icu-design .coach-access-status-pending { background: var(--ca-warning-fill); color: var(--ca-warning); }
+#root .icu-design .coach-access-status-accepted { background: var(--ca-success-fill); color: var(--ca-success); }
+#root .icu-design .coach-access-status-revoked { background: var(--ca-accent-fill); color: var(--ca-accent); }
+#root .icu-design .coach-access-footnote { margin-top: 14px; color: var(--ca-faint); font-size: 12px; line-height: 1.5; }
+#root .icu-design .coach-access-empty { padding: 20px 0; color: var(--ca-faint); font-size: 13px; line-height: 1.5; text-align: center; }
+#root .icu-design .coach-access-feedback { margin-top: 8px; color: var(--ca-success); font-size: 12.5px; line-height: 1.5; }
+#root .icu-design .coach-access-error { margin-top: 8px; color: var(--ca-accent); font-size: 13px; line-height: 1.5; }
+#root .icu-design .coach-access-hint { color: var(--ca-muted); font-size: 12.5px; line-height: 1.5; }
+#root .icu-design .coach-access-team-settings { border-radius: 20px; background: var(--ca-surface); scroll-margin-top: 24px; }
+#root .icu-design .coach-access-team-settings > summary { padding: 20px 28px; color: var(--ca-muted); font-size: 14px; font-weight: 700; }
+#root .icu-design .coach-access-team-settings > .tw-panel { margin: 0 16px 16px; }
+@media (max-width: 540px) {
+  #root .icu-design .coach-access-card { padding: 22px 18px; }
+  #root .icu-design .coach-access-levels > div { grid-template-columns: minmax(0, 1fr); }
+  #root .icu-design .coach-access-person { flex-basis: 190px; }
+  #root .icu-design .coach-access-row-actions { gap: 8px; }
+  #root .icu-design .coach-access-button { min-height: 40px; }
+  #root .icu-design .coach-access-tabs button { min-height: 40px; padding-inline: 10px; }
+  #root .icu-design .coach-access-revoke-all { padding: 14px; }
+  #root .icu-design .coach-access-revoke-all > .coach-access-button { margin-left: auto; }
+  #root .icu-design .coach-access-team-settings > summary { padding-inline: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #root .icu-design .coach-access-switch > span, #root .icu-design .coach-access-switch > span::after, #root .icu-design .coach-access-button { transition: none; }
+}

@@ -1,0 +1,48 @@
+/* Time in zones: the intensity distribution on the Load balance page. The card sits inside .analysis-load-v2, so it takes the
+   card, heading, key, tooltip and metric styles of the fitness and weekly sections (analysis-load-balance-v2.css) and their
+   --lb-* tokens, light and midnight. Only the five zone colours and the stacked bars are new here. The colours are the run
+   page's heart-rate zone colours, so a zone looks the same on both pages. */
+
+#root .analysis-load-v2 .training-intensity-v2 {
+  --ti-zone-1: #9db8ad;
+  --ti-zone-2: #5f8f7e;
+  --ti-zone-3: #c99a2e;
+  --ti-zone-4: #d46a2f;
+  --ti-zone-5: #a0392a;
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2 .training-intensity-v2 {
+  --ti-zone-1: #7da596;
+  --ti-zone-2: #6fae9b;
+  --ti-zone-3: #e0b84f;
+  --ti-zone-4: #ee8a4e;
+  --ti-zone-5: #f07561;
+}
+
+#root .analysis-load-v2 .training-intensity-v2__legend { flex-wrap: wrap; gap: 6px 14px; }
+#root .analysis-load-v2 .training-intensity-v2__legend span { display: inline-flex; align-items: center; gap: 6px; }
+#root .analysis-load-v2 .training-intensity-v2__legend span.training-intensity-v2__unit { padding-left: 14px; border-left: 1px solid var(--lb-line); color: var(--lb-faint); }
+
+/* A zone's swatch: in the key and in the readout. The readout's own rule for its little line is narrower than this one. */
+#root .analysis-load-v2 .training-intensity-v2 i.training-intensity-v2__swatch {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+#root .analysis-load-v2 .training-intensity-v2 i.training-intensity-v2__swatch.is-zone-1 { background: var(--ti-zone-1); }
+#root .analysis-load-v2 .training-intensity-v2 i.training-intensity-v2__swatch.is-zone-2 { background: var(--ti-zone-2); }
+#root .analysis-load-v2 .training-intensity-v2 i.training-intensity-v2__swatch.is-zone-3 { background: var(--ti-zone-3); }
+#root .analysis-load-v2 .training-intensity-v2 i.training-intensity-v2__swatch.is-zone-4 { background: var(--ti-zone-4); }
+#root .analysis-load-v2 .training-intensity-v2 i.training-intensity-v2__swatch.is-zone-5 { background: var(--ti-zone-5); }
+
+/* The bars: one rectangle for each zone, zone 1 at the bottom. A week still going is a little lighter. */
+#root .analysis-load-v2 .training-intensity-v2__segment.is-zone-1 { fill: var(--ti-zone-1); }
+#root .analysis-load-v2 .training-intensity-v2__segment.is-zone-2 { fill: var(--ti-zone-2); }
+#root .analysis-load-v2 .training-intensity-v2__segment.is-zone-3 { fill: var(--ti-zone-3); }
+#root .analysis-load-v2 .training-intensity-v2__segment.is-zone-4 { fill: var(--ti-zone-4); }
+#root .analysis-load-v2 .training-intensity-v2__segment.is-zone-5 { fill: var(--ti-zone-5); }
+#root .analysis-load-v2 .training-intensity-v2__bar.is-open { opacity: 0.72; }
+#root .analysis-load-v2 .training-intensity-v2__bar.is-current .training-intensity-v2__segment,
+#root .analysis-load-v2 .training-intensity-v2__bar.is-selected .training-intensity-v2__segment { stroke: var(--lb-ink); stroke-width: 1; }

@@ -22,6 +22,9 @@ export default function AuthenticatedPageChrome({
   children,
   bodyClassName = '',
   profile = null,
+  title = null,
+  activeKey = null,
+  breadcrumbLabel = null,
 }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -47,11 +50,11 @@ export default function AuthenticatedPageChrome({
 
   const resolvedProfile = profile || loadedProfile;
   const navItems = useMemo(
-    () => getRunnerShellNavItems({ t, lang }),
-    [lang, t],
+    () => getRunnerShellNavItems({ t, lang, activeKey }),
+    [lang, t, activeKey],
   );
-  const pageTitle = resolveShellTitle(location.pathname, t);
-  const profileName = String(resolvedProfile?.displayName || resolvedProfile?.email || 'HERMES').trim();
+  const pageTitle = title || resolveShellTitle(location.pathname, t);
+  const profileName = String(resolvedProfile?.displayName || resolvedProfile?.email || 'HERMESRUNS').trim();
   const profileInitial = profileName.slice(0, 1).toUpperCase() || 'H';
 
   return (
@@ -117,15 +120,15 @@ export default function AuthenticatedPageChrome({
             <RunnerShellTopNav
               navItems={navItems}
               activeLabel={pageTitle}
-              parentLabel={t('settings.heading')}
-              parentRoute="/settings"
+              parentLabel={breadcrumbLabel || (title ? t('profile.dashboard_nav_dashboard') : t('settings.heading'))}
+              parentRoute={title ? '/profile' : '/settings'}
               navigate={navigate}
             />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
-              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current="page">
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current={location.pathname.startsWith('/settings') ? 'page' : undefined}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
               <TopbarUserMenu initials={profileInitial} label={t('components.account_menu.title')} showProfile />

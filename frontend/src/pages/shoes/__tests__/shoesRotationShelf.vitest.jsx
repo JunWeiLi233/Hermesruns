@@ -44,6 +44,42 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+it.each(['en', 'zh-CN'])('does not grade a one-pair locker as a minimal rotation in %s', async lang => {
+  preferences.lang = lang;
+  shoes = [shoes[0]];
+  const { container } = await openPage();
+  const header = container.querySelector('.shoe-v2-head-copy');
+  const dictionary = lang === 'en' ? en : zh;
+  expect(header).not.toHaveTextContent(dictionary.shoes.rotation_health_label);
+  expect(header).toHaveTextContent(dictionary.shoes.v2_active_pairs.replace('{count}', '1'));
+  expect(container.querySelector('.shoe-v2-eta')).toHaveTextContent(lang === 'en' ? '188 km to mileage limit' : '距里程上限 188 公里');
+});
+
+it.each(['en', 'zh-CN'])('retains rotation usage details for multiple owned pairs in %s', async lang => {
+  preferences.lang = lang;
+  const { container } = await openPage();
+  expect(container.querySelector('.shoe-v2-head-copy')).toHaveTextContent((lang === 'en' ? en : zh).shoes.rotation_health_label);
+});
+
+it.each(['en', 'zh-CN'])('keeps an empty locker free of catalog mileage and offers adding one owned pair in %s', async lang => {
+  preferences.lang = lang;
+  shoes = [];
+  const { container } = await openPage();
+  expect(container.querySelectorAll('.shoe-v2-card')).toHaveLength(0);
+  expect(container.querySelector('.shoe-inventory-status')).toHaveTextContent(lang === 'en'
+    ? 'No shoes yet. Add a pair you own to track its mileage.' : '还没有跑鞋。添加一双你拥有的跑鞋，记录它的里程。');
+  expect(container.querySelector('.shoe-v2-head-copy')).not.toHaveTextContent((lang === 'en' ? en : zh).shoes.rotation_health_label);
+  fireEvent.click(container.querySelector('.shoe-v2-add-card'));
+  expect(screen.getByRole('heading', { name: 'Add destination' })).toBeInTheDocument();
+});
+
+it('labels an exceeded mileage cap as a limit rather than a measured retirement date', async () => {
+  shoes = [{ ...shoes[0], currentDistanceKm: 620 }];
+  const { container } = await openPage();
+  expect(container.querySelector('.shoe-v2-eta')).toHaveTextContent('Mileage limit reached');
+  expect(container.querySelector('.shoe-v2-eta')).not.toHaveTextContent('Past retirement');
+});
+
 async function openPage() {
   const result = render(<MemoryRouter initialEntries={['/shoes']}><Routes>
     <Route path="/shoes" element={<Shoes />} />
@@ -59,7 +95,7 @@ it('shows actual inventory mileage, warning colors, usage, and working filters',
   expect(cards()).toHaveLength(4);
   const nike = cards().find((card) => card.textContent.includes('Pegasus'));
   expect(nike).toHaveClass('is-critical');
-  expect(nike).toHaveTextContent('62 km left');
+  expect(nike).toHaveTextContent('62 km to limit');
   expect(cards().find((card) => card.textContent.includes('Superblast'))).toHaveTextContent('1 uses');
   expect(cards().find((card) => card.textContent.includes('Superblast'))).toHaveTextContent('last Oct 7');
   fireEvent.click(within(container.querySelector('.shoe-v2-chips')).getByRole('button', { name: 'Race' }));
@@ -131,12 +167,12 @@ it('renders large collections as virtualized shelf rows without losing the row p
   expect(container.querySelector('.shoe-v2-virtual-row').querySelectorAll('.shoe-v2-card')).toHaveLength(4);
 });
 
-it('converts both mileage and remaining life to miles', async () => {
+it('converts both mileage and distance to the mileage limit to miles', async () => {
   preferences.unit = 'mile';
   const { container } = await openPage();
   const asics = [...container.querySelectorAll('.shoe-v2-card')].find((card) => card.textContent.includes('Superblast'));
   expect(asics.querySelector('.shoe-v2-mileage')).toHaveTextContent('256/ 373 mi');
-  expect(asics.querySelector('.shoe-v2-left')).toHaveTextContent('117 mi left');
+  expect(asics.querySelector('.shoe-v2-left')).toHaveTextContent('117 mi to limit');
 });
 
 async function openEditor() {
@@ -144,6 +180,21 @@ async function openEditor() {
   fireEvent.click(container.querySelector('.shoe-v2-model'));
   return screen.getByRole('dialog');
 }
+
+it.each([100, 500, 2000])('keeps the edit mileage range and exact %s km save aligned with Add Shoes', async (km) => {
+  const dialog = await openEditor();
+  const slider = within(dialog).getByRole('slider');
+  expect(slider).toHaveAttribute('min', '100');
+  expect(slider).toHaveAttribute('max', '2000');
+  expect(slider).toHaveAttribute('step', '50');
+  fireEvent.change(slider, { target: { value: String(km) } });
+  expect(dialog.querySelector('.edit-v2-limit-head')).toHaveTextContent(`${km}km`);
+  fireEvent.click(within(dialog).getByRole('button', { name: en.shoes.save }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  const put = apiFetch.mock.calls.find(([, options]) => options?.method === 'PUT');
+  expect(put[0]).toBe('/api/shoes/1');
+  expect(JSON.parse(put[1].body).maxDistanceKm).toBe(km);
+});
 
 it('updates the edit header and enables Save only while the draft differs', async () => {
   const dialog = await openEditor();
@@ -173,7 +224,7 @@ it('keeps mileage presets and the primary switch in the draft until Save', async
   expect(dialog.querySelector('.edit-v2-usage-bar i')).toHaveStyle({ width: '100%' });
   expect(dialog).toHaveTextContent(en.shoes.retirement_past_due);
   fireEvent.change(slider, { target: { value: '750' } });
-  expect(dialog).toHaveTextContent('338 km left');
+  expect(dialog).toHaveTextContent('338 km to limit');
   expect(dialog.querySelector('.edit-v2-usage-bar i')).toHaveClass('is-good');
   fireEvent.click(within(dialog).getByRole('switch', { name: en.shoes.set_primary }));
   expect(within(dialog).getByRole('switch')).not.toBeChecked();

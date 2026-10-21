@@ -1805,6 +1805,7 @@
 
 .admin-command-sidebar__brand .hermes-logo {
   font-size: 1rem;
+  --hermes-logo-tile: 28px;
 }
 
 .admin-command-sidebar__brand p {
@@ -5238,6 +5239,11 @@ button.admin-users-command-kpi:hover {
 .admin-command-page .admin-command-topbar__wordmark {
   color: #f07561;
   font-size: 1.28rem;
+}
+
+.admin-command-page .admin-command-topbar__wordmark .hermes-wordmark {
+  height: 1em;
+  color: var(--hermes-logo-paper);
 }
 
 .admin-command-page .admin-command-topbar__nav {

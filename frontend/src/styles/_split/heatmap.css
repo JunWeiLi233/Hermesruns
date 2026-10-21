@@ -299,6 +299,11 @@
   max-width: 8rem;
 }
 
+.heatmap-page-brand-pill .hermes-logo {
+  --hermes-logo-tile: 24px;
+  max-width: none;
+}
+
 .heatmap-page-search-pill {
   min-width: 0;
 }

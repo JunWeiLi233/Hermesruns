@@ -1,0 +1,2 @@
+import {test,expect,login,open,screen} from './fixtures.js';
+test('F03-H1 common filters do not falsely advertise saved presets',async({page},info)=>{info.annotations.push({type:'scope',description:'Preset CRUD UX deferred to R3'});await login(page);await open(page,'filters');await expect(page.getByRole('button',{name:'Save preset',exact:true})).toHaveCount(0);await screen(page,info,'common-filter-scope');});

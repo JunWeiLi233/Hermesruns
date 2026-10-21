@@ -5,6 +5,10 @@ public record RaceCourseMapAdminDetail(
         String raceName,
         String city,
         String country,
+        String officialWebsite,
+        Double latitude,
+        Double longitude,
+        Double distanceKm,
         PreviewSnapshot live,
         PreviewSnapshot pendingPreview,
         PreviewSnapshot currentLivePreview

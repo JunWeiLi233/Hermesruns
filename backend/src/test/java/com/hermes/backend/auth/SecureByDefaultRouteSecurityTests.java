@@ -56,6 +56,15 @@ class SecureByDefaultRouteSecurityTests {
                 .andExpect(jsonPath("$.error").value("Invalid or expired session token."));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"/training-log", "/analysis/trends", "/analysis/pace-curve", "/analysis/vo2max-estimates", "/analysis/quality-sessions"})
+    void legacyAnalysisAddressesLoadTheShellForTheirClientRedirect(String path) throws Exception {
+        mockMvc.perform(get(path).queryParam("metric", "distance"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow, noarchive"));
+    }
+
     @Test
     void spaRouteListCoversCoreAppRoutes() {
         // Canary: the derived route list must keep covering the core navigation routes
@@ -77,6 +86,9 @@ class SecureByDefaultRouteSecurityTests {
                 .replace("{id}", "123")
                 .replace("{insightKey}", "cadence")
                 .replace("{distKey}", "10k")
+                .replace("{planId}", "sample-plan")
+                .replace("{versionId}", "sample-version")
+                .replace("{workoutId}", "sample-workout")
                 .replace("{raceId}", "42");
 
         mockMvc.perform(get(path))

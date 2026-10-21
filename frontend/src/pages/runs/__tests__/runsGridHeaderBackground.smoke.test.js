@@ -47,7 +47,7 @@ for (const metric of ['distance', 'average_pace', 'moving_time']) {
   );
 }
 assert.match(row, /formatDistance\(distanceKm, 1, lang\)[\s\S]*formatPace\(distanceKm, movingTimeSeconds, lang\)[\s\S]*formatDuration\(movingTimeSeconds\)/, 'Run rows should retain formatted distance, pace, and moving-time values.');
-assert.match(row, /<time className="runs-ledger-row__full-date" dateTime=\{started\.toISOString\(\)\}/, 'Grid and mobile rows should retain a machine-readable full date.');
+assert.match(row, /<time className="runs-ledger-row__full-date" dateTime=\{run\.activityInstant \|\| getActivityDateKey\(run\)\}/, 'Grid and mobile rows should retain the actual machine-readable instant, or the account date when no trustworthy instant exists.');
 assert.match(row, /onDelete && \([\s\S]*aria-label=\{t\('runs\.delete'\)\}[\s\S]*e\.stopPropagation\(\); onDelete\(run\)/, 'Deletion should remain a separate labeled action that does not open the run.');
 
 assert.match(rule(history + ' .recent-runs-month-group'), /overflow:\s*hidden;[\s\S]*border-radius:\s*16px !important;[\s\S]*background:\s*var\(--v2-card\) !important;[\s\S]*box-shadow:\s*none !important;/, 'Each month should clip its header and rows inside one independent card.');

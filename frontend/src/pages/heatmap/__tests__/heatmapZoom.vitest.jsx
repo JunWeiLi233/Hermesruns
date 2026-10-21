@@ -12,9 +12,12 @@ vi.mock('../../../contexts/I18nContext', () => ({
   useI18n: () => ({ lang: 'en', t: (key) => key }),
 }));
 vi.mock('../../../components/TopbarUserMenu', () => ({ default: () => null }));
-vi.mock('../../../api', () => ({
+vi.mock('../../../api', () => ({ subscribeWakeRetry: () => () => {},
   getBackendBaseUrl: () => '',
   apiJson: async (url) => {
+    if (url.startsWith('/api/activities/route-previews')) return [{activityId:1,availability:'READY',points:[
+      {latitude:40.74,longitude:-74.01},{latitude:40.741,longitude:-74.01},{latitude:40.741,longitude:-74.011},
+    ]}];
     if (url.startsWith('/api/profile/heatmap/viewport')) return { points: [] };
     if (url.startsWith('/api/profile/heatmap')) return {
       pointCount: 2,
@@ -51,11 +54,13 @@ beforeEach(() => {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(function () {
     const canvas = this;
     if (!contexts.has(this)) contexts.set(this, {
-      beginPath: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(),
+      beginPath: vi.fn(), moveTo: vi.fn(), lineTo: vi.fn(), arc: vi.fn(), fill: vi.fn(), stroke: vi.fn(),
       setTransform: vi.fn(() => {
         if (canvas.classList.contains('heatmap-page-dot-canvas')) leaflet.positions.push(leaflet.map.getZoom());
       }),
       clearRect: vi.fn(), drawImage: vi.fn(),
+      createImageData: (width, height) => ({data: new Uint8ClampedArray(width * height * 4)}),
+      putImageData: vi.fn(),
     });
     return contexts.get(this);
   });
@@ -65,13 +70,25 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-async function mountHeatmap() {
-  render(<MemoryRouter><Heatmap /></MemoryRouter>);
+async function mountHeatmap(simple = false) {
+  render(<MemoryRouter><Heatmap simple={simple}/></MemoryRouter>);
   await waitFor(() => expect(leaflet.positions.length).toBeGreaterThan(0));
   vi.useFakeTimers();
   leaflet.positions = [];
   return leaflet.map;
 }
+
+it('renders recorded route lines with only map controls in the simplified page', async () => {
+  await mountHeatmap(true);
+  expect(document.querySelector('.heatmap-page-dot-canvas')).toHaveAttribute('data-render-mode', 'routes');
+  expect(document.querySelector('.hm-explorer-toolbar')).toBeNull();
+  expect(document.querySelector('.heatmap-page-topbar')).toBeNull();
+  expect(screen.getAllByRole('button')).toHaveLength(4);
+  const canvas = document.querySelector('.heatmap-page-dot-canvas');
+  expect(contexts.get(canvas).lineTo).toHaveBeenCalled();
+  expect(contexts.get(canvas).drawImage).not.toHaveBeenCalled();
+  expect(contexts.get(canvas).arc).not.toHaveBeenCalled();
+});
 
 function startZoom(map, targetZoom) {
   act(() => {
@@ -89,6 +106,18 @@ function startZoom(map, targetZoom) {
 function endZoom(map) {
   act(() => { map._animatingZoom = false; map.fire('zoomend'); map.fire('moveend'); });
 }
+
+it('keeps route lines thin and connected after zooming out', async () => {
+  const map = await mountHeatmap(true);
+  const zoom = map.getZoom() - 2;
+  startZoom(map, zoom);
+  endZoom(map);
+  const canvas = document.querySelector('.heatmap-page-dot-canvas');
+  expect(canvas).toHaveAttribute('data-render-zoom', String(zoom));
+  expect(contexts.get(canvas).lineWidth).toBe(1.6);
+  expect(contexts.get(canvas).lineTo).toHaveBeenCalled();
+  expect(contexts.get(canvas).arc).not.toHaveBeenCalled();
+});
 
 it.each([1, -1])('finishes a %s zoom without replaying button clicks from the active animation', async (direction) => {
   const map = await mountHeatmap();

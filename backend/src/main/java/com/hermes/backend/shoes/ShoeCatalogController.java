@@ -80,9 +80,16 @@ public class ShoeCatalogController {
         }
 
         List<ShoeCatalogBrand> brands = brandRepository.findAllByOrderByNameAsc();
+        List<ShoeCatalogModel> allModels = modelRepository.findAllByOrderByBrand_NameAscNameAsc();
+        Map<Long, List<ShoeCatalogModel>> modelsByBrand = new LinkedHashMap<>();
+        for (ShoeCatalogModel model : allModels) {
+            modelsByBrand.computeIfAbsent(model.getBrand().getId(), ignored -> new ArrayList<>()).add(model);
+        }
+        Map<Long, String> liveImages = shoeImageAssetService == null ? Map.of()
+                : shoeImageAssetService.findLiveImageUrlsForCatalog(allModels);
         List<Map<String, Object>> out = new ArrayList<>();
         for (ShoeCatalogBrand b : brands) {
-            List<ShoeCatalogModel> models = modelRepository.findByBrandIdOrderByNameAsc(b.getId());
+            List<ShoeCatalogModel> models = modelsByBrand.getOrDefault(b.getId(), List.of());
             List<Map<String, Object>> modelRows = new ArrayList<>();
             for (ShoeCatalogModel m : models) {
                 Map<String, Object> modelRow = new LinkedHashMap<>();
@@ -91,10 +98,8 @@ public class ShoeCatalogController {
                 modelRow.put("modelZh", m.getNameZh() == null ? "" : m.getNameZh());
                 modelRow.put("modelEn", m.getNameEn() == null ? "" : m.getNameEn());
                 modelRow.put("type", m.getType());
-                if (shoeImageAssetService != null) {
-                    shoeImageAssetService.findLiveImageUrl(b.getName(), m.getName())
-                            .ifPresent(url -> modelRow.put("imageUrl", url));
-                }
+                String imageUrl = liveImages.get(m.getId());
+                if (imageUrl != null) modelRow.put("imageUrl", imageUrl);
                 modelRows.add(modelRow);
             }
             Map<String, Object> row = new LinkedHashMap<>();

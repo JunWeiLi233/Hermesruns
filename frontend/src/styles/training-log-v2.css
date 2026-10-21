@@ -1,0 +1,320 @@
+/* Training log (M5, S11): the runner's runs by week and day. Cards, headings, chips and the light and midnight palettes
+   follow the Load balance and Import pages it sits beside; every colour below is one of the --tl-* tokens defined here. */
+
+#root .training-log-v2 {
+  --tl-card: #fff;
+  --tl-ink: #171717;
+  --tl-muted: #515563;
+  --tl-faint: #6f665c;
+  --tl-line: rgba(28, 25, 23, 0.08);
+  --tl-fill: rgba(28, 25, 23, 0.05);
+  --tl-accent: #a0392a;
+  --tl-accent-soft: rgba(160, 57, 42, 0.09);
+  --tl-on-accent: #fff;
+  --tl-good: #1e7a35;
+  --tl-error: #c4261a;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1180px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 0 0 48px;
+  color: var(--tl-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2 {
+  --tl-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --tl-ink: #f8f4ef;
+  --tl-muted: #c0b8ad;
+  --tl-faint: #a69e93;
+  --tl-line: rgba(255, 248, 238, 0.12);
+  --tl-fill: rgba(255, 255, 255, 0.06);
+  --tl-accent: #ffb4a7;
+  --tl-accent-soft: rgba(255, 180, 167, 0.14);
+  --tl-on-accent: #1c1917;
+  --tl-good: #9cd2aa;
+  --tl-error: #ff9b87;
+}
+
+#root .training-log-v2 :is(h1, h2, h3, p, dl, dd, ol, ul) { margin: 0; }
+#root .training-log-v2 :is(ol, ul) { padding: 0; list-style: none; }
+
+/* Heading */
+#root .training-log-v2__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+#root .training-log-v2__head h2 {
+  color: var(--tl-ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+#root .training-log-v2__head p { max-width: 60ch; margin-top: 6px; color: var(--tl-muted); font-size: 0.9rem; line-height: 1.5; text-wrap: pretty; }
+#root .training-log-v2__links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+#root .training-log-v2__links a,
+#root .training-log-v2__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tl-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+#root .training-log-v2__links a:hover,
+#root .training-log-v2__link:hover { text-decoration: underline; }
+#root .training-log-v2 :is(a, button):focus-visible { outline: 2px solid var(--tl-accent); outline-offset: 2px; border-radius: 6px; }
+
+/* Filters */
+#root .training-log-v2__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 22px;
+  border-radius: 24px;
+  background: var(--tl-card);
+}
+#root .training-log-v2__filters[aria-busy="true"] { opacity: 0.7; }
+#root .training-log-v2__filters .training-log-v2__link { align-self: flex-start; }
+#root .training-log-v2__filter-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+#root .training-log-v2__filter-label { flex: 0 0 5.5rem; color: var(--tl-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .training-log-v2__chips { display: flex; flex: 1 1 0; flex-wrap: wrap; gap: 6px; min-width: 0; }
+
+#root .training-log-v2__chips button:not(.training-log-v2__link) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-fill);
+  color: var(--tl-ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+#root .training-log-v2__chips button:not(.training-log-v2__link):hover { background: var(--tl-accent-soft); }
+#root .training-log-v2__chips button:not(.training-log-v2__link)[aria-pressed="true"] { background: var(--tl-accent); color: var(--tl-on-accent); }
+#root .training-log-v2__chips small { color: inherit; font-size: 0.72rem; font-variant-numeric: tabular-nums; opacity: 0.7; }
+#root .training-log-v2__chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+#root .training-log-v2__chips .training-log-v2__link { align-self: center; min-height: 34px; }
+
+/* View: the metric the log looks at and a jump to a date. A card of its own, slimmer than the filters. */
+#root .training-log-v2__view {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px 32px;
+  padding: 16px 22px;
+  border-radius: 24px;
+  background: var(--tl-card);
+}
+#root .training-log-v2__view[aria-busy="true"] { opacity: 0.7; }
+#root .training-log-v2__view-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
+#root .training-log-v2__view .training-log-v2__filter-label { flex: 0 0 auto; }
+#root .training-log-v2__jump .training-log-v2__note { flex-basis: 100%; }
+#root .training-log-v2__date {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-fill);
+  color: var(--tl-ink);
+  color-scheme: light;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2__date { color-scheme: dark; }
+#root .training-log-v2__date:focus-visible { outline: 2px solid var(--tl-accent); outline-offset: 2px; }
+
+#root .training-log-v2__note { color: var(--tl-muted); font-size: 0.8rem; line-height: 1.5; text-wrap: pretty; }
+#root .training-log-v2__basis { color: var(--tl-faint); font-size: 0.75rem; line-height: 1.5; text-wrap: pretty; }
+#root .training-log-v2__error { color: var(--tl-error); font-size: 0.85rem; }
+
+/* Weeks */
+#root .training-log-v2__weeks { display: flex; flex-direction: column; gap: 14px; }
+#root .training-log-v2__weeks[aria-busy="true"] { opacity: 0.6; }
+
+#root .training-log-v2__week {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 22px 26px;
+  border-radius: 24px;
+  background: var(--tl-card);
+}
+#root .training-log-v2__week.is-current { box-shadow: inset 0 0 0 2px var(--tl-accent-soft); }
+#root .training-log-v2__week.is-empty { padding-block: 16px; }
+
+#root .training-log-v2__week-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; }
+#root .training-log-v2__week-head h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; color: var(--tl-ink); font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
+#root .training-log-v2__badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--tl-accent-soft);
+  color: var(--tl-accent);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+#root .training-log-v2__quiet { color: var(--tl-faint); font-size: 0.85rem; }
+
+#root .training-log-v2__totals { display: flex; flex-wrap: wrap; gap: 8px 28px; }
+#root .training-log-v2__totals > div { display: flex; flex-direction: column; gap: 2px; }
+#root .training-log-v2 dt { color: var(--tl-faint); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .training-log-v2 dd { color: var(--tl-ink); font-size: 0.98rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* The strip: one bar a day, all weeks on the same scale */
+#root .training-log-v2__strip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+#root .training-log-v2__strip li { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+#root .training-log-v2__bar { position: relative; display: block; width: 100%; max-width: 40px; height: 52px; overflow: hidden; border-radius: 8px; background: var(--tl-fill); }
+#root .training-log-v2__bar i { position: absolute; right: 0; bottom: 0; left: 0; display: block; border-radius: 8px; background: var(--tl-accent); }
+#root .training-log-v2__dow { margin-top: 4px; color: var(--tl-faint); font-size: 0.68rem; font-weight: 700; }
+#root .training-log-v2__dom { color: var(--tl-muted); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+#root .training-log-v2__strip li.has-runs .training-log-v2__dow { color: var(--tl-ink); }
+
+/* Days and runs */
+#root .training-log-v2__days { display: flex; flex-direction: column; gap: 14px; }
+#root .training-log-v2__day { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#root .training-log-v2__day h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; color: var(--tl-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .training-log-v2__day-total { color: var(--tl-ink); font-size: 0.82rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0; text-transform: none; }
+
+/* The figure the log is looking at (the metric chosen above the weeks), on a week and on a run */
+#root .training-log-v2__totals > .is-chosen :is(dt, dd),
+#root .training-log-v2__run-stats > .is-chosen :is(dt, dd) { color: var(--tl-accent); }
+
+#root .training-log-v2__run {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 8px 20px;
+  padding: 12px 0;
+  border-top: 1px solid var(--tl-line);
+}
+#root .training-log-v2__day li:first-child { border-top: 0; }
+#root .training-log-v2__run-main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; }
+#root .training-log-v2__run-name { min-width: 0; overflow: hidden; color: var(--tl-ink); font-size: 0.95rem; font-weight: 700; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+#root .training-log-v2__run-name:hover { color: var(--tl-accent); text-decoration: underline; }
+
+#root .training-log-v2__type {
+  flex: 0 0 auto;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--tl-fill);
+  color: var(--tl-ink);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+#root .training-log-v2__type.is-race { background: var(--tl-accent); color: var(--tl-on-accent); }
+
+#root .training-log-v2__run-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.4rem, 1fr)); gap: 8px 16px; }
+#root .training-log-v2__run-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#root .training-log-v2__run-stats dd { font-size: 0.9rem; white-space: nowrap; }
+
+#root .training-log-v2__run-tags { display: flex; flex-wrap: wrap; grid-column: 1 / -1; gap: 6px; }
+#root .training-log-v2__tag {
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0 12px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-accent-soft);
+  color: var(--tl-ink);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+#root .training-log-v2__tag:hover { background: var(--tl-fill); }
+#root .training-log-v2__tag[aria-pressed="true"] { background: var(--tl-accent); color: var(--tl-on-accent); }
+
+/* Several empty weeks in a row, folded into one line when the log is filtered */
+#root .training-log-v2__gap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 10px 26px;
+  border-radius: 18px;
+  background: var(--tl-fill);
+  color: var(--tl-muted);
+  font-size: 0.85rem;
+}
+#root .training-log-v2__gap span { color: var(--tl-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* More weeks, empty and failed states */
+#root .training-log-v2__more { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#root .training-log-v2__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tl-accent);
+  color: var(--tl-on-accent);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+#root .training-log-v2__button:disabled { opacity: 0.6; cursor: progress; }
+
+#root .training-log-v2__empty,
+#root .training-log-v2__state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 24px;
+  border-radius: 24px;
+  background: var(--tl-card);
+  text-align: center;
+}
+#root .training-log-v2__empty h2 { color: var(--tl-ink); font-size: 1.15rem; font-weight: 800; }
+#root .training-log-v2__empty p { max-width: 46ch; color: var(--tl-muted); font-size: 0.9rem; line-height: 1.5; text-wrap: pretty; }
+#root .training-log-v2__empty .training-log-v2__button { margin-top: 6px; }
+
+/* While it loads */
+#root .training-log-v2__skeleton { display: flex; flex-direction: column; gap: 14px; }
+#root .training-log-v2__skeleton-filters { display: block; height: 76px; border-radius: 24px; }
+#root .training-log-v2__skeleton-week { display: flex; flex-direction: column; gap: 12px; padding: 22px 26px; border-radius: 24px; background: var(--tl-card); }
+#root .training-log-v2__skeleton-week .page-skeleton__block { display: block; height: 18px; border-radius: 8px; }
+#root .training-log-v2__skeleton-week .page-skeleton__block.is-short { width: 40%; height: 14px; }
+#root .training-log-v2__skeleton-week .page-skeleton__block:last-child { height: 56px; border-radius: 12px; }
+
+@media (max-width: 720px) {
+  #root .training-log-v2 { gap: 16px; padding-bottom: 32px; }
+  #root .training-log-v2__filters,
+  #root .training-log-v2__view { padding: 16px; border-radius: 20px; }
+  #root .training-log-v2__filter-label,
+  #root .training-log-v2__view .training-log-v2__filter-label { flex-basis: 100%; }
+  #root .training-log-v2__date { flex: 1 1 10rem; min-height: 44px; }
+  #root .training-log-v2__week { padding: 18px 16px; border-radius: 20px; }
+  #root .training-log-v2__totals { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 12px; }
+  #root .training-log-v2__run { grid-template-columns: minmax(0, 1fr); padding: 14px 0; }
+  #root .training-log-v2__run-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #root .training-log-v2__chips button:not(.training-log-v2__link),
+  #root .training-log-v2__tag { min-height: 40px; }
+  #root .training-log-v2__button { width: 100%; min-height: 46px; }
+}

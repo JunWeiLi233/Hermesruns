@@ -13,4 +13,6 @@ public interface RunMetricsProjection {
     Double getDistanceKm();
     Double getDistanceMeters();
     LocalDateTime getEffectiveStartTime();
+    LocalDateTime getStartTime();
+    Boolean getStravaApiSourced();
 }

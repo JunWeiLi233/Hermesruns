@@ -52,7 +52,10 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -352,9 +355,10 @@ class BackendStressTests {
     }
 
     @Test
-    @DisplayName("STRESS: AutomatedCoachService — concurrent getOrCreateState recovers from race")
-    void coachService_concurrentGetOrCreateState_recoversFromRace() {
+    @DisplayName("STRESS: AutomatedCoachService — first-use rechecks state after acquiring the runner lock")
+    void coachService_concurrentGetOrCreateState_rechecksUnderLock() {
         Runner runner = runner(1L);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
         CoachRunnerStateRepository stateRepository = mock(CoachRunnerStateRepository.class);
         CoachScheduledWorkoutRepository scheduleRepository = mock(CoachScheduledWorkoutRepository.class);
         CoachTrainingBlockRepository blockRepository = mock(CoachTrainingBlockRepository.class);
@@ -378,10 +382,14 @@ class BackendStressTests {
                 .thenReturn(fullSchedule(runner, LocalDate.now(), 14));
         when(blockRepository.findByRunnerAndActiveTrue(runner)).thenReturn(Optional.empty());
 
-        AutomatedCoachService service = service(stateRepository, scheduleRepository, blockRepository, alertRepository);
+        AutomatedCoachService service = service(runnerRepository, stateRepository, scheduleRepository, blockRepository, alertRepository);
 
         assertThatCode(() -> service.getCoachState(runner)).doesNotThrowAnyException();
-        verify(stateRepository).save(argThat(state -> state != recoveredState));
+        var initialization = inOrder(stateRepository, runnerRepository);
+        initialization.verify(stateRepository).findByRunner(runner);
+        initialization.verify(runnerRepository).findByIdForUpdate(runner.getId());
+        initialization.verify(stateRepository, times(2)).findByRunner(runner);
+        verify(stateRepository, never()).save(argThat(state -> state != recoveredState));
         verify(stateRepository).save(recoveredState);
     }
 
@@ -802,8 +810,18 @@ class BackendStressTests {
             CoachTrainingBlockRepository blockRepository,
             CoachFeedbackAlertRepository alertRepository
     ) {
+        return service(mock(RunnerRepository.class), stateRepository, scheduleRepository, blockRepository, alertRepository);
+    }
+
+    private static AutomatedCoachService service(
+            RunnerRepository runnerRepository,
+            CoachRunnerStateRepository stateRepository,
+            CoachScheduledWorkoutRepository scheduleRepository,
+            CoachTrainingBlockRepository blockRepository,
+            CoachFeedbackAlertRepository alertRepository
+    ) {
         return new AutomatedCoachService(
-                mock(RunnerRepository.class),
+                runnerRepository,
                 mock(ActivityRepository.class),
                 stateRepository,
                 scheduleRepository,

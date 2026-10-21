@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Feature-gating quota service for premium features.
@@ -57,6 +58,21 @@ public class QuotaService {
         return used < limit;
     }
 
+    /** Check and reserve against current database state, shared by every application instance. */
+    @Transactional
+    public boolean tryConsumeFeature(Runner runner, String featureKey) {
+        Runner fresh = runnerRepository.findByIdForUpdate(runner.getId()).orElseThrow();
+        if (isPro(fresh)) return true;
+        normalizeMonthlyWindow(fresh, featureKey);
+        copyShoeUsage(fresh, runner);
+        if (getFeatureUsage(fresh, featureKey) >= getFeatureLimit(featureKey)) return false;
+        if (!"shoe-scan".equals(featureKey)) return false;
+        fresh.setShoeScanCount(fresh.getShoeScanCount() + 1);
+        runnerRepository.save(fresh);
+        copyShoeUsage(fresh, runner);
+        return true;
+    }
+
     /**
      * Consume one use of a feature. No-op for Pro users.
      * Call only after {@link #canUseFeature} returns true.
@@ -81,14 +97,18 @@ public class QuotaService {
      * Decrements the feature counter by 1 (floor at 0) and persists.
      * No-op for Pro/admin runners (they were never charged).
      */
+    @Transactional
     public void rollbackConsumedFeature(Runner runner, String featureKey) {
         if (isPro(runner)) return;
+        Runner fresh = runnerRepository.findByIdForUpdate(runner.getId()).orElseThrow();
+        if (!java.util.Objects.equals(fresh.getShoeScanCountReset(), runner.getShoeScanCountReset())) return;
         switch (featureKey) {
             case "shoe-scan" -> {
-                int current = runner.getShoeScanCount();
+                int current = fresh.getShoeScanCount();
                 if (current > 0) {
-                    runner.setShoeScanCount(current - 1);
-                    runnerRepository.save(runner);
+                    fresh.setShoeScanCount(current - 1);
+                    runnerRepository.save(fresh);
+                    copyShoeUsage(fresh, runner);
                 }
             }
             default -> { /* no counter to roll back */ }
@@ -173,9 +193,7 @@ public class QuotaService {
         LocalDate resetDate = runner.getShoeScanCountReset();
 
         // First time: set reset to the 1st of current month
-        if (resetDate == null) {
-            resetDate = today.withDayOfMonth(1);
-        }
+        if (resetDate == null) resetDate = today.withDayOfMonth(1);
 
         LocalDate currentMonthStart = today.withDayOfMonth(1);
         if (resetDate.isBefore(currentMonthStart)) {
@@ -183,8 +201,12 @@ public class QuotaService {
             switch (featureKey) {
                 case "shoe-scan" -> runner.setShoeScanCount(0);
             }
-            runner.setShoeScanCountReset(currentMonthStart);
-            runnerRepository.save(runner);
         }
+        runner.setShoeScanCountReset(currentMonthStart);
+    }
+
+    private static void copyShoeUsage(Runner source, Runner target) {
+        target.setShoeScanCount(source.getShoeScanCount());
+        target.setShoeScanCountReset(source.getShoeScanCountReset());
     }
 }
