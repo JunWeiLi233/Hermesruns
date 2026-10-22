@@ -8,7 +8,7 @@ import static com.hermes.backend.training.TrainingFailure.check;
 
 /** Server compiler, independently validated; never accepts a client-computed step or duration. */
 public final class TrainingWorkout {
-    private static final Pattern STEP=Pattern.compile("^(\\d+(?:\\.\\d+)?)m\\s+@(\\d+(?:\\.\\d+)?)(%|bpm|W|rpm|m/s)\\s+(.+)$");
+    private static final Pattern STEP=Pattern.compile("^(\\d+(?:\\.\\d+)?)m\\s++@(\\d+(?:\\.\\d+)?)(%|bpm|W|rpm|m/s)\\s++(.+)$");
     public static Map<String,Object> compile(String source) {
         check(source!=null&&source.getBytes(StandardCharsets.UTF_8).length<=65536,422,"WORKOUT_SOURCE_LIMIT");
         var steps=new ArrayList<Map<String,Object>>();var block=new ArrayList<Map<String,Object>>();int repeat=1;

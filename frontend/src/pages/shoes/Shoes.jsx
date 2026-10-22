@@ -97,6 +97,15 @@ async function fileToOptimizedDataUrl(file, t) {
   }
 }
 
+// Validate again at the image boundary: processed/cache results and generated
+// thumbnails must retain an image URL, including when a producer falls back.
+function getShoeImageSource(value) {
+  const source = getSafeImageUrl(value);
+  if (source.startsWith('https://') || source.startsWith('http://')
+    || source.startsWith('blob:') || source.startsWith('data:image/')) return source;
+  return undefined;
+}
+
 /** Shoe image component with auto background removal */
 function ProcessedDisplayImage({ src, alt, className, fallback, onError, loading = 'lazy' }) {
   const encodedSrc = getSafeImageUrl(src);
@@ -122,10 +131,11 @@ function ProcessedDisplayImage({ src, alt, className, fallback, onError, loading
   if (!encodedSrc) {
     return fallback || <div className="shoe-img-placeholder"><span>S</span></div>;
   }
-  if (!processed || processed.src !== encodedSrc) {
+  const processedSrc = getShoeImageSource(processed?.url);
+  if (!processed || processed.src !== encodedSrc || !processedSrc) {
     return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className={className} src={processed.url} alt={alt} width="800" height="800" onError={onError} loading={loading} decoding="async" />;
+  return <img className={className} src={processedSrc} alt={alt} width="800" height="800" onError={onError} loading={loading} decoding="async" />;
 }
 
 function ShoeImage({ src, alt }) {
@@ -1858,7 +1868,7 @@ const Shoes = memo(function Shoes() {
                       <div className="scan-v2-thumbs">
                         {scanThumbs.map((url, index) => (
                           <span key={url} className="scan-v2-thumb is-scanning">
-                            <img src={url} alt={`${t('shoes.scan_image')} ${index + 1}`} />
+                            <img src={getShoeImageSource(url)} alt={`${t('shoes.scan_image')} ${index + 1}`} />
                             <i aria-hidden="true" />
                           </span>
                         ))}
@@ -1881,7 +1891,7 @@ const Shoes = memo(function Shoes() {
                         <div className="scan-v2-thumbs">
                           {scanThumbs.map((url, index) => (
                             <span key={url} className="scan-v2-thumb">
-                              <img src={url} alt={`${t('shoes.scan_image')} ${index + 1}`} />
+                              <img src={getShoeImageSource(url)} alt={`${t('shoes.scan_image')} ${index + 1}`} />
                               <button type="button" onClick={() => removeScanFile(index)} aria-label={t('shoes.scan_v2_remove_image', { index: index + 1 })}>&times;</button>
                             </span>
                           ))}

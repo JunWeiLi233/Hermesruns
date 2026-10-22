@@ -103,13 +103,26 @@ function backendClasspath() {
     fs.statSync(path.join(outStatic, 'index.html')).mtimeMs < fs.statSync(path.join(srcStatic, 'index.html')).mtimeMs;
   if (stale) fs.cpSync(srcStatic, outStatic, { recursive: true, force: true });
 
-  const cpFile = process.env.E2E_CLASSPATH_FILE || path.join(cacheDir, 'classpath.txt');
+  const cpFile = path.resolve(process.env.E2E_CLASSPATH_FILE || path.join(cacheDir, 'classpath.txt'));
   if (!fs.existsSync(cpFile)) {
+    const properties = [
+      `-Dmaven.repo.local=${path.join(repoRoot, '.m2repo')}`,
+      `-Dhermes.build.directory=${path.join(backendDir, 'target-e2e')}`,
+      `-Dmdep.outputFile=${cpFile}`,
+    ];
+    if (isWin && properties.some(value => /["\u0000-\u001f]/.test(value))) {
+      throw new Error('Maven classpath paths cannot contain quotes or control characters.');
+    }
     fs.mkdirSync(path.dirname(cpFile), { recursive: true });
     const mvn = path.join(backendDir, isWin ? 'mvnw.cmd' : 'mvnw');
-    const args = ['-f', path.join(backendDir, 'pom.xml'), '-q', 'dependency:build-classpath',
-      `-Dmaven.repo.local=${path.join(repoRoot, '.m2repo')}`, `-Dhermes.build.directory=${path.join(backendDir, 'target-e2e')}`, `-Dmdep.outputFile=${cpFile}`];
-    const res = spawnSync(isWin ? 'cmd' : mvn, isWin ? ['/c', mvn, ...args] : args, { stdio: 'inherit' });
+    // Windows batch wrappers require cmd. Keep its command entirely literal: Java reads these
+    // quoted properties itself, so spaces, ampersands and %variables% in paths cannot become commands.
+    const res = isWin
+      ? spawnSync('cmd.exe', ['/d', '/s', '/c', 'mvnw.cmd -f pom.xml -q dependency:build-classpath'], {
+        cwd: backendDir, windowsHide: true, stdio: 'inherit',
+        env: { ...process.env, JAVA_TOOL_OPTIONS: properties.map(value => `"${value}"`).join(' ') },
+      })
+      : spawnSync(mvn, ['-f', path.join(backendDir, 'pom.xml'), '-q', 'dependency:build-classpath', ...properties], { stdio: 'inherit' });
     if (res.status !== 0) throw new Error('could not resolve the backend classpath with Maven');
   }
   // devtools would restart the app when classes change and opens a LiveReload port that your own dev server holds.

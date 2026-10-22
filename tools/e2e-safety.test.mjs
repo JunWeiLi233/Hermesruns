@@ -70,6 +70,73 @@ assert.throws(() => safeStackName('../main'), /simple stack name/);
 
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'hermesruns-e2e-safety-'));
 try {
+  // Exercise the actual classpath resolver without importing the stack's CLI or starting a server.
+  const stackSource = fs.readFileSync(path.join(repositoryRoot, 'e2e/tools/stack.mjs'), 'utf8');
+  const classpathSource = stackSource.slice(stackSource.indexOf('function backendClasspath()'), stackSource.indexOf('\nasync function serve()'));
+  assert.ok(classpathSource.startsWith('function backendClasspath()'));
+  const mavenRoot = path.join(temporary, 'checkout & %E2E_PATH_EXPANSION%');
+  const mavenBackend = path.join(mavenRoot, 'backend');
+  const mavenClasses = path.join(mavenBackend, 'target-e2e', 'classes');
+  const classpathFile = path.join(mavenRoot, 'cache & %E2E_PATH_EXPANSION%', 'dependencies.txt');
+  const captureFile = path.join(temporary, 'maven-launch.json');
+  fs.mkdirSync(mavenClasses, { recursive: true });
+  fs.mkdirSync(path.join(mavenBackend, 'src/main/resources/static'), { recursive: true });
+  fs.writeFileSync(path.join(mavenClasses, 'application.properties'), '');
+  fs.writeFileSync(path.join(mavenBackend, 'src/main/resources/static/index.html'), '<div>fixture</div>');
+  fs.writeFileSync(path.join(mavenBackend, 'probe.mjs'), `
+    import fs from 'node:fs';
+    fs.writeFileSync(process.env.E2E_CLASSPATH_PROBE_CAPTURE, JSON.stringify({ javaOptions: process.env.JAVA_TOOL_OPTIONS, cwd: process.cwd() }));
+    fs.writeFileSync(process.env.E2E_CLASSPATH_FILE, ['dependency-one', 'spring-boot-devtools.jar', 'dependency-two'].join(process.platform === 'win32' ? ';' : ':'));
+  `);
+  fs.writeFileSync(path.join(mavenBackend, 'mvnw.cmd'), `@echo off\r\n"${process.execPath}" probe.mjs\r\nexit /b %errorlevel%\r\n`);
+  const mavenEnv = { ...process.env, E2E_CLASSPATH_FILE: classpathFile, E2E_PATH_EXPANSION: 'must-not-expand',
+    E2E_CLASSPATH_PROBE_CAPTURE: captureFile, JAVA_TOOL_OPTIONS: '-Dunrelated.parent.option=true' };
+  for (const windows of [true, false]) {
+    fs.rmSync(classpathFile, { force: true });
+    let launches = 0;
+    const result = vm.runInNewContext(`${classpathSource}\nbackendClasspath()`, {
+      fs, path, repoRoot: mavenRoot, backendDir: mavenBackend, cacheDir: path.join(mavenRoot, 'cache'),
+      isWin: windows, process: { env: mavenEnv }, assertIsolatedBuildDirectory: value => assertIsolatedBuildDirectory(value, mavenRoot),
+      spawnSync: (command, args, options) => {
+        launches++;
+        if (windows) {
+          assert.deepEqual(Array.from(args), ['/d', '/s', '/c', 'mvnw.cmd -f pom.xml -q dependency:build-classpath'],
+            'Only a fixed literal command may reach cmd; path values must never be shell arguments.');
+          assert.equal(command, 'cmd.exe');
+          assert.equal(options.cwd, mavenBackend);
+          assert.equal(options.env.JAVA_TOOL_OPTIONS, [
+            `"-Dmaven.repo.local=${path.join(mavenRoot, '.m2repo')}"`,
+            `"-Dhermes.build.directory=${path.join(mavenBackend, 'target-e2e')}"`,
+            `"-Dmdep.outputFile=${classpathFile}"`,
+          ].join(' '));
+          if (process.platform === 'win32') {
+            const child = spawnSync(command, Array.from(args), { ...options, stdio: 'pipe', encoding: 'utf8', windowsHide: true });
+            assert.ifError(child.error);
+            assert.equal(child.status, 0, `${child.stdout}\n${child.stderr}`);
+            const capture = JSON.parse(fs.readFileSync(captureFile, 'utf8'));
+            assert.equal(capture.javaOptions, options.env.JAVA_TOOL_OPTIONS, 'cmd must preserve literal ampersands and percent signs in Java property values.');
+            assert.equal(capture.cwd.toLowerCase(), mavenBackend.toLowerCase());
+            return child;
+          }
+        } else {
+          assert.equal(command, path.join(mavenBackend, 'mvnw'));
+          assert.equal(args.at(-1), `-Dmdep.outputFile=${classpathFile}`);
+        }
+        fs.writeFileSync(classpathFile, ['dependency-one', 'spring-boot-devtools.jar', 'dependency-two'].join(path.delimiter));
+        return { status: 0 };
+      },
+    });
+    assert.equal(launches, 1);
+    assert.equal(result, [mavenClasses, 'dependency-one', 'dependency-two'].join(path.delimiter));
+  }
+  for (const invalid of ['invalid"path', 'invalid\npath', 'invalid\0path']) {
+    assert.throws(() => vm.runInNewContext(`${classpathSource}\nbackendClasspath()`, {
+      fs: { ...fs, existsSync: file => file.endsWith('application.properties') || file.endsWith('index.html'), mkdirSync: () => {}, statSync: () => ({ mtimeMs: 1 }) },
+      path, repoRoot: mavenRoot, backendDir: mavenBackend, cacheDir: path.join(mavenRoot, 'cache'), isWin: true,
+      process: { env: { E2E_CLASSPATH_FILE: invalid } }, assertIsolatedBuildDirectory: value => value,
+      spawnSync: () => { throw Error('Unsafe paths must be rejected before a child is launched.'); },
+    }), /quotes or control characters/);
+  }
   const root = path.join(temporary, 'checkout');
   const auth = path.join(root, 'e2e', '.auth');
   fs.mkdirSync(auth, { recursive: true });

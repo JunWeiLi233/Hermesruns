@@ -11,6 +11,7 @@ COPY frontend/package*.json ./
 RUN npm ci --ignore-scripts
 
 COPY frontend/index.html ./
+COPY frontend/public.html ./
 COPY frontend/vite.config.js ./
 COPY frontend/postcss.config.js ./
 COPY frontend/tailwind.config.js ./
