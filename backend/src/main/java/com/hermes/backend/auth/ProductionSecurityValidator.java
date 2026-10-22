@@ -41,6 +41,18 @@ public class ProductionSecurityValidator {
     @Value("${app.official-course.startup-seed.enabled:true}")
     private boolean courseStartupSeedEnabled;
 
+    @Value("${app.course-map.bulk-seed.enabled:false}")
+    private boolean courseBulkSeedEnabled;
+
+    @Value("${app.course-map.bulk-scan.enabled:false}")
+    private boolean courseBulkScanEnabled;
+
+    @Value("${app.training-workspace.migrate:h2}")
+    private String trainingWorkspaceMigrate = "false";
+
+    @Value("${app.schema-compatibility.enabled:true}")
+    private boolean schemaCompatibilityEnabled;
+
     @Value("${RAILWAY_ENVIRONMENT_ID:}")
     private String railwayEnvironmentId;
 
@@ -217,6 +229,16 @@ public class ProductionSecurityValidator {
         if (courseStartupSeedEnabled) {
             throw new IllegalStateException(
                     "HERMES_ENV=production: HERMES_OFFICIAL_COURSE_STARTUP_SEED_ENABLED must be false to preserve live routes.");
+        }
+        if (courseBulkSeedEnabled || courseBulkScanEnabled) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: app.course-map.bulk-seed.enabled and app.course-map.bulk-scan.enabled"
+                            + " must be false to preserve live routes.");
+        }
+        if (!"false".equals(normalize(trainingWorkspaceMigrate)) || schemaCompatibilityEnabled) {
+            throw new IllegalStateException(
+                    "HERMES_ENV=production: app.training-workspace.migrate and app.schema-compatibility.enabled"
+                            + " must be false; apply reviewed migrations before startup.");
         }
     }
 

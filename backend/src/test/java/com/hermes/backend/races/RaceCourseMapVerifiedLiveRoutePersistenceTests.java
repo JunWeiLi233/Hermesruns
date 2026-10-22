@@ -42,7 +42,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 })
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class RaceCourseMapVerifiedLiveRoutePersistenceTests {
-    private static final String RACE_ID = "synthetic-verified-live-tokyo";
+    private static final String RACE_ID = "tokyo-marathon";
     private static final String LIVE_IMAGE = "local-course-map:previous-tokyo.png";
     private static final String PENDING_IMAGE = "local-course-map:pending-tokyo.png";
     private static final String REVIEWER = "synthetic-reviewer@hermes.test";
@@ -62,6 +62,7 @@ class RaceCourseMapVerifiedLiveRoutePersistenceTests {
     @Autowired private RaceCourseMapService courses;
     @Autowired private RaceCourseMapAssetRepository assets;
     @Autowired private RaceCourseMapImageService images;
+    @Autowired private RaceCourseMapBulkSeedService seeds;
     @Autowired private ObjectMapper json;
     @Autowired private JdbcTemplate database;
 
@@ -142,6 +143,23 @@ class RaceCourseMapVerifiedLiveRoutePersistenceTests {
         asset.setPendingUpdatedByEmail(REVIEWER);
         assets.saveAndFlush(asset);
         assertThat(assets.count()).isEqualTo(1);
+    }
+
+    @Test
+    void overwriteSeedForActualTokyoIdPreservesEveryCommittedLiveColumnAndArtifact() throws Exception {
+        Map<String, String> previouslyCommittedLive = committedLive();
+        byte[] previousArtifact = Files.readAllBytes(liveArtifact);
+        var race = new RaceCourseMapBulkSeedService.CatalogRace(RACE_ID, "Tokyo Marathon", "Tokyo Marathon",
+                "https://www.marathon.tokyo/", "Tokyo", "Japan", "Tokyo, Japan", 42.195, 3, "",
+                35.6762, 139.6503, "");
+
+        assertThat(seeds.seedRace(race, "startup-seeder", true))
+                .isEqualTo(RaceCourseMapBulkSeedService.SeedOutcome.SKIPPED_HAS_REAL_MAP);
+
+        assertThat(committedLive()).isEqualTo(previouslyCommittedLive);
+        assertThat(Files.readAllBytes(liveArtifact)).isEqualTo(previousArtifact);
+        assertThat(savedAsset().getPendingImageUrl()).isEqualTo(PENDING_IMAGE);
+        verifyNoInteractions(externalHttp, externalRest, externalAi, externalRouting);
     }
 
     @Test

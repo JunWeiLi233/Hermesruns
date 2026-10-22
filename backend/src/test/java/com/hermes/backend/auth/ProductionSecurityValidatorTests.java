@@ -47,10 +47,24 @@ class ProductionSecurityValidatorTests {
     }
 
     @Test
-    void productionRejectsAutomaticCourseReseeding() {
+    void productionRejectsEveryCompatibilityMigrationWriter() {
+        for (String value : new String[] {"true", "h2", ""}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "trainingWorkspaceMigrate", value);
+            assertThatThrownBy(validator::validate).hasMessageContaining("must be false");
+        }
         ProductionSecurityValidator validator = secureProductionValidator();
-        ReflectionTestUtils.setField(validator, "courseStartupSeedEnabled", true);
-        assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_OFFICIAL_COURSE_STARTUP_SEED_ENABLED");
+        ReflectionTestUtils.setField(validator, "schemaCompatibilityEnabled", true);
+        assertThatThrownBy(validator::validate).hasMessageContaining("must be false");
+    }
+
+    @Test
+    void productionRejectsAutomaticCourseReseeding() {
+        for (String field : new String[] {"courseStartupSeedEnabled", "courseBulkSeedEnabled", "courseBulkScanEnabled"}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, field, true);
+            assertThatThrownBy(validator::validate).hasMessageContaining("must be false to preserve live routes");
+        }
     }
 
     @Test

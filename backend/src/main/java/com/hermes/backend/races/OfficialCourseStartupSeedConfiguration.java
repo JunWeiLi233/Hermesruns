@@ -196,8 +196,7 @@ public class OfficialCourseStartupSeedConfiguration {
                 String raceId = entry.race().id();
                 boolean alreadySeeded = assetRepository.findByRaceId(raceId)
                         .map(asset -> hasCurrentOfficialCourseSeed(asset, entry)
-                                || (allowsVerifiedAdminCourseMapPreservation(entry)
-                                && hasVerifiedAdminCourseMap(asset)))
+                                || hasVerifiedAdminCourseMap(asset))
                         .orElse(false);
                 if (alreadySeeded) {
                     logger.debug("official-course-startup-seed: {} already official — skipping", raceId);
@@ -502,22 +501,14 @@ public class OfficialCourseStartupSeedConfiguration {
         return value == null ? "" : value.trim();
     }
 
-    private boolean allowsVerifiedAdminCourseMapPreservation(OfficialRaceEntry entry) {
-        return entry != null
-                && entry.race() != null
-                && !BostonMarathonOfficialCourse.RACE_ID.equals(entry.race().id())
-                && !TokyoMarathonOfficialCourse.RACE_ID.equals(entry.race().id())
-                && !WuxiMarathonOfficialCourse.RACE_ID.equals(entry.race().id());
-    }
-
     private boolean hasVerifiedAdminCourseMap(RaceCourseMapAsset asset) {
         if (asset == null) {
             return false;
         }
         String source = asset.getLiveSource() == null ? "" : asset.getLiveSource().trim();
-        String imageUrl = asset.getLiveImageUrl() == null ? "" : asset.getLiveImageUrl().trim();
         String routePoints = asset.getLiveRoutePointsJson() == null ? "" : asset.getLiveRoutePointsJson().trim();
-        return source.startsWith("admin-") && !imageUrl.isBlank() && routePoints.length() > 2;
+        return (asset.getLocalRouteArtifactRef() != null && !asset.getLocalRouteArtifactRef().isBlank())
+                || ((source.startsWith("admin-") || source.startsWith("admin_")) && routePoints.length() > 2);
     }
 
     private record OfficialRaceEntry(

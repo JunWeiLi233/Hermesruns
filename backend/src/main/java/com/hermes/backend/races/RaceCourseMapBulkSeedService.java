@@ -256,6 +256,11 @@ public class RaceCourseMapBulkSeedService {
         Optional<RaceCourseMapAsset> existing = assetRepository.findByRaceId(race.id());
         if (existing.isPresent()) {
             RaceCourseMapAsset asset = existing.get();
+            // Explicit publication owns the live route even when its source label
+            // is also used by an official seed, or later geometry checks change.
+            if (asset.getLocalRouteArtifactRef() != null && !asset.getLocalRouteArtifactRef().isBlank()) {
+                return SeedOutcome.SKIPPED_HAS_REAL_MAP;
+            }
             String existingSource = asset.getLiveSource();
             String existingRoute = asset.getLiveRoutePointsJson();
             boolean hasRealRoute = existingRoute != null && !existingRoute.isBlank() && !"[]".equals(existingRoute.trim());
@@ -286,8 +291,7 @@ public class RaceCourseMapBulkSeedService {
                     || BergenCityMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
                     || AmsterdamMarathonOfficialCourse.OFFICIAL_SOURCE.equals(existingSource)
                     || (existingSource != null && existingSource.startsWith("known-official-course:"));
-            boolean allowKnownOfficialCourseRefresh = overwriteSynthetic && isKnownOfficialCourseRace(race);
-            if (hasRealRoute && routeIsPlausible && !isSyntheticSource && !allowKnownOfficialCourseRefresh) {
+            if (hasRealRoute && routeIsPlausible && !isSyntheticSource) {
                 // Real admin-uploaded route with a plausible distance 鈥?never
                 // overwrite even with overwriteSynthetic=true.
                 return SeedOutcome.SKIPPED_HAS_REAL_MAP;

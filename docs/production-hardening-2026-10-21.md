@@ -40,6 +40,10 @@ The combined regression also exposed an existing admin request-path fallback bug
 
 ## Deployment requirements
 
+The [PR178 release manifest](deployment/pr178-release-manifest.md) supersedes this
+earlier partial list and includes training, analysis, community/story, compatibility
+DDL, persistent files, restore validation and production rollout gates.
+
 1. Apply `docs/deployment/2026-10-21-billing-budget.sql` before deploying the new billing code with production `ddl-auto=validate`.
 2. Apply `backend/src/main/resources/db/performance/V001__activity_history_index.sql` using PostgreSQL autocommit, outside a transaction. Confirm the index is valid after a concurrent build.
 3. Deploy the backend/frontend and Railway definition together, preserving the env-backed settings in `.env.example`. Configure shared Redis limits if multiple app instances are used.

@@ -11,6 +11,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -30,6 +32,42 @@ import static org.mockito.Mockito.when;
 class RaceCourseMapBulkSeedServiceTests {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    @ParameterizedTest
+    @CsvSource({
+            "tokyo-marathon,admin_manual,false",
+            "boston-marathon,admin-image-url,false",
+            "wuxi-marathon,admin-upload,false",
+            "amsterdam-marathon,verified-official-map:amsterdam-marathon,true",
+            "tokyo-marathon,tokyo-official-course,true"
+    })
+    void overwriteNeverReplacesPublishedRoutesForKnownOfficialRaces(
+            String raceId, String source, boolean publishedArtifact) throws Exception {
+        RestTemplate externalHttp = mock(RestTemplate.class);
+        RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+        RaceCourseMapAsset existing = new RaceCourseMapAsset();
+        existing.setRaceId(raceId);
+        existing.setLiveSource(source);
+        existing.setLiveImageUrl("local-course-map:verified-source.png");
+        existing.setLiveRoutePointsJson(buildPlausibleMarathonRouteJson(35.69, 139.69));
+        existing.setLiveSummary("Verified by an administrator");
+        existing.setPendingImageUrl("local-course-map:pending-source.png");
+        if (publishedArtifact) existing.setLocalRouteArtifactRef("local-course-map-route:verified-route.json");
+        String before = objectMapper.writeValueAsString(existing);
+        when(repository.findByRaceId(raceId)).thenReturn(Optional.of(existing));
+        RaceCourseMapBulkSeedService.CatalogRace race = new RaceCourseMapBulkSeedService.CatalogRace(
+                raceId, raceId, "Organizer", "https://example.com/", "Tokyo", "Japan",
+                "Tokyo, Japan", 42.195, 3, "", 35.69, 139.69, "");
+
+        RaceCourseMapBulkSeedService service = newService(externalHttp, repository);
+        service.osrmRetryDelayMs = 0L;
+        assertThat(service.seedRace(race, "startup-seeder", true))
+                .isEqualTo(RaceCourseMapBulkSeedService.SeedOutcome.SKIPPED_HAS_REAL_MAP);
+
+        assertThat(objectMapper.writeValueAsString(existing)).isEqualTo(before);
+        verify(repository, never()).save(any(RaceCourseMapAsset.class));
+        org.mockito.Mockito.verifyNoInteractions(externalHttp);
+    }
 
     @Test
     void officialLandmarkCatalogCoversThePreviouslySyntheticRaceSet() {
@@ -843,13 +881,13 @@ class RaceCourseMapBulkSeedServiceTests {
     }
 
     @Test
-    void seedRacePersistsBostonOfficialCourseInsteadOfStaleAdminUpload() throws Exception {
+    void seedRaceRefreshesSeedOwnedBostonOfficialCourse() throws Exception {
         RestTemplate restTemplate = mockElevationRestTemplate();
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
 
         RaceCourseMapAsset existing = new RaceCourseMapAsset();
         existing.setRaceId(BostonMarathonOfficialCourse.RACE_ID);
-        existing.setLiveSource("admin-upload");
+        existing.setLiveSource("known-official-course:legacy-boston");
         existing.setLiveImageUrl("local-course-map:boston-marathon-1a7a57c21c071553.jpg");
         existing.setLiveRoutePointsJson("""
                 [
@@ -1030,7 +1068,7 @@ class RaceCourseMapBulkSeedServiceTests {
 
         RaceCourseMapAsset existing = new RaceCourseMapAsset();
         existing.setRaceId("chicago-marathon");
-        existing.setLiveSource("admin-document-url");
+        existing.setLiveSource(ChicagoMarathonKnownCourse.OFFICIAL_SOURCE);
         existing.setLiveImageUrl("local-course-map:chicago-marathon-83ca64b5b1c872f2.png");
         existing.setLiveRoutePointsJson(buildPlausibleMarathonRouteJson(41.8809, -87.6207));
         existing.setLiveElevationSamplesJson("[185,184,182,203,196,213,192,229,289,260]");
@@ -1134,7 +1172,7 @@ class RaceCourseMapBulkSeedServiceTests {
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
         RaceCourseMapAsset existing = new RaceCourseMapAsset();
         existing.setRaceId(AthensMarathonOfficialCourse.RACE_ID);
-        existing.setLiveSource("admin_manual");
+        existing.setLiveSource("known-official-course:legacy-athens");
         existing.setLiveImageUrl("https://cdn.example.com/bad-athens-course.png");
         existing.setLiveRoutePointsJson(buildPlausibleMarathonRouteJson(37.9838, 23.7275));
         when(repository.findByRaceId(AthensMarathonOfficialCourse.RACE_ID)).thenReturn(Optional.of(existing));
