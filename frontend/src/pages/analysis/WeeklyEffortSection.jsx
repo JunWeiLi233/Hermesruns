@@ -1,5 +1,6 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
+import { MethodsLink } from '../../components/HowWorkedOut';
 import useElementWidth from '../../hooks/useElementWidth';
 import { formatShortDate } from '../../utils/fitnessChart';
 import { WEEK_STATUS_TONE, buildWeeklyChart, weeklyTooltipPosition } from '../../utils/weeklyEffortChart';
@@ -172,7 +173,7 @@ export default function WeeklyEffortSection() {
               </div>
               <span className={`analysis-load-v2-zone${CHIP_CLASS[tone]}`}>{t(`training_series.status_${thisWeek.status}`)}</span>
             </div>
-            <WeeklyChart weeks={weeks} label={t('training_series.weekly_chart_label', { count: weeks.length })} />
+            <WeeklyChart weeks={weeks} label={weeks.length === 1 ? t('training_series.weekly_chart_label_one') : t('training_series.weekly_chart_label', { count: weeks.length })} />
             <p className="analysis-fit-v2-note">{thisWeekSentence(t, formatNumber, thisWeek)}</p>
           </>
         ) : null}
@@ -182,7 +183,7 @@ export default function WeeklyEffortSection() {
             <button type="button" className="analysis-load-v2-link" onClick={reload}>{t('training_series.refresh')}</button>
           </p>
         ) : null}
-        {weeks.length > 0 ? <p className="analysis-fit-v2-note is-faint">{t('training_series.weekly_basis', { band: data.bandPercent })}</p> : null}
+        {weeks.length > 0 ? <p className="analysis-fit-v2-note is-faint">{t('training_series.weekly_basis', { band: data.bandPercent })} <MethodsLink anchor="weekly-effort" /></p> : null}
       </>
     );
   } else if (status === 'error') {
@@ -204,6 +205,7 @@ export default function WeeklyEffortSection() {
   return (
     <section
       id="load-weekly-effort"
+      tabIndex={-1}
       className="analysis-load-v2-chart analysis-fit-v2"
       aria-labelledby={titleId}
       aria-busy={status === 'loading' || status === 'refreshing' ? 'true' : undefined}

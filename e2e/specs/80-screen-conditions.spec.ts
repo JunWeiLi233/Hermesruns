@@ -20,7 +20,7 @@ test.beforeAll(async () => {
 });
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const ratioShown = (page: Page) => page.getByText('acute : chronic workload ratio');
+const ratioShown = (page: Page) => page.locator('.analysis-load-v2-ratio > strong');
 const fiveHundred = { status: 500, contentType: 'application/json', body: '{"error":"boom"}' };
 
 async function signedInContext(browser: Parameters<typeof contextWith>[0], baseURL: string | undefined, guard: Parameters<typeof contextWith>[3]): Promise<BrowserContext> {
@@ -63,7 +63,7 @@ test.describe('F02 Load balance and Analysis under bad conditions', () => {
     try {
       const page = await context.newPage();
       let failures = 1;
-      await page.route(/\/api\/activities$/, (route) => (failures-- > 0 ? route.fulfill(fiveHundred) : route.continue()));
+      await page.route(/\/api\/activities\/analysis$/, (route) => (failures-- > 0 ? route.fulfill(fiveHundred) : route.continue()));
       await page.goto('/analysis/load-balance');
       await expect(page.getByRole('alert')).toContainText('Unable to load analysis right now.');
       await page.getByRole('button', { name: 'Try again' }).click();
@@ -106,11 +106,11 @@ test.describe('F02 Load balance and Analysis under bad conditions', () => {
       await page.getByText('Load balance', { exact: true }).first().click();
       await expect(page).toHaveURL(/\/analysis\/load-balance$/);
       await expect(ratioShown(page)).toBeVisible();
-      const header = (await page.locator('main').innerText()).match(/workload ratio\s+(\d\.\d\d)/)?.[1];
+      const header = await ratioShown(page).innerText();
       expect(header, 'the ratio in the header').toBeTruthy();
       await page.reload();
       await expect(ratioShown(page)).toBeVisible();
-      expect((await page.locator('main').innerText()).match(/workload ratio\s+(\d\.\d\d)/)?.[1]).toBe(header);
+      await expect(ratioShown(page)).toHaveText(header);
       await page.goBack();
       await expect(page).toHaveURL(/\/analysis$/);
       await expect(page.getByRole('heading', { name: /Fitness is/ })).toBeVisible();
@@ -175,7 +175,7 @@ test.describe('F05 prediction pages under bad conditions', () => {
     try {
       const page = await context.newPage();
       let failures = 1;
-      await page.route(/\/api\/activities$/, (route) => (failures-- > 0 ? route.fulfill(fiveHundred) : route.continue()));
+      await page.route(/\/api\/activities\/analysis$/, (route) => (failures-- > 0 ? route.fulfill(fiveHundred) : route.continue()));
       await page.goto('/prediction/10k');
       await expect(page.getByRole('alert')).toContainText('Unable to load analysis right now.');
       await expect(page.locator('body')).not.toContainText('Not enough data yet');
@@ -278,11 +278,11 @@ test.describe('F04 zones editor under bad conditions', () => {
       let offline = true;
       await page.route('**/api/training/zones', (route) => (route.request().method() === 'PUT' && offline ? route.abort('failed') : route.continue()));
       await maxField(page).fill('185');
-      await page.getByRole('button', { name: 'Save', exact: true }).click();
+      await maxField(page).locator('..').getByRole('button', { name: 'Save', exact: true }).click();
       await expect(page.getByRole('alert')).toContainText('Could not save your zones');
       await expect(maxField(page)).toHaveValue('185');
       offline = false;
-      await page.getByRole('button', { name: 'Save', exact: true }).click();
+      await maxField(page).locator('..').getByRole('button', { name: 'Save', exact: true }).click();
       // The error goes as soon as Save is pressed; the server has the value once the page says it was saved.
       await expect(page.getByRole('status').filter({ hasText: 'Saved.' })).toBeVisible();
       await expect(page.getByRole('alert')).toHaveCount(0);

@@ -5,8 +5,11 @@ import RunActivityContributionGraph from './RunActivityContributionGraph';
 import SettingsDataCard from './SettingsDataCard';
 import SettingsPlanCard from './SettingsPlanCard';
 import SettingsTimeZoneRow from './SettingsTimeZoneRow';
-import SettingsPaceZones from './SettingsPaceZones';
 import SettingsTrainingZones from './SettingsTrainingZones';
+import TrainingDataProvider from '../features/training/integrated/TrainingDataProvider';
+import SettingsTrainingTools from '../features/training/integrated/SettingsTrainingTools';
+import { dismissCompletionCard, isCompletionCardDismissed } from '../utils/settingsCompletionDismissal';
+import SettingsPaceZones from './SettingsPaceZones';
 import { useRunSummariesEnabled } from '../utils/runSummaryPreference';
 
 /* Settings v2 (design 25a): sticky section selector + one active group.
@@ -16,6 +19,7 @@ import { useRunSummariesEnabled } from '../utils/runSummaryPreference';
 const SECTION_IDS = ['profile', 'preferences', 'training', 'connections', 'notifications', 'activity', 'account'];
 
 export default function SettingsAtlasLayout({
+  accountEmail = '',
   initialSection,
   t,
   navigate,
@@ -73,6 +77,8 @@ export default function SettingsAtlasLayout({
     if (SECTION_IDS.includes(initialSection)) setActiveSection(initialSection);
   }
   const [compactNavigation, setCompactNavigation] = useState(false);
+  const [dismissedAccount, setDismissedAccount] = useState(null);
+  const completionDismissed = dismissedAccount === accountEmail || isCompletionCardDismissed(accountEmail);
   const avatarInputRef = useRef(null);
   const sectionTabsRef = useRef(null);
   const [summariesOn, setSummariesOn] = useRunSummariesEnabled();
@@ -120,6 +126,12 @@ export default function SettingsAtlasLayout({
     if (file) onAvatarUpload?.(file);
   }
 
+  function dismissCompletion() {
+    dismissCompletionCard(accountEmail);
+    setDismissedAccount(accountEmail);
+    sectionTabsRef.current?.querySelector('[aria-selected="true"]')?.focus({ preventScroll: true });
+  }
+
   const avatar = (size) => (
     <span className={`st-v2-avatar is-${size}`} aria-hidden="true">
       {avatarUrl ? <img src={avatarUrl} alt="" width="256" height="256" loading="eager" decoding="async" /> : initials}
@@ -138,10 +150,15 @@ export default function SettingsAtlasLayout({
             </div>
           </div>
 
-          <div className="st-v2-setup">
+          {!completionDismissed && <div className="st-v2-setup">
             <div className="st-v2-setup-head">
               <span>{t('settings.stitch_completion_title')}</span>
-              <strong>{setupChecklist.length ? `${doneCount} / ${setupChecklist.length}` : `${completionScore}%`}</strong>
+              <div className="st-v2-setup-actions">
+                <strong>{setupChecklist.length ? `${doneCount} / ${setupChecklist.length}` : `${completionScore}%`}</strong>
+                <button type="button" className="st-v2-setup-dismiss" onClick={dismissCompletion} aria-label={t('settings.dismiss_completion')} title={t('settings.dismiss_completion')}>
+                  <AppIcon name="delete" />
+                </button>
+              </div>
             </div>
             <div className="st-v2-progress" aria-hidden="true"><i style={{ width: `${completionScore}%` }} /></div>
             <ul>
@@ -152,7 +169,7 @@ export default function SettingsAtlasLayout({
                 </li>
               ))}
             </ul>
-          </div>
+          </div>}
 
           <nav ref={sectionTabsRef} className="st-v2-nav" role="tablist" aria-orientation={compactNavigation ? 'horizontal' : 'vertical'} aria-label={t('settings.heading')}>
             {sections.map(([id, label], index) => (
@@ -303,6 +320,7 @@ export default function SettingsAtlasLayout({
           <section id="st-v2-training" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'training'} aria-labelledby="st-v2-tab-training">
             <h2 id="st-v2-training-label" className="st-v2-group-label">{t('settings.training_zones_title')}</h2>
             <SettingsTrainingZones t={t} active={activeSection === 'training'} />
+            {activeSection === 'training' && <TrainingDataProvider><SettingsTrainingTools view="training" /></TrainingDataProvider>}
             <SettingsPaceZones t={t} lang={lang} unit={unit} active={activeSection === 'training'} />
           </section>
 
@@ -400,7 +418,7 @@ export default function SettingsAtlasLayout({
 
           <section id="st-v2-activity" className="st-v2-group st-v2-activity" role="tabpanel" hidden={activeSection !== 'activity'} aria-labelledby="st-v2-tab-activity">
             <h2 id="st-v2-activity-label" className="st-v2-group-label">{t('settings.v2_activity_title')}</h2>
-            <RunActivityContributionGraph runs={runActivities} status={runActivityState} lang={lang} t={t} />
+            <RunActivityContributionGraph runs={runActivities} status={runActivityState} lang={lang} t={t} timeZone={timeZone} />
           </section>
 
           <section id="st-v2-account" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'account'} aria-labelledby="st-v2-tab-account">
@@ -416,6 +434,7 @@ export default function SettingsAtlasLayout({
             </div>
             <SettingsPlanCard t={t} />
             <SettingsDataCard t={t} onRequestDeleteAccount={onRequestDeleteAccount} />
+            {activeSection === 'account' && <TrainingDataProvider><SettingsTrainingTools view="account" /></TrainingDataProvider>}
             <p className="st-v2-meta">{[resolvedUnitLabel, resolvedLanguageLabel, activeThemeLabel].filter(Boolean).join(' · ')}</p>
           </section>
         </div>

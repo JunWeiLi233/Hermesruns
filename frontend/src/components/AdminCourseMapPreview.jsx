@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import 'leaflet/dist/leaflet.css';
 import { getBackendBaseUrl } from '../api';
 import { buildCourseMapStaticGeometry } from '../utils/courseMapStaticGeometry.js';
-import { normalizeOverlayBounds } from '../utils/races/courseMapGeometry.js';
 
 const ADMIN_REVIEW_PREVIEW_MAX_TILE_ZOOM = 19;
 const ADMIN_REVIEW_PREVIEW_MAX_ROUTE_ZOOM = 14;
@@ -93,7 +92,6 @@ export default function AdminCourseMapPreview({
   const isCardVariant = variant === 'card';
 
   const imageUrl = resolvePreviewImageUrl(preview);
-  const overlayBounds = useMemo(() => normalizeOverlayBounds(preview?.overlayBounds), [preview?.overlayBounds]);
   const routePoints = useMemo(() => normalizeRoutePoints(preview?.routePoints), [preview?.routePoints]);
   const polylinePoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
   const fallbackLatLng = useMemo(() => {
@@ -103,14 +101,11 @@ export default function AdminCourseMapPreview({
   const tileUrl = useMemo(() => `${getBackendBaseUrl()}/api/maps/tiles/{z}/{x}/{y}.png`, []);
   const fallbackTileUrl = useMemo(() => 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', []);
   const hasAlignedRoute = polylinePoints.length > 1;
-  const hasAlignedOverlay = Boolean(imageUrl) && Boolean(overlayBounds) && hasAlignedRoute;
-  const hasRenderableAlignment = hasAlignedOverlay || hasAlignedRoute;
   const hasFallbackCenter = Boolean(fallbackLatLng);
-  const shouldRenderMap = renderMap && !mapFailed && (hasRenderableAlignment || (forceLiveMap && hasFallbackCenter));
+  const shouldRenderMap = renderMap && !mapFailed && (hasAlignedRoute || (forceLiveMap && hasFallbackCenter));
   const canRenderImage = Boolean(imageUrl) && !imageFailed;
-  const shouldAllowImageFallback = allowImageFallback || hasRenderableAlignment;
   const previewSummary = useMemo(() => resolvePreviewSummary(preview), [preview]);
-  const showPreviewSummary = Boolean(previewSummary) && !hasRenderableAlignment;
+  const showPreviewSummary = Boolean(previewSummary) && !hasAlignedRoute;
   const fallbackLabel = previewSummary || (preview && unalignedLabel ? unalignedLabel : emptyLabel);
   const staticRouteGeometry = useMemo(() => buildCourseMapStaticGeometry(polylinePoints), [polylinePoints]);
 
@@ -118,13 +113,14 @@ export default function AdminCourseMapPreview({
     setMapReady(false);
     setMapFailed(false);
     setImageFailed(false);
-  }, [imageUrl, overlayBounds, preview, hasAlignedRoute, forceLiveMap, hasFallbackCenter]);
+  }, [imageUrl, preview, hasAlignedRoute, forceLiveMap, hasFallbackCenter]);
 
   useEffect(() => {
     if (!mapHostRef.current || !shouldRenderMap) return undefined;
     let cancelled = false;
     let resizeTimer = null;
     let tileFallbackTimer = null;
+    let layoutFrame = null;
 
     const clearTileFallbackTimer = () => {
       if (tileFallbackTimer) {
@@ -145,6 +141,11 @@ export default function AdminCourseMapPreview({
         boxZoom: false,
         keyboard: false,
         tap: false,
+        // Preview tabs can replace the map during a viewport adjustment.
+        // Passive previews do not need Leaflet's deferred zoom animations.
+        zoomAnimation: false,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
         maxZoom: ADMIN_REVIEW_PREVIEW_MAX_TILE_ZOOM,
       });
 
@@ -156,17 +157,10 @@ export default function AdminCourseMapPreview({
       };
 
       createPreviewPane('admin-review-preview__tile-pane', 180);
-      createPreviewPane('admin-review-preview__source-pane', 260);
       createPreviewPane('admin-review-preview__route-shadow-pane', 420);
       createPreviewPane('admin-review-preview__route-pane', 430);
       createPreviewPane('admin-review-preview__marker-pane', 440);
 
-      const resolvedOverlayBounds = overlayBounds
-        ? L.latLngBounds(
-          [overlayBounds.south, overlayBounds.west],
-          [overlayBounds.north, overlayBounds.east],
-        )
-        : null;
       let activeTileLayer = null;
       let polyline = null;
       let switchedToFallbackTiles = false;
@@ -234,13 +228,7 @@ export default function AdminCourseMapPreview({
       const applyPreviewViewport = () => {
         if (polyline) {
           map.fitBounds(polyline.getBounds().pad(0.08), {
-            padding: [18, 18],
-            maxZoom: ADMIN_REVIEW_PREVIEW_MAX_ROUTE_ZOOM,
-          });
-          return;
-        }
-        if (hasAlignedOverlay && resolvedOverlayBounds) {
-          map.fitBounds(resolvedOverlayBounds.pad(0.05), {
+            animate: false,
             padding: [18, 18],
             maxZoom: ADMIN_REVIEW_PREVIEW_MAX_ROUTE_ZOOM,
           });
@@ -250,15 +238,6 @@ export default function AdminCourseMapPreview({
           map.setView(fallbackLatLng, 11, { animate: false });
         }
       };
-
-      if (hasAlignedOverlay && resolvedOverlayBounds) {
-        L.imageOverlay(imageUrl, resolvedOverlayBounds, {
-          pane: 'admin-review-preview__source-pane',
-          opacity: 0.22,
-          interactive: false,
-          className: 'admin-review-preview__map-overlay',
-        }).addTo(map);
-      }
 
       if (hasAlignedRoute) {
         L.polyline(polylinePoints, {
@@ -308,7 +287,7 @@ export default function AdminCourseMapPreview({
       };
 
       if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-        window.requestAnimationFrame(finalizeLayout);
+        layoutFrame = window.requestAnimationFrame(finalizeLayout);
       }
       resizeTimer = setTimeout(finalizeLayout, 150);
       mapInstanceRef.current = map;
@@ -320,6 +299,7 @@ export default function AdminCourseMapPreview({
 
     return () => {
       cancelled = true;
+      if (layoutFrame != null) window.cancelAnimationFrame(layoutFrame);
       if (resizeTimer) {
         clearTimeout(resizeTimer);
       }
@@ -329,9 +309,10 @@ export default function AdminCourseMapPreview({
         mapInstanceRef.current = null;
       }
     };
-  }, [fallbackLatLng, fallbackTileUrl, hasAlignedOverlay, hasAlignedRoute, imageUrl, overlayBounds, polylinePoints, shouldRenderMap, tileUrl]);
+  }, [fallbackLatLng, fallbackTileUrl, hasAlignedRoute, polylinePoints, shouldRenderMap, tileUrl]);
 
-  if (!renderMap && isCardVariant && !(allowImageFallback && canRenderImage)) {
+  if ((renderMap && mapFailed && hasAlignedRoute)
+    || (!renderMap && isCardVariant && !(allowImageFallback && canRenderImage))) {
     return (
       <div className="admin-review-preview admin-review-preview--card admin-review-preview--static-card">
         <svg className="admin-review-preview__static-route" viewBox="0 0 100 100" role="img" aria-label={title}>
@@ -350,7 +331,7 @@ export default function AdminCourseMapPreview({
             r="3"
           />
         </svg>
-        <span className="admin-review-preview__static-label">{emptyLabel}</span>
+        <span className="admin-review-preview__static-label">{mapFailed ? fallbackLabel || title : emptyLabel}</span>
       </div>
     );
   }
@@ -358,20 +339,6 @@ export default function AdminCourseMapPreview({
   if (shouldRenderMap) {
     return (
       <div className={`admin-review-preview admin-review-preview--map${isCardVariant ? ' admin-review-preview--card' : ''}`}>
-        <div className="admin-review-preview__image-layer">
-          {!mapReady && shouldAllowImageFallback && canRenderImage ? (
-            <img
-              src={imageUrl}
-              alt={title}
-              className={`admin-review-preview__image${isCardVariant ? ' admin-review-preview__image--card' : ''}`}
-              loading="lazy"
-              decoding="async"
-              width="1600"
-              height="900"
-              onError={() => setImageFailed(true)}
-            />
-          ) : null}
-        </div>
         <div className="admin-review-preview__map-layer">
           <div
             ref={mapHostRef}
@@ -379,7 +346,7 @@ export default function AdminCourseMapPreview({
             aria-label={title}
           />
         </div>
-        {!mapReady && !canRenderImage ? <div className="admin-review-preview__map-wash" aria-hidden="true" /> : null}
+        {!mapReady ? <div className="admin-review-preview__map-wash" aria-hidden="true" /> : null}
         {showPreviewSummary ? (
           <div className="admin-review-preview__summary-overlay">
             <p>{previewSummary}</p>

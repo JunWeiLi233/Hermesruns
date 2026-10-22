@@ -21,6 +21,9 @@ public class AdminBootstrapConfiguration {
     @Value("${APP_BOOTSTRAP_ADMIN_PASSWORD:}")
     private String bootstrapAdminPassword;
 
+    @Value("${hermes.environment:development}")
+    private String environment;
+
     @Bean
     @ConditionalOnMissingBean(name = "bootstrapAdminRunner")
     ApplicationRunner bootstrapAdminRunner(RunnerRepository runnerRepository, AuthService authService) {
@@ -35,7 +38,23 @@ public class AdminBootstrapConfiguration {
                 return;
             }
 
-            Runner admin = runnerRepository.findByEmailIgnoreCase(normalizedEmail).orElseGet(Runner::new);
+            if (!"development".equalsIgnoreCase(environment == null ? "" : environment.trim())) {
+                log.warn("[Hermes] Admin bootstrap is available only in development. Remove bootstrap credentials.");
+                return;
+            }
+            // Bootstrap creates the first administrator. It must never become a
+            // password reset, account reactivation, or runner promotion on restart.
+            if (runnerRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+                log.info("[Hermes] Admin bootstrap skipped: account already exists. Remove bootstrap credentials.");
+                return;
+            }
+            if (runnerRepository.count((root, query, criteria) ->
+                    criteria.equal(criteria.upper(root.get("role")), "ADMIN")) > 0) {
+                log.info("[Hermes] Admin bootstrap skipped: administrator already exists. Remove bootstrap credentials.");
+                return;
+            }
+
+            Runner admin = new Runner();
             admin.setEmail(normalizedEmail);
             admin.setDeleted(false);
             admin.setStatus("ACTIVE");

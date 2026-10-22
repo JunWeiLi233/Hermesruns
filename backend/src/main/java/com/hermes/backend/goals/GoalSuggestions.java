@@ -1,6 +1,10 @@
 package com.hermes.backend.goals;
 
 import java.time.LocalDate;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
+import java.util.HashSet;
+import com.hermes.backend.coaching.AutomatedCoachService.CoachPlanDto;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -239,5 +243,64 @@ public final class GoalSuggestions {
 
     private static double round1(double value) {
         return Math.round(value * 10.0) / 10.0;
+    }
+    /** A prescribed plan needs recent running, while history-only suggestions require enough complete weeks. */
+    public static boolean enoughRunningForPlan(List<Day> days, LocalDate today) {
+        LocalDate from = today.minusDays(27);
+        return days.stream().anyMatch(day -> valid(day, from, today));
+    }
+
+    public static List<Suggestion> suggest(List<Day> days, LocalDate today, Set<String> existing, CoachPlanDto plan) {
+        if (!hasUsablePlan(plan)) return suggest(days, today, existing);
+        Map<String, Suggestion> offered = new LinkedHashMap<>();
+        for (Suggestion suggestion : prescribedWeekly(days, today, existing, plan)) {
+            add(offered, existing, suggestion);
+        }
+        // A selected plan owns weekly prescriptions, including an exhausted week.
+        // Tracking a longer period still uses the unchanged historical rules.
+        for (Suggestion suggestion : suggest(days, today, existing)) {
+            if (!GoalPeriods.WEEK.equals(suggestion.period())) add(offered, existing, suggestion);
+        }
+        return List.copyOf(offered.values());
+    }
+
+    static boolean hasUsablePlan(CoachPlanDto plan) {
+        return plan != null && ((Double.isFinite(plan.targetWeeklyKm()) && plan.targetWeeklyKm() > 0)
+                || (plan.sessionsPerWeek() > 0 && plan.sessionsPerWeek() <= 7)
+                || (plan.weeklyBudgets() != null && !plan.weeklyBudgets().isEmpty()));
+    }
+
+    private static List<Suggestion> prescribedWeekly(List<Day> days, LocalDate today, Set<String> existing, CoachPlanDto plan) {
+        boolean published = plan != null && plan.reasonCodes() != null && plan.reasonCodes().contains("VERSIONED_PLAN");
+        if (plan == null || (!enoughRunningForPlan(days, today) && !published)) return List.of();
+        List<Suggestion> offered = new ArrayList<>();
+        // History explains the comparison only. It cannot manufacture or increase a prescription.
+        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        double km = 0; int runs = 0; Set<LocalDate> activeWeeks = new HashSet<>();
+        for (Day day : days) if (valid(day, monday.minusWeeks(WEEKS), monday.minusDays(1))) {
+            km += day.km(); runs += day.runs();
+            activeWeeks.add(day.day().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)));
+        }
+        int span = activeWeeks.size();
+        boolean distanceComplete = plan.weeklyBudgets() != null && plan.weeklyBudgets().stream()
+                .anyMatch(w -> !today.isBefore(w.start()) && !today.isAfter(w.end()) && w.completedKm() >= w.budgetKm());
+        int completedRuns = days.stream().filter(d -> valid(d, monday, today)).mapToInt(Day::runs).sum();
+        if (!distanceComplete && Double.isFinite(plan.targetWeeklyKm()) && plan.targetWeeklyKm() > 0) {
+            add(offered, existing, "DISTANCE", "km", plan.targetWeeklyKm(), span, span == 0 ? 0 : km / span);
+        }
+        if (completedRuns < plan.sessionsPerWeek() && plan.sessionsPerWeek() > 0 && plan.sessionsPerWeek() <= 7) {
+            add(offered, existing, "COUNT", "runs", plan.sessionsPerWeek(), span, span == 0 ? 0 : (double) runs / span);
+        }
+        return List.copyOf(offered);
+    }
+
+    private static boolean valid(Day day, LocalDate from, LocalDate to) {
+        return day != null && day.day() != null && !day.day().isBefore(from) && !day.day().isAfter(to)
+                && Double.isFinite(day.km()) && day.km() > 0 && day.runs() > 0;
+    }
+    private static void add(List<Suggestion> out, Set<String> existing, String metric, String unit, double target, int span, double usual) {
+        if (!existing.contains("WEEK/" + metric)) {
+            out.add(new Suggestion("WEEK", metric, unit, target, new Basis("coach-plan", span, Math.round(usual * 10) / 10d, 0)));
+        }
     }
 }

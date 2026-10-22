@@ -8,6 +8,8 @@ import FooterNavLinks from '../../components/FooterNavLinks';
 import stravaConnectButton from '../../assets/btn_strava_connect_with_orange.svg';
 import { parseLoginStatusQuery } from '../../utils/stravaLinking';
 import { createPasskey, getPasskey, isWebAuthnSupported } from '../../utils/webauthn';
+import { trainingPlanReturnPath } from '../../utils/trainingPlanReturnPath';
+import { rememberTrainingAuthReturn, consumeTrainingAuthReturn } from '../../utils/trainingAuthReturn';
 
 export default function Login() {
   const { login, isAuthenticated, isAdmin, authHydrated } = useAuth();
@@ -43,8 +45,9 @@ export default function Login() {
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
-    navigate(isAdmin ? '/dashboard' : '/profile');
-  }, [isAuthenticated, authHydrated, isAdmin, navigate]);
+    const remembered=consumeTrainingAuthReturn(window.location.origin);
+    navigate(isAdmin ? '/dashboard' : trainingPlanReturnPath(searchParams.get('returnTo')||remembered, window.location.origin));
+  }, [isAuthenticated, authHydrated, isAdmin, navigate, searchParams]);
 
   useEffect(() => {
     let cancelled = false;
@@ -263,6 +266,7 @@ export default function Login() {
       return;
     }
     const baseUrl = getBackendBaseUrl();
+    rememberTrainingAuthReturn(searchParams.get('returnTo'),window.location.origin);
     window.location.href = `${baseUrl}/api/auth/${provider}/start?state=login`;
   }
 

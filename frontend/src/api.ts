@@ -17,6 +17,9 @@ export class ApiRequestError extends Error {
   }
 }
 
+export const isHeatmapCapabilityPath = (path: string): boolean => /^\/heatmap\/(unsubscribe|verify-report-email|reset-password|deletion)\/?$/.test(path);
+export const isPublicHeatmapPath = (path: string): boolean => /^\/heatmap\/(unsubscribe|verify-report-email|reset-password|deletion|help|about|privacy)\/?$/.test(path);
+
 /** Retries after the first attempt for Railway cold-start wake failures. */
 export const WAKE_RETRY_MAX = 2;
 export const WAKE_RETRY_DELAYS_MS = [1000, 2500] as const;
@@ -162,40 +165,66 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
     headers.set('Accept-Language', storedLanguage || browserLanguage);
   }
   const token = localStorage.getItem('hermes_jwt');
-  if (token) {
+  if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
   const method = typeof options.method === 'string' ? options.method : 'GET';
-  return withWakeRetry(
+  const response = await withWakeRetry(
     () => fetch(`${baseUrl}${url}`, { ...options, headers }),
     {
       method,
       shouldRetryResult: (response) => isWakeRetryableStatus(response.status),
     },
   );
+  if (response.ok && response.status !== 202 && !['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())
+    && /^\/api\/(activities|manual-runs|imports?|coach|wellness|run-plans|training|profile)(\/|$)/.test(url)) {
+    // Invalidate before notifying subscribers so they cannot reload a stale batch.
+    const { invalidateResourceCache } = await import('./api/resourceCache');
+    invalidateResourceCache('/api/activities');
+    invalidateResourceCache('/api/profile');
+    try { localStorage.setItem('hermes_recommendation_revision', String(Date.now())); } catch { /* Local updates still work if storage is unavailable. */ }
+    window.dispatchEvent(new Event('hermes-recommendations-changed'));
+  }
+  return response;
 }
 
 export async function apiJson<T = unknown>(url: string, options: RequestInit = {}): Promise<T> {
+  const explicit = new Headers(options.headers).get('Authorization');
+  const tokenAtSend = explicit ? (explicit.startsWith('Bearer ') ? explicit.slice(7) : null) : localStorage.getItem('hermes_jwt');
   const response = await apiFetch(url, options);
   if (response.status === 401) {
-    localStorage.removeItem('hermes_jwt');
-    localStorage.removeItem('hermes_email');
-    localStorage.removeItem('hermes_role');
-    try {
-      localStorage.removeItem('hermes_admin');
-    } catch { /* ignore */ }
-    window.location.href = '/login';
-    throw new Error('Unauthorized');
+    rejectExpiredSession(tokenAtSend);
   }
   const contentType = response.headers.get('content-type') || '';
   const data: unknown = contentType.includes('application/json') ? await response.json() : {};
   if (!response.ok) {
     const payload = isApiErrorPayload(data) ? data : {};
+    const path = window.location.pathname;
+    const adminPortal = path === '/admin' || path === '/admin/' || path === '/dashboard'
+      || path.startsWith('/dashboard/') || path === '/workflows';
+    // An admin bearer token outlives its eight-hour MFA proof. Reauthenticate
+    // this portal instead of stranding it on the generic dashboard load error.
+    if (response.status === 403 && payload.code === 'admin_required' && adminPortal) {
+      rejectExpiredSession(tokenAtSend);
+    }
     const retryAfter = response.headers.get('retry-after');
     throw new ApiRequestError(payload.error || payload.message || 'Request failed', response.status, retryAfter);
   }
   return data as T;
+}
+
+function rejectExpiredSession(tokenAtSend: string | null): never {
+  // A late response from a retired credential cannot sign out its successor.
+  if (localStorage.getItem('hermes_jwt') !== tokenAtSend) throw new Error('Unauthorized');
+  localStorage.removeItem('hermes_jwt');
+  localStorage.removeItem('hermes_email');
+  localStorage.removeItem('hermes_role');
+  try {
+    localStorage.removeItem('hermes_admin');
+  } catch { /* ignore */ }
+  if (!isPublicHeatmapPath(window.location.pathname)) window.location.href = '/login';
+  throw new Error('Unauthorized');
 }
 
 function isApiErrorPayload(value: unknown): value is ApiErrorPayload {

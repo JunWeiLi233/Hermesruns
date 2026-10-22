@@ -13,6 +13,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class HttpsEnforcementFilterTests {
 
     @Test
+    void readinessProbeReachesDatabaseCheckInsteadOfFabricatingSuccess() throws Exception {
+        HttpsEnforcementFilter filter = productionFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/internal/ready");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        filter.doFilter(request, response, (req, res) -> ((jakarta.servlet.http.HttpServletResponse) res).setStatus(503));
+        assertEquals(503, response.getStatus());
+        assertNull(response.getHeader("Location"));
+    }
+
+    @Test
     void railwayRootHealthProbeReturnsOkWithoutChangingThePublicHomeRoute() throws Exception {
         HttpsEnforcementFilter filter = productionFilter();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/");

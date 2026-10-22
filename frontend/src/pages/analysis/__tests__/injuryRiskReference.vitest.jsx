@@ -32,7 +32,7 @@ beforeEach(() => {
     date.setUTCDate(date.getUTCDate() - index);
     return { id: index + 1, name: `Run ${index + 1}`, startTime: date.toISOString(), distanceKm: 8, movingTimeSeconds: 2400, averageCadence: 176, averageHeartRate: 140, maxHeartRate: 185 };
   });
-  cachedApiJson.mockImplementation(async url => url === '/api/activities' ? activities : { displayName: 'Runner' });
+  cachedApiJson.mockImplementation(async url => url === '/api/activities/analysis' ? activities : { displayName: 'Runner' });
   apiJson.mockReset();
   apiJson.mockResolvedValue({ recentLogs: [{ level: 'low' }] });
 });

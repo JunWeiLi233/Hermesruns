@@ -1,0 +1,1 @@
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Swimming"><Id>2026-10-17T18:00:00Z</Id><Notes>Pool practice without GPS</Notes><Lap StartTime="2026-10-17T18:00:00Z"><TotalTimeSeconds>1800</TotalTimeSeconds><DistanceMeters>1500</DistanceMeters></Lap></Activity></Activities></TrainingCenterDatabase>

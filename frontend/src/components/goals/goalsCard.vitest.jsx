@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiJson } from '../../api';
 import en from '../../i18n/locales/en';
 import zh from '../../i18n/locales/zh-CN';
+import { methodsDocUrl } from '../../utils/methodsDoc';
 import GoalsCard from './GoalsCard';
 import { earlyGoal, goal, reachedGoal, response } from './goalFixtures';
 
@@ -142,6 +143,7 @@ describe('the list', () => {
     expect(within(list).getAllByRole('heading').map((heading) => heading.textContent)).toEqual(['Weekly distance', 'Weekly runs', 'Yearly distance']);
     expect(screen.getByRole('heading', { level: 2, name: t('goals.title') })).toBeInTheDocument();
     expect(within(list).getAllByRole('heading').every((heading) => heading.tagName === 'H3')).toBe(true);
+    expect(screen.getByRole('link', { name: t('methods.link') })).toHaveAttribute('href', methodsDocUrl('goals'));
   });
 
   it('draws a goal as a bar with the numbers it is made of', async () => {

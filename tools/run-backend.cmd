@@ -1,4 +1,6 @@
 @echo off
+setlocal
+set "PSModulePath=%SystemRoot%\System32\WindowsPowerShell\v1.0\Modules;%PSModulePath%"
 
 echo [Hermes] Hunting for JDK 17 and Maven...
 
@@ -15,13 +17,15 @@ if /i "%~1"=="--check-only" (
   set "CHECK_ONLY=1"
 )
 
+if exist "%ROOT%\backend\reviewed-release.json" goto :reviewed_release
+
 if exist "%LOCAL_ENV_PS1%" (
   echo [Hermes] Loading local env from Hermes.local.env.ps1...
   powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "$ErrorActionPreference = 'Stop';" ^
     "$envPath = [IO.Path]::GetFullPath('%LOCAL_ENV_PS1%');" ^
     "$bootPath = [IO.Path]::GetFullPath('%LOCAL_ENV_BOOT%');" ^
-    "$vars = @('APP_DB_URL','APP_DB_DRIVER','APP_DB_USERNAME','APP_DB_PASSWORD','STRAVA_CLIENT_ID','STRAVA_CLIENT_SECRET','STRAVA_REDIRECT_URI','APP_STRAVA_CLIENT_ID','APP_STRAVA_CLIENT_SECRET','APP_STRAVA_REDIRECT_URI','APP_DATA_ENCRYPTION_KEY','APP_GOOGLE_CLIENT_ID','APP_GOOGLE_CLIENT_SECRET','APP_GOOGLE_REDIRECT_URI','GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REDIRECT_URI','APP_BOOTSTRAP_ADMIN_EMAIL','APP_BOOTSTRAP_ADMIN_PASSWORD','APP_JPA_DDL_AUTO','APP_AI_API_KEY','APP_AI_MODEL','APP_AI_PROVIDER','APP_AI_COURSE_MAP_PROVIDER','APP_ROUTE_EXTRACTION_PYTHON_COMMAND','APP_ROUTE_EXTRACTION_QWEN_MODEL_ID','APP_ROUTE_EXTRACTION_QWEN_DEVICE_MAP','APP_ROUTE_EXTRACTION_QWEN_CACHE_DIR','APP_ROUTE_EXTRACTION_QWEN_ALIGNMENT_SCRIPT','APP_ROUTE_EXTRACTION_QWEN_PARAMETERS_SCRIPT','APP_ROUTE_EXTRACTION_QWEN_ANCHOR_SCRIPT','APP_CARTO_BASEMAPS_API_KEY','SPRING_MAIL_HOST','SPRING_MAIL_PORT','SPRING_MAIL_USERNAME','SPRING_MAIL_PASSWORD','APP_MAIL_FROM','APP_PUBLIC_BASE_URL','HERMES_ADMIN_MFA_ENABLED','HERMES_WEBAUTHN_RP_ID','HERMES_WEBAUTHN_RP_NAME','HERMES_WEBAUTHN_ALLOWED_ORIGINS','HERMES_ADMIN_MFA_BOOTSTRAP_TOKEN','HERMES_ADMIN_ACCESS_ENABLED','HERMES_ADMIN_ACCESS_TEAM_DOMAIN','HERMES_ADMIN_ACCESS_AUDIENCE','HERMES_ADMIN_ACCESS_ALLOWED_EMAILS','HERMES_ENV','SPRING_PROFILES_ACTIVE','APP_ENABLE_HSTS','APP_CORS_ALLOWED_ORIGINS','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_PRO_MONTHLY');" ^
+    "$vars = @('APP_DB_URL','APP_DB_DRIVER','APP_DB_USERNAME','APP_DB_PASSWORD','STRAVA_CLIENT_ID','STRAVA_CLIENT_SECRET','STRAVA_REDIRECT_URI','APP_STRAVA_CLIENT_ID','APP_STRAVA_CLIENT_SECRET','APP_STRAVA_REDIRECT_URI','APP_DATA_ENCRYPTION_KEY','APP_GOOGLE_CLIENT_ID','APP_GOOGLE_CLIENT_SECRET','APP_GOOGLE_REDIRECT_URI','GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REDIRECT_URI','APP_BOOTSTRAP_ADMIN_EMAIL','APP_BOOTSTRAP_ADMIN_PASSWORD','APP_JPA_DDL_AUTO','APP_TRAININGWORKSPACE_MIGRATE','APP_RUN_PLANS_EXPERIMENTAL_RULESET','APP_RUN_PLANS_APPROVED_RULESET','APP_AI_API_KEY','APP_AI_MODEL','APP_AI_PROVIDER','APP_AI_COURSE_MAP_PROVIDER','APP_ROUTE_EXTRACTION_PYTHON_COMMAND','APP_ROUTE_EXTRACTION_QWEN_MODEL_ID','APP_ROUTE_EXTRACTION_QWEN_DEVICE_MAP','APP_ROUTE_EXTRACTION_QWEN_CACHE_DIR','APP_ROUTE_EXTRACTION_QWEN_ALIGNMENT_SCRIPT','APP_ROUTE_EXTRACTION_QWEN_PARAMETERS_SCRIPT','APP_ROUTE_EXTRACTION_QWEN_ANCHOR_SCRIPT','APP_CARTO_BASEMAPS_API_KEY','SPRING_MAIL_HOST','SPRING_MAIL_PORT','SPRING_MAIL_USERNAME','SPRING_MAIL_PASSWORD','APP_MAIL_FROM','APP_PUBLIC_BASE_URL','HERMES_ADMIN_MFA_ENABLED','HERMES_WEBAUTHN_RP_ID','HERMES_WEBAUTHN_RP_NAME','HERMES_WEBAUTHN_ALLOWED_ORIGINS','HERMES_ADMIN_MFA_BOOTSTRAP_TOKEN','HERMES_ADMIN_ACCESS_ENABLED','HERMES_ADMIN_ACCESS_TEAM_DOMAIN','HERMES_ADMIN_ACCESS_AUDIENCE','HERMES_ADMIN_ACCESS_ALLOWED_EMAILS','HERMES_ENV','SPRING_PROFILES_ACTIVE','APP_ENABLE_HSTS','APP_CORS_ALLOWED_ORIGINS','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_PRO_MONTHLY');" ^
     ". $envPath;" ^
     "$lines = @(foreach ($name in $vars) { $value = [Environment]::GetEnvironmentVariable($name, 'Process'); if (-not [string]::IsNullOrWhiteSpace($value)) { 'set ""' + $name + '=' + ($value -replace '%%', '%%%%') + '""' } });" ^
     "[IO.File]::WriteAllLines($bootPath, $lines, [Text.Encoding]::ASCII)"
@@ -40,7 +44,7 @@ if not errorlevel 1 goto :jdk_found
 
 :: Look for a bundled JDK 17 in tools\jdk17\
 :: (no spaces in this path, so for /d wildcard works fine)
-for /d %%D in ("%ROOT%tools\jdk17\jdk-*") do (
+for /d %%D in ("%ROOT%\tools\jdk17\jdk-*") do (
   if exist "%%~fD\bin\java.exe" (
     set "JAVA_HOME=%%~fD"
     goto :jdk_found
@@ -145,6 +149,9 @@ for /f "delims=" %%V in ('dir /b /ad "%USERPROFILE%\.m2\wrapper\dists" 2^>nul ^|
 :: Move into the backend folder to launch
 cd /d "%ROOT%\backend"
 
+:: Keep the running classpath separate from Maven tests and builds in backend\target.
+:: Clean this dedicated output so deleted or renamed source classes cannot linger.
+set "RUNTIME_BUILD=%ROOT%\backend\build\local-runtime"
 echo [Hermes] Igniting Spring Boot...
 :: Memory-optimized JVM flags for small servers (2GB RAM).
 :: Metaspace needs 384m: devtools reloads the app through a second classloader,
@@ -153,9 +160,17 @@ if not defined JAVA_TOOL_OPTIONS (
   set "JAVA_TOOL_OPTIONS=-Xmx768m -Xms256m -XX:+UseSerialGC -XX:MaxMetaspaceSize=384m"
 )
 if defined MVN_CMD (
-  call "%MVN_CMD%" -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true org.springframework.boot:spring-boot-maven-plugin:run
+  call "%MVN_CMD%" -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true -Dhermes.build.directory="%RUNTIME_BUILD%" clean org.springframework.boot:spring-boot-maven-plugin:run
 ) else (
-  call "%ROOT%\backend\mvnw.cmd" -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true org.springframework.boot:spring-boot-maven-plugin:run
+  call "%ROOT%\backend\mvnw.cmd" -Dmaven.repo.local="%MAVEN_REPO%" -Dmaven.test.skip=true -Dhermes.build.directory="%RUNTIME_BUILD%" clean org.springframework.boot:spring-boot-maven-plugin:run
 )
 
+exit /b %ERRORLEVEL%
+
+:reviewed_release
+if defined CHECK_ONLY goto :reviewed_release_check
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\tools\run-reviewed-release.ps1"
+exit /b %ERRORLEVEL%
+:reviewed_release_check
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\tools\run-reviewed-release.ps1" -CheckOnly
 exit /b %ERRORLEVEL%

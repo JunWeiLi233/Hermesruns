@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(path.join(here, "../AnalysisInsightDetail.jsx"), 'utf8');
 const injuryChart = source.match(
-  /<div className="analysis-cinematic-chart" style=\{\{ position: 'relative' \}\}>[\s\S]*?onPointerMove=\{handleInjuryPointerMove\}[\s\S]*?<\/svg>/,
+  /<div className="analysis-cinematic-chart" style=\{\{ position: 'relative', aspectRatio: '1000 \/ 220', minHeight: 0 \}\}>[\s\S]*?onPointerMove=\{handleInjuryPointerMove\}[\s\S]*?<\/svg>/,
 );
 
 assert.ok(injuryChart, 'The Injury Risk chart markup should remain addressable.');

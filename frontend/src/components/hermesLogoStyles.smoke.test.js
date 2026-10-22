@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const stylesDir = path.join(here, '../styles');
 const read = (file) => readFileSync(path.join(stylesDir, file), 'utf8');
-const sharedStyleSource = read('_split/shared.css');
+const sharedStyleSource = read('_split/shared.css') + read('brand.css');
 
 function activeStyleFiles(dir = stylesDir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {

@@ -1,0 +1,183 @@
+/* Pace curve: the runner's fastest time over each standard distance, by how long the effort lasted, and the critical pace line
+   through the efforts of three to forty minutes. Cards, headings, chips and the light and midnight palettes follow the Training
+   log and Load balance pages it sits beside; every colour below is one of the --pc-* tokens defined here. */
+
+#root .pace-curve-v2 {
+  --pc-card: #fff;
+  --pc-ink: #171717;
+  --pc-muted: #515563;
+  --pc-faint: #6f665c;
+  --pc-line: rgba(28, 25, 23, 0.08);
+  --pc-fill: rgba(28, 25, 23, 0.05);
+  --pc-accent: #a0392a;
+  --pc-accent-soft: rgba(160, 57, 42, 0.09);
+  --pc-on-accent: #fff;
+  --pc-watch: #8a5300;
+  --pc-error: #c4261a;
+  --pc-critical: #2f6fc0;
+  --pc-out: #766d64;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 1180px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 0 0 48px;
+  color: var(--pc-ink);
+}
+
+body:is(.theme-midnight, .theme-high-contrast) #root .pace-curve-v2 {
+  --pc-card: var(--profile-night-card, rgba(255, 255, 255, 0.05));
+  --pc-ink: #f8f4ef;
+  --pc-muted: #c0b8ad;
+  --pc-faint: #a69e93;
+  --pc-line: rgba(255, 248, 238, 0.12);
+  --pc-fill: rgba(255, 255, 255, 0.06);
+  --pc-accent: #ffb4a7;
+  --pc-accent-soft: rgba(255, 180, 167, 0.14);
+  --pc-on-accent: #1c1917;
+  --pc-watch: #ffd38a;
+  --pc-error: #ff9b87;
+  --pc-critical: #78a9ef;
+  --pc-out: #a69e93;
+}
+
+#root .pace-curve-v2 :is(h1, h2, h3, p, dl, dd, ol, ul) { margin: 0; }
+#root .pace-curve-v2 :is(ol, ul) { padding: 0; list-style: none; }
+
+/* Heading */
+#root .pace-curve-v2__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+#root .pace-curve-v2__head h2 {
+  color: var(--pc-ink);
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+#root .pace-curve-v2__head p { max-width: 62ch; margin-top: 6px; color: var(--pc-muted); font-size: 0.9rem; line-height: 1.5; text-wrap: pretty; }
+#root .pace-curve-v2__links { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+#root .pace-curve-v2__links a,
+#root .pace-curve-v2__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pc-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+#root .pace-curve-v2__links a:hover,
+#root .pace-curve-v2__link:hover { text-decoration: underline; }
+#root .pace-curve-v2 :is(a, button):focus-visible { outline: 2px solid var(--pc-accent); outline-offset: 2px; border-radius: 6px; }
+
+/* The window */
+#root .pace-curve-v2__window { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 14px 22px; border-radius: 24px; background: var(--pc-card); }
+#root .pace-curve-v2__window-label { color: var(--pc-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .pace-curve-v2__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+#root .pace-curve-v2__chips button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pc-fill);
+  color: var(--pc-ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+#root .pace-curve-v2__chips button:hover { background: var(--pc-accent-soft); }
+#root .pace-curve-v2__chips button[aria-pressed="true"] { background: var(--pc-accent); color: var(--pc-on-accent); }
+
+/* The critical pace, D' and the fit */
+#root .pace-curve-v2__tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+#root .pace-curve-v2__tiles article { display: flex; flex-direction: column; gap: 6px; padding: 20px 22px; border-radius: 18px; background: var(--pc-card); }
+#root .pace-curve-v2__tiles span { color: var(--pc-muted); font-size: 0.75rem; font-weight: 700; }
+#root .pace-curve-v2__tiles strong { font-size: 1.85rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+#root .pace-curve-v2__tiles small { color: var(--pc-faint); font-size: 0.75rem; line-height: 1.45; }
+#root .pace-curve-v2__tiles article.is-watch strong { color: var(--pc-watch); }
+
+/* The chart */
+#root .pace-curve-v2__card { display: flex; flex-direction: column; gap: 12px; padding: 20px 22px; border-radius: 24px; background: var(--pc-card); }
+#root .pace-curve-v2__legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--pc-muted); font-size: 0.75rem; }
+#root .pace-curve-v2__legend span { display: inline-flex; align-items: center; gap: 6px; }
+#root .pace-curve-v2__swatch { display: inline-block; flex: 0 0 auto; width: 10px; height: 10px; border: 2px solid var(--pc-out); border-radius: 50%; background: var(--pc-card); }
+#root .pace-curve-v2__swatch.is-in-line { border-color: var(--pc-accent); background: var(--pc-accent); }
+#root .pace-curve-v2__swatch.is-line { width: 16px; height: 0; border: 0; border-top: 3px solid var(--pc-accent); border-radius: 2px; background: none; }
+#root .pace-curve-v2__swatch.is-critical { width: 16px; height: 0; border: 0; border-top: 2px dashed var(--pc-critical); border-radius: 0; background: none; }
+#root .pace-curve-v2__plot { position: relative; min-width: 0; }
+#root .pace-curve-v2__svg { display: block; width: 100%; height: auto; overflow: visible; }
+#root .pace-curve-v2__svg text { fill: var(--pc-faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+#root .pace-curve-v2__svg text.pace-curve-v2__critical-label { fill: var(--pc-critical); font-size: 11px; font-weight: 700; }
+#root .pace-curve-v2__grid { stroke: var(--pc-line); stroke-width: 1; }
+#root .pace-curve-v2__grid.is-vertical { stroke-dasharray: 2 5; }
+#root .pace-curve-v2__critical { stroke: var(--pc-critical); stroke-width: 1.5; stroke-dasharray: 6 5; }
+#root .pace-curve-v2__line { fill: none; stroke: var(--pc-accent); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+#root .pace-curve-v2__line.is-extended { stroke-width: 1.5; stroke-dasharray: 3 5; opacity: 0.7; }
+#root .pace-curve-v2__dot { fill: var(--pc-card); stroke: var(--pc-out); stroke-width: 2; }
+#root .pace-curve-v2__dot.is-in-line { fill: var(--pc-accent); stroke: var(--pc-card); }
+
+/* The table of the same efforts */
+#root .pace-curve-v2__table-wrap { overflow-x: auto; border-radius: 24px; background: var(--pc-card); }
+#root .pace-curve-v2__table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+#root .pace-curve-v2__table th,
+#root .pace-curve-v2__table td { padding: 12px 18px; border-bottom: 1px solid var(--pc-line); text-align: left; white-space: nowrap; }
+#root .pace-curve-v2__table thead th { color: var(--pc-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+#root .pace-curve-v2__table tbody th { font-weight: 700; }
+#root .pace-curve-v2__table tbody tr:last-child :is(th, td) { border-bottom: 0; }
+#root .pace-curve-v2__table tr.is-in-line :is(th, td) { background: var(--pc-accent-soft); }
+#root .pace-curve-v2__table a { color: var(--pc-accent); font-weight: 700; text-decoration: none; }
+#root .pace-curve-v2__table a:hover { text-decoration: underline; }
+#root .pace-curve-v2__tag { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--pc-fill); color: var(--pc-muted); font-size: 0.7rem; font-weight: 700; }
+
+/* Notes, states */
+#root .pace-curve-v2__note { max-width: 78ch; color: var(--pc-muted); font-size: 0.82rem; line-height: 1.5; text-wrap: pretty; }
+#root .pace-curve-v2__note.is-faint { color: var(--pc-faint); font-size: 0.75rem; }
+#root .pace-curve-v2__note.is-watch { color: var(--pc-watch); font-weight: 600; }
+#root .pace-curve-v2__note.is-error { color: var(--pc-error); }
+#root .pace-curve-v2__note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+#root .pace-curve-v2__empty { display: flex; flex-direction: column; gap: 8px; padding: 28px; border-radius: 24px; background: var(--pc-card); }
+#root .pace-curve-v2__empty h2 { font-size: 1.1rem; }
+#root .pace-curve-v2__empty p { max-width: 62ch; color: var(--pc-muted); font-size: 0.88rem; line-height: 1.5; }
+#root .pace-curve-v2__state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+#root .pace-curve-v2__button {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pc-accent);
+  color: var(--pc-on-accent);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+#root .pace-curve-v2__skeleton { display: flex; flex-direction: column; gap: 12px; }
+#root .pace-curve-v2__skeleton-tiles { height: 120px; border-radius: 18px; }
+#root .pace-curve-v2__skeleton-chart { height: 320px; border-radius: 24px; }
+#root .pace-curve-v2__skeleton-line { width: 60%; height: 12px; border-radius: 6px; }
+
+@media (max-width: 760px) {
+  #root .pace-curve-v2__tiles { grid-template-columns: minmax(0, 1fr); gap: 0; overflow: hidden; border-radius: 18px; background: var(--pc-card); }
+  /* A name on the left and its number on the right of a line, and when the two do not fit on a line (a long name, the text made larger) the number goes under the name and not over it. */
+  #root .pace-curve-v2__tiles article { display: flex; flex-flow: row wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; padding: 12px 16px; border-radius: 0; background: transparent; }
+  #root .pace-curve-v2__tiles article + article { border-top: 1px solid var(--pc-line); }
+  #root .pace-curve-v2__tiles span { flex: 0 1 auto; }
+  #root .pace-curve-v2__tiles strong { flex: 0 0 auto; margin-left: auto; font-size: 1.4rem; text-align: right; }
+  #root .pace-curve-v2__tiles small { flex: 1 1 100%; }
+  #root .pace-curve-v2__card { padding: 16px; }
+  #root .pace-curve-v2__table :is(th, td) { padding: 10px 12px; }
+  #root .pace-curve-v2__skeleton-chart { height: 260px; }
+}
+
+/* The link to this page from the cards of Analysis and the prediction pages. */
+#root .pace-curve-link { margin: 6px 0 0; font-size: 0.78rem; line-height: 1.5; }
+#root .pace-curve-link a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+#root .analysis-page-shell .pace-curve-link { color: var(--a2-muted); }
+#root .prediction-v2 .pace-curve-link { color: var(--pv-muted); }

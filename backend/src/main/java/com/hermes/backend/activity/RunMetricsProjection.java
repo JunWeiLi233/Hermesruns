@@ -13,10 +13,9 @@ public interface RunMetricsProjection {
     Double getDistanceKm();
     Double getDistanceMeters();
     LocalDateTime getEffectiveStartTime();
+    LocalDateTime getStartTime();
 
-    /** True for a run fetched from the Strava API, whose start is the runner's own clock; a run from a file holds UTC. */
     Boolean getStravaApiSourced();
 
-    /** True for a run with no start time of its own, which {@link #getEffectiveStartTime()} files under the day it was added. */
     Boolean getUndated();
 }

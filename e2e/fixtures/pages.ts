@@ -3,7 +3,7 @@
 //   const pages = pageOpener();
 //   test.afterEach(() => pages.closeAll());
 //   const page = await pages.open(browser, baseURL, guard, runner, '/training-log');
-import type { Browser, BrowserContext, Page } from '@playwright/test';
+import type { Browser, BrowserContext, BrowserContextOptions, Page } from '@playwright/test';
 import { contextWith, type Guard } from './test.ts';
 
 export interface Who {
@@ -12,8 +12,11 @@ export interface Who {
 }
 
 export interface PageOpener {
-  /** A new context signed in as `who`, watched by the guard, with one page opened on `route` (null: a blank page, to set routes before the first load). */
-  open(browser: Browser, baseURL: string | undefined, guard: Guard, who: Who, route: string | null): Promise<Page>;
+  /**
+   * A new context signed in as `who`, watched by the guard, with one page opened on `route` (null: a blank page, to set routes before the first
+   * load). `options` replace the suite's locale (en-US) and time zone (America/New_York), for a case about another device.
+   */
+  open(browser: Browser, baseURL: string | undefined, guard: Guard, who: Who, route: string | null, options?: BrowserContextOptions): Promise<Page>;
   /** A second page in the same context as `page` (a second tab). */
   tab(page: Page, route: string): Promise<Page>;
   closeAll(): Promise<void>;
@@ -22,9 +25,9 @@ export interface PageOpener {
 export function pageOpener(): PageOpener {
   const contexts: BrowserContext[] = [];
   return {
-    async open(browser, baseURL, guard, who, route) {
+    async open(browser, baseURL, guard, who, route, options = {}) {
       // The locale and time zone the project's own pages have, so a date field and a calendar day read the way the suite expects.
-      const context = await contextWith(browser, who, baseURL as string, guard, { locale: 'en-US', timezoneId: 'America/New_York' });
+      const context = await contextWith(browser, who, baseURL as string, guard, { locale: 'en-US', timezoneId: 'America/New_York', ...options });
       contexts.push(context);
       const page = await context.newPage();
       if (route !== null) await page.goto(route);

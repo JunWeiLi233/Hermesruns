@@ -18,8 +18,10 @@ export default function MobileRunnerNavigation() {
   const compact = useSyncExternalStore(subscribe, isMobile, () => false);
   const { t, lang } = useI18n();
   const location = useLocation();
+  const mapOnly = /^\/heatmap(?:\/recorded)?\/?$/.test(location.pathname);
+  const visible = compact && !mapOnly;
   const [menuKey, setMenuKey] = useState(null);
-  const menuOpen = compact && menuKey === location.key;
+  const menuOpen = visible && menuKey === location.key;
   const primary = [
     { route: '/profile', label: t('common.mobile_home'), icon: 'dashboard' },
     { route: '/today-run', label: t('common.mobile_today'), icon: 'calendar_today' },
@@ -32,12 +34,12 @@ export default function MobileRunnerNavigation() {
   const secondaryActive = !primary.some(({ route }) => location.pathname === route || location.pathname.startsWith(`${route}/`));
 
   useEffect(() => {
-    if (!compact) return undefined;
+    if (!visible) return undefined;
     document.body.classList.add('has-mobile-runner-navigation');
     return () => document.body.classList.remove('has-mobile-runner-navigation');
-  }, [compact]);
+  }, [visible]);
 
-  if (!compact) return null;
+  if (!visible) return null;
   return createPortal(
     <>
       <nav className="mobile-runner-nav" aria-label={t('common.mobile_navigation')}>

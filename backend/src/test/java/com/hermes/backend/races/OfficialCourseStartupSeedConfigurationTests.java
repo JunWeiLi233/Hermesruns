@@ -168,7 +168,7 @@ class OfficialCourseStartupSeedConfigurationTests {
     }
 
     @Test
-    void startupSeederRefreshesStaleTokyoAdminUploadThatFrontendTrustGateRejects() throws Exception {
+    void startupSeederPreservesTokyoAdminUploadForExplicitReviewEvenIfTrustGateRejectsIt() throws Exception {
         RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
         RaceCourseMapAssetRepository assetRepository = mock(RaceCourseMapAssetRepository.class);
         RaceCourseMapAsset staleTokyo = new RaceCourseMapAsset();
@@ -194,10 +194,7 @@ class OfficialCourseStartupSeedConfigurationTests {
 
         runner.run(null);
 
-        ArgumentCaptor<RaceCourseMapBulkSeedService.CatalogRace> raceCaptor =
-                ArgumentCaptor.forClass(RaceCourseMapBulkSeedService.CatalogRace.class);
-        verify(bulkSeedService).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
-        assertThat(raceCaptor.getValue().id()).isEqualTo(TokyoMarathonOfficialCourse.RACE_ID);
+        verify(bulkSeedService, never()).seedRace(any(), anyString(), eq(true));
     }
 
     @Test
@@ -433,7 +430,7 @@ class OfficialCourseStartupSeedConfigurationTests {
     }
 
     @Test
-    void startupSeederRefreshesStaleBostonAdminUpload() throws Exception {
+    void startupSeederPreservesBostonAdminUploadForExplicitReview() throws Exception {
         RaceCourseMapBulkSeedService bulkSeedService = mock(RaceCourseMapBulkSeedService.class);
         RaceCourseMapAssetRepository assetRepository = mock(RaceCourseMapAssetRepository.class);
         RaceCourseMapAsset staleBoston = new RaceCourseMapAsset();
@@ -459,10 +456,7 @@ class OfficialCourseStartupSeedConfigurationTests {
 
         runner.run(null);
 
-        ArgumentCaptor<RaceCourseMapBulkSeedService.CatalogRace> raceCaptor =
-                ArgumentCaptor.forClass(RaceCourseMapBulkSeedService.CatalogRace.class);
-        verify(bulkSeedService).seedRace(raceCaptor.capture(), eq("startup-seeder"), eq(true));
-        assertThat(raceCaptor.getValue().id()).isEqualTo(BostonMarathonOfficialCourse.RACE_ID);
+        verify(bulkSeedService, never()).seedRace(any(), anyString(), eq(true));
     }
 
     @Test

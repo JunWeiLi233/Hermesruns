@@ -15,6 +15,12 @@
 .cursor
 .gemini
 .m2repo
+# Keep local snapshots, source-recovery evidence, and operator data off remote builders.
+.private-backups
+output
+replica
+founder
+sites
 .mempalace
 .omx
 .share
@@ -41,6 +47,7 @@ frontend/node_modules
 frontend/.npm-cache
 frontend/dist
 backend/target
+backend/target-*
 backend/src/main/resources/static
 backend/.mvn/repository
 backend/*.mv.db

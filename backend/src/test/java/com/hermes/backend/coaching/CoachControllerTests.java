@@ -85,13 +85,31 @@ class CoachControllerTests {
                 null
         );
         when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
-        when(coachService.getTodayWithReadiness(runner)).thenReturn(payload);
+        when(coachService.getTodayWithReadiness(runner, true)).thenReturn(payload);
         CoachController controller = coachController(authService, coachService);
 
-        ResponseEntity<?> response = controller.getToday("Bearer runner-token");
+        ResponseEntity<?> response = controller.getToday("Bearer runner-token", true);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(payload);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"'',true", "true,true", "false,false"})
+    void todayRouteOptionBindsFromRequestAndDefaultsToEnabled(String option, boolean expected) throws Exception {
+        AuthService authService = mock(AuthService.class);
+        AutomatedCoachService coachService = mock(AutomatedCoachService.class);
+        Runner runner = runner();
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        var mvc = org.springframework.test.web.servlet.setup.MockMvcBuilders
+                .standaloneSetup(coachController(authService, coachService)).build();
+        var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                .get("/api/coach/today").header("Authorization", "Bearer runner-token");
+        if (!option.isEmpty()) request.param("includeRoute", option);
+
+        mvc.perform(request).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+
+        verify(coachService).getTodayWithReadiness(runner, expected);
     }
 
     @Test

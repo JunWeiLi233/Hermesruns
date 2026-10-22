@@ -39,18 +39,57 @@ public class PersonalizedRunningPlanner {
     public PersonalizedPlan plan(PlannerInput rawInput) {
         PlannerInput input = normalize(rawInput);
         RunHistory history = input.history();
+        if (history.volume28Km() <= 0 && history.averageRunKm() <= 0) {
+            List<PlannedSession> unavailable = java.util.stream.IntStream.range(0, input.horizonDays())
+                    .mapToObj(day -> new PlannedSession(input.today().plusDays(day), CoachWorkoutType.REST,
+                            null, null, false, "onboarding", "unavailable", "history_required",
+                            null, null, null, false)).toList();
+            return new PersonalizedPlan("onboarding", 0, 0, List.of(), 0,
+                    List.of("history_required"), unavailable, unavailable.get(0), null, List.of(),
+                    java.util.stream.IntStream.range(0, 7).mapToObj(day -> new PlannedSession(
+                            WeeklyMileageBudget.monday(input.today()).plusDays(day), CoachWorkoutType.REST,
+                            null, null, false, "onboarding", "unavailable", "history_required", null, null, null, false)).toList());
+        }
         double acwr = computeAcwr(history);
         String phase = resolvePhase(input, acwr);
-        int sessionsPerWeek = resolveSessionsPerWeek(history, phase);
-        List<DayOfWeek> preferredRunDays = resolvePreferredRunDays(history, sessionsPerWeek);
+        int inferredSessions = resolveSessionsPerWeek(history, phase);
+        List<DayOfWeek> preferredRunDays = input.availableRunDays() == null
+                ? resolvePreferredRunDays(history, inferredSessions)
+                : input.availableRunDays().stream().distinct()
+                    .sorted(Comparator.<DayOfWeek>comparingInt(day -> -history.preferredDayCounts().getOrDefault(day, 0))
+                            .thenComparingInt(DayOfWeek::getValue))
+                    .limit(inferredSessions).sorted(Comparator.comparingInt(DayOfWeek::getValue)).toList();
+        if (preferredRunDays.isEmpty()) {
+            var rest = java.util.stream.IntStream.range(0, input.horizonDays()).mapToObj(day -> new PlannedSession(
+                    input.today().plusDays(day), CoachWorkoutType.REST, null, null, false, phase, "rest", "scheduled_rest",
+                    null, null, null, false)).toList();
+            return new PersonalizedPlan(phase, 0, 0, List.of(), confidence(history, input), List.of("scheduled_rest"),
+                    rest, rest.get(0), historyEvidence(input, phase), List.of(),
+                    java.util.stream.IntStream.range(0, 7).mapToObj(day -> new PlannedSession(
+                            WeeklyMileageBudget.monday(input.today()).plusDays(day), CoachWorkoutType.REST,
+                            null, null, false, phase, "rest", "scheduled_rest", null, null, null, false)).toList());
+        }
+        int sessionsPerWeek = preferredRunDays.size();
         double targetWeeklyKm = resolveTargetWeeklyKm(history, phase, sessionsPerWeek);
+        if (sessionsPerWeek < inferredSessions) targetWeeklyKm = round1(targetWeeklyKm * sessionsPerWeek / inferredSessions);
         List<String> reasonCodes = planReasonCodes(input, phase, acwr);
-        List<PlannedSession> sessions = buildSessions(
+        List<PlannedSession> rawDrafts = buildSessions(
                 input,
                 phase,
                 targetWeeklyKm,
                 preferredRunDays
         );
+        List<PlannedSession> drafts = new ArrayList<>();
+        // Assign the complete weekly target before considering completed runs or the requested display horizon.
+        for (int start = 0; start < rawDrafts.size(); start += 7) {
+            drafts.addAll(WeeklyMileageBudget.planWeek(targetWeeklyKm,
+                    rawDrafts.subList(start, Math.min(start + 7, rawDrafts.size()))));
+        }
+        var allocation = WeeklyMileageBudget.allocate(input.today(), targetWeeklyKm, drafts, input.completedKmByDate());
+        LocalDate weekStart = WeeklyMileageBudget.monday(input.today());
+        List<PlannedSession> weeklySessions = drafts.stream().filter(s -> !s.date().isAfter(weekStart.plusDays(6))).toList();
+        List<PlannedSession> sessions = allocation.sessions().stream()
+                .filter(s -> s.date().isBefore(input.today().plusDays(input.horizonDays()))).toList();
         PlannedSession today = sessions.stream()
                 .filter(session -> input.today().equals(session.date()))
                 .findFirst()
@@ -64,7 +103,10 @@ public class PersonalizedRunningPlanner {
                 confidence(history, input),
                 List.copyOf(reasonCodes),
                 List.copyOf(sessions),
-                today
+                today,
+                historyEvidence(input, phase),
+                allocation.weeks(),
+                weeklySessions
         );
     }
 
@@ -82,7 +124,10 @@ public class PersonalizedRunningPlanner {
                 rawInput != null && rawInput.readinessSupported(),
                 normalizeCode(rawInput == null ? null : rawInput.injuryRisk()),
                 normalizeCode(rawInput == null ? null : rawInput.sorenessLevel()),
-                rawInput == null ? null : rawInput.goal()
+                rawInput == null ? null : rawInput.goal(),
+                normalizedCompleted(rawInput == null ? null : rawInput.completedKmByDate(), today),
+                rawInput == null || rawInput.availableRunDays() == null ? null
+                        : rawInput.availableRunDays().stream().filter(java.util.Objects::nonNull).distinct().toList()
         );
     }
 
@@ -171,17 +216,8 @@ public class PersonalizedRunningPlanner {
                 ? history.volume28Km() / 4.0
                 : history.averageRunKm() > 0
                     ? history.averageRunKm() * sessionsPerWeek
-                    : 12.0;
-        double multiplier = switch (phase) {
-            case "protect" -> 0.55;
-            case "comeback" -> 0.65;
-            case "taper" -> 0.70;
-            case "absorb" -> 0.80;
-            case "rebalance" -> 0.90;
-            case "race" -> 0.75;
-            case "onboarding" -> 1.0;
-            default -> 1.05;
-        };
+                      : 0.0;
+        double multiplier = weeklyMultiplier(phase);
         double floor = switch (phase) {
             case "protect" -> 6.0;
             case "comeback", "onboarding" -> 9.0;
@@ -192,6 +228,19 @@ public class PersonalizedRunningPlanner {
             target = Math.min(target, Math.max(floor, chronicWeekly * MAX_WEEKLY_GROWTH));
         }
         return round1(target);
+    }
+
+    private double weeklyMultiplier(String phase) {
+        return switch (phase) {
+            case "protect" -> 0.55;
+            case "comeback" -> 0.65;
+            case "taper" -> 0.70;
+            case "absorb" -> 0.80;
+            case "rebalance" -> 0.90;
+            case "race" -> 0.75;
+            case "onboarding" -> 1.0;
+            default -> 1.05;
+        };
     }
 
     private List<String> planReasonCodes(PlannerInput input, String phase, double acwr) {
@@ -220,14 +269,22 @@ public class PersonalizedRunningPlanner {
             double targetWeeklyKm,
             List<DayOfWeek> preferredRunDays
     ) {
+        LocalDate lastDay = input.today().plusDays(input.horizonDays() - 1L)
+                .with(java.time.temporal.TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+        return buildSessions(input, phase, targetWeeklyKm, preferredRunDays, WeeklyMileageBudget.monday(input.today()), lastDay);
+    }
+
+    private List<PlannedSession> buildSessions(PlannerInput input, String phase, double targetWeeklyKm,
+            List<DayOfWeek> preferredRunDays, LocalDate firstDay, LocalDate lastDay) {
         List<PlannedSession> sessions = new ArrayList<>();
         DayOfWeek longRunDay = resolveLongRunDay(preferredRunDays, input.history());
         DayOfWeek qualityDay = resolveQualityDay(preferredRunDays, longRunDay, input.history());
 
-        for (int index = 0; index < input.horizonDays(); index++) {
-            LocalDate date = input.today().plusDays(index);
+        for (LocalDate date = firstDay; !date.isAfter(lastDay); date = date.plusDays(1)) {
             SessionDraft draft = baseSession(date, phase, preferredRunDays, longRunDay, qualityDay, input);
-            draft = applyRaceOverride(draft, date, input.goal());
+            if (input.availableRunDays() == null || input.availableRunDays().contains(date.getDayOfWeek())) {
+                draft = applyRaceOverride(draft, date, input.goal());
+            }
             draft = applyTodayProtection(draft, date, input, phase);
             Double distanceKm = distanceFor(draft, targetWeeklyKm, input.history(), input.goal(), preferredRunDays.size(), phase);
             PaceRange pace = paceFor(draft.workoutType(), input.history().averagePaceSecondsPerKm(), input.goal());
@@ -494,6 +551,37 @@ public class PersonalizedRunningPlanner {
         return Math.round(value * 10.0) / 10.0;
     }
 
+    private Map<LocalDate, Double> normalizedCompleted(Map<LocalDate, Double> completed, LocalDate today) {
+        if (completed == null) return Map.of();
+        var result = new java.util.TreeMap<LocalDate, Double>();
+        completed.forEach((date, km) -> {
+            if (date != null && !date.isAfter(today) && km != null && Double.isFinite(km) && km > 0) result.put(date, km);
+        });
+        return Map.copyOf(result);
+    }
+
+    private HistoryEvidence historyEvidence(PlannerInput input, String phase) {
+        var h = input.history();
+        var daily = input.completedKmByDate().entrySet().stream()
+                .filter(e -> !e.getKey().isBefore(input.today().minusDays(27)))
+                .sorted(Map.Entry.comparingByKey()).map(e -> new DailyDistance(e.getKey(), e.getValue())).toList();
+        int frequency = resolveSessionsPerWeek(h, phase);
+        double minimum = switch (phase) { case "protect" -> 6; case "comeback", "onboarding" -> 9; default -> Math.min(18, frequency * 3); };
+        return new HistoryEvidence(input.today(), input.today().minusDays(6), input.today().minusDays(27),
+                h.volume7Km(), h.volume28Km(), h.volume28Km() / 4.0, computeAcwr(h), HIGH_ACWR,
+                weeklyMultiplier(phase), minimum, MAX_WEEKLY_GROWTH, h.runDays28(), h.averageRunKm(),
+                h.longestRunKm28(), h.averagePaceSecondsPerKm(), h.highIntensitySupported() ? h.highIntensityRatio7d() : null,
+                h.hoursSinceHardRun(), h.daysSinceLastRun(), input.injuryRisk(), input.sorenessLevel(), daily);
+    }
+
+    public record DailyDistance(LocalDate date, double km) {}
+    public record HistoryEvidence(LocalDate asOfDate, LocalDate from7, LocalDate from28,
+            double volume7Km, double volume28Km, double averageWeeklyKm, double distanceLoadRatio,
+            double highLoadThreshold, double weeklyMultiplier, double minimumWeeklyKm, double maximumGrowthMultiplier,
+            int runDays28, double averageRunKm, double longestRunKm28, double averagePaceSecondsPerKm,
+            Double highIntensityRatio7d, Integer hoursSinceHardRun, Integer daysSinceLastRun,
+            String injuryRisk, String sorenessLevel, List<DailyDistance> dailyDistances) {}
+
     public record PlannerInput(
             LocalDate today,
             int horizonDays,
@@ -503,8 +591,20 @@ public class PersonalizedRunningPlanner {
             boolean readinessSupported,
             String injuryRisk,
             String sorenessLevel,
-            Goal goal
-    ) {}
+            Goal goal,
+            Map<LocalDate, Double> completedKmByDate,
+            List<DayOfWeek> availableRunDays
+    ) {
+        public PlannerInput(LocalDate today, int horizonDays, RunHistory history, Integer readinessScore,
+                String readinessVerdict, boolean readinessSupported, String injuryRisk, String sorenessLevel, Goal goal,
+                Map<LocalDate, Double> completedKmByDate) {
+            this(today, horizonDays, history, readinessScore, readinessVerdict, readinessSupported, injuryRisk, sorenessLevel, goal, completedKmByDate, null);
+        }
+        public PlannerInput(LocalDate today, int horizonDays, RunHistory history, Integer readinessScore,
+                String readinessVerdict, boolean readinessSupported, String injuryRisk, String sorenessLevel, Goal goal) {
+            this(today, horizonDays, history, readinessScore, readinessVerdict, readinessSupported, injuryRisk, sorenessLevel, goal, Map.of(), null);
+        }
+    }
 
     public record RunHistory(
             int totalRuns,
@@ -517,8 +617,15 @@ public class PersonalizedRunningPlanner {
             double highIntensityRatio7d,
             Integer hoursSinceHardRun,
             Integer daysSinceLastRun,
-            Map<DayOfWeek, Integer> preferredDayCounts
+            Map<DayOfWeek, Integer> preferredDayCounts,
+            boolean highIntensitySupported
     ) {
+        public RunHistory(int totalRuns, int runDays28, double volume7Km, double volume28Km, double averageRunKm,
+                double longestRunKm28, double averagePaceSecondsPerKm, double highIntensityRatio7d,
+                Integer hoursSinceHardRun, Integer daysSinceLastRun, Map<DayOfWeek, Integer> preferredDayCounts) {
+            this(totalRuns, runDays28, volume7Km, volume28Km, averageRunKm, longestRunKm28, averagePaceSecondsPerKm,
+                    highIntensityRatio7d, hoursSinceHardRun, daysSinceLastRun, preferredDayCounts, true);
+        }
         public static RunHistory empty() {
             return new RunHistory(0, 0, 0, 0, 0, 0, 0, 0, null, null, Map.of());
         }
@@ -533,16 +640,19 @@ public class PersonalizedRunningPlanner {
             return new RunHistory(
                     Math.max(0, totalRuns),
                     Math.max(0, runDays28),
-                    Math.max(0, volume7Km),
-                    Math.max(0, volume28Km),
-                    Math.max(0, averageRunKm),
-                    Math.max(0, longestRunKm28),
-                    Math.max(0, averagePaceSecondsPerKm),
-                    Math.max(0, highIntensityRatio7d),
+                    finiteNonNegative(volume7Km),
+                    finiteNonNegative(volume28Km),
+                    finiteNonNegative(averageRunKm),
+                    finiteNonNegative(longestRunKm28),
+                    finiteNonNegative(averagePaceSecondsPerKm),
+                    finiteNonNegative(highIntensityRatio7d),
                     hoursSinceHardRun == null ? null : Math.max(0, hoursSinceHardRun),
                     daysSinceLastRun == null ? null : Math.max(0, daysSinceLastRun),
-                    Map.copyOf(safeCounts)
+                    Map.copyOf(safeCounts), highIntensitySupported
             );
+        }
+        private static double finiteNonNegative(double value) {
+            return Double.isFinite(value) && value > 0 ? value : 0;
         }
     }
 
@@ -553,21 +663,6 @@ public class PersonalizedRunningPlanner {
             String name
     ) {}
 
-    public record PlannedSession(
-            LocalDate date,
-            CoachWorkoutType workoutType,
-            Double distanceKm,
-            Integer durationMinutes,
-            boolean stridesSuggested,
-            String phase,
-            String intent,
-            String reasonCode,
-            Integer targetPaceMinSecondsPerKm,
-            Integer targetPaceMaxSecondsPerKm,
-            CoachWorkoutType mutatedFrom,
-            boolean readinessAdjusted
-    ) {}
-
     public record PersonalizedPlan(
             String phase,
             double targetWeeklyKm,
@@ -576,8 +671,22 @@ public class PersonalizedRunningPlanner {
             int confidence,
             List<String> reasonCodes,
             List<PlannedSession> sessions,
-            PlannedSession today
-    ) {}
+            PlannedSession today,
+            HistoryEvidence historyEvidence,
+            List<WeeklyMileageBudget.Week> weeklyBudgets,
+            List<PlannedSession> weeklySessions
+    ) {
+        public PersonalizedPlan(String phase, double targetWeeklyKm, int sessionsPerWeek,
+                List<DayOfWeek> preferredRunDays, int confidence, List<String> reasonCodes, List<PlannedSession> sessions,
+                PlannedSession today, HistoryEvidence historyEvidence, List<WeeklyMileageBudget.Week> weeklyBudgets) {
+            this(phase, targetWeeklyKm, sessionsPerWeek, preferredRunDays, confidence, reasonCodes, sessions, today,
+                    historyEvidence, weeklyBudgets, List.of());
+        }
+        public PersonalizedPlan(String phase, double targetWeeklyKm, int sessionsPerWeek,
+                List<DayOfWeek> preferredRunDays, int confidence, List<String> reasonCodes, List<PlannedSession> sessions, PlannedSession today) {
+            this(phase, targetWeeklyKm, sessionsPerWeek, preferredRunDays, confidence, reasonCodes, sessions, today, null, List.of());
+        }
+    }
 
     private record SessionDraft(
             CoachWorkoutType workoutType,

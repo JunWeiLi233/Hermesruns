@@ -29,13 +29,16 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
 
         double totalDistanceMeters = 0d;
         double totalTimeSeconds = 0d;
+        boolean distanceRecorded = false, timeRecorded = false;
         for (Element lapElement : childElementsByLocalName(activityElement, "Lap")) {
             Double lapDistance = parseDouble(firstTextByLocalName(lapElement, "DistanceMeters"));
             Double lapTime = parseDouble(firstTextByLocalName(lapElement, "TotalTimeSeconds"));
             if (lapDistance != null) {
+                distanceRecorded = true;
                 totalDistanceMeters += lapDistance;
             }
             if (lapTime != null) {
+                timeRecorded = true;
                 totalTimeSeconds += lapTime;
             }
         }
@@ -98,12 +101,13 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
             ));
         }
 
-        if (points.isEmpty()) {
+        if (points.isEmpty() && !explorerPolicy()) {
             throw new IllegalArgumentException("The TCX file does not contain any valid coordinates.");
         }
 
-        Double distanceMeters = totalDistanceMeters > 0 ? totalDistanceMeters : (double) estimateDistanceMeters(points);
-        Long durationSeconds = totalTimeSeconds > 0 ? Math.round(totalTimeSeconds) : durationSeconds(startTime, endTime);
+        Double distanceMeters = explorerPolicy() ? distanceRecorded ? totalDistanceMeters : points.isEmpty() ? null : (double) estimateDistanceMeters(points)
+                : totalDistanceMeters > 0 ? totalDistanceMeters : (double) estimateDistanceMeters(points);
+        Long durationSeconds = explorerPolicy() && timeRecorded ? Math.round(totalTimeSeconds) : totalTimeSeconds > 0 ? Math.round(totalTimeSeconds) : durationSeconds(startTime, endTime);
         return new ParsedActivityData(
                 resolveName(sport, startTime, fileName),
                 ActivityTypeResolver.fromSportLabels(sport),
@@ -112,8 +116,42 @@ public class TcxActivityFileParser extends AbstractXmlActivityFileParser {
                 durationSeconds,
                 points,
                 null,
-                null
+                null,
+                sourceLaps(activityElement, startTime)
         );
+    }
+
+    private List<com.hermes.backend.activity.analysis.SessionAnalysisSources.Lap> sourceLaps(
+            Element activity, LocalDateTime activityStart) {
+        var laps = new ArrayList<com.hermes.backend.activity.analysis.SessionAnalysisSources.Lap>();
+        for (Element lap : childElementsByLocalName(activity, "Lap")) {
+            // Intensity must belong directly to this Lap; nested workout templates do not classify it.
+            String intensity = firstTextByLocalName(lap, "Intensity");
+            String kind = "Active".equals(intensity) ? "work"
+                    : "Resting".equals(intensity) ? "recovery" : "unknown";
+            LocalDateTime start = parseDateTime(lap.getAttribute("StartTime"));
+            LocalDateTime end = null;
+            var timestamps = lap.getElementsByTagNameNS("*", "Time");
+            for (int i = 0; i < timestamps.getLength(); i++) {
+                LocalDateTime time = parseDateTime(timestamps.item(i).getTextContent());
+                if (time != null && (end == null || time.isAfter(end))) end = time;
+            }
+            laps.add(new com.hermes.backend.activity.analysis.SessionAnalysisSources.Lap(
+                    "lap-" + (laps.size() + 1), kind, elapsed(activityStart, start), elapsed(activityStart, end),
+                    finiteNonnegative(parseDouble(firstTextByLocalName(lap, "TotalTimeSeconds"))),
+                    finiteNonnegative(parseDouble(firstTextByLocalName(lap, "DistanceMeters"))), intensity));
+        }
+        return List.copyOf(laps);
+    }
+
+    private Integer elapsed(LocalDateTime base, LocalDateTime time) {
+        if (base == null || time == null) return null;
+        long seconds = java.time.Duration.between(base, time).getSeconds();
+        return seconds >= 0 && seconds <= Integer.MAX_VALUE ? (int) seconds : null;
+    }
+
+    private Double finiteNonnegative(Double value) {
+        return value != null && Double.isFinite(value) && value >= 0 ? value : null;
     }
 
     private String resolveName(String sport, LocalDateTime startTime, String fileName) {

@@ -6,7 +6,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CyclicBarrier;
@@ -40,34 +39,33 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 class CoachRunnerStateCreationRaceTests {
 
-    private static final CyclicBarrier BOTH_HAVE_LOOKED = new CyclicBarrier(2);
-    private static final ThreadLocal<Boolean> HAS_LOOKED = ThreadLocal.withInitial(() -> false);
-    private static volatile boolean holdAfterTheLookup;
+    private static final CyclicBarrier BOTH_HAVE_ARRIVED = new CyclicBarrier(2);
+    private static final ThreadLocal<Boolean> HAS_ARRIVED = ThreadLocal.withInitial(() -> false);
+    private static volatile boolean holdBeforeTheLock;
 
     /**
-     * Puts the repository behind a wrapper that holds a request, once its lookup has found no coach state, until the other request
-     * has looked as well. Both then go on to create the row, which is the order that used to break.
+     * Both requests reach first-use initialization together. Hold them before the real database lock, so the regression
+     * exercises transaction serialization without requiring the second request to read state before it owns the runner.
      */
     @TestConfiguration
-    static class HoldRequestsAfterTheLookup {
+    static class HoldRequestsBeforeTheLock {
         @Bean
-        static BeanPostProcessor holdRequestsThatFoundNoCoachState() {
+        static BeanPostProcessor holdRequestsAtFirstUse() {
             return new BeanPostProcessor() {
                 @Override
                 public Object postProcessAfterInitialization(Object bean, String beanName) {
-                    if (!(bean instanceof CoachRunnerStateRepository)) return bean;
-                    return Proxy.newProxyInstance(CoachRunnerStateRepository.class.getClassLoader(),
-                            new Class<?>[] {CoachRunnerStateRepository.class}, (proxy, method, args) -> {
+                    if (!(bean instanceof RunnerRepository)) return bean;
+                    return Proxy.newProxyInstance(RunnerRepository.class.getClassLoader(),
+                            new Class<?>[] {RunnerRepository.class}, (proxy, method, args) -> {
+                                if (holdBeforeTheLock && "findByIdForUpdate".equals(method.getName()) && !HAS_ARRIVED.get()) {
+                                    HAS_ARRIVED.set(true);
+                                    BOTH_HAVE_ARRIVED.await(10, TimeUnit.SECONDS);
+                                }
                                 Object answer;
                                 try {
                                     answer = method.invoke(bean, args);
                                 } catch (InvocationTargetException failure) {
                                     throw failure.getCause();
-                                }
-                                if (holdAfterTheLookup && "findByRunner".equals(method.getName()) && !HAS_LOOKED.get()
-                                        && answer instanceof Optional<?> found && found.isEmpty()) {
-                                    HAS_LOOKED.set(true);
-                                    BOTH_HAVE_LOOKED.await(10, TimeUnit.SECONDS);
                                 }
                                 return answer;
                             });
@@ -84,7 +82,7 @@ class CoachRunnerStateCreationRaceTests {
     void twoRequestsThatBothFindNoStateEndUpWithTheSameOneRow() throws Exception {
         Runner runner = runners.saveAndFlush(new Runner("race-" + UUID.randomUUID() + "@hermes.test", "active"));
 
-        holdAfterTheLookup = true;
+        holdBeforeTheLock = true;
         ExecutorService pool = Executors.newFixedThreadPool(2);
         try {
             List<Future<Object>> requests = new ArrayList<>();
@@ -96,7 +94,7 @@ class CoachRunnerStateCreationRaceTests {
                 assertThat(request.get(30, TimeUnit.SECONDS)).as("a coach state, not an exception").isNotNull();
             }
         } finally {
-            holdAfterTheLookup = false;
+            holdBeforeTheLock = false;
             pool.shutdownNow();
         }
 

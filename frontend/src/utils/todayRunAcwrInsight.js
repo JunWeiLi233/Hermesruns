@@ -45,8 +45,19 @@ export function describeAcwrState(acwr) {
   };
 }
 
-export function getTodayRunAcwrInsight(acwr) {
+export function getTodayRunAcwrInsight(acwr, coachLoadEvidence) {
   const state = describeAcwrState(acwr);
+
+  if (coachLoadEvidence?.source === 'personalized-planner') {
+    return {
+      ...state,
+      intensityAction: 'follow-plan',
+      stripLabelKey: 'today_run.acwr_planner_estimate_label',
+      calloutTitleKey: 'today_run.acwr_planner_estimate_title',
+      calloutBodyKey: 'today_run.acwr_planner_estimate_body',
+      calloutParams: {},
+    };
+  }
 
   switch (state.zone) {
     case 'low':

@@ -94,8 +94,8 @@ assert.match(
 
 assert.match(
   scheduleSource,
-  /const routeWaypoints = \(Array\.isArray\(routeRecommendation\?\.waypoints\) \? routeRecommendation\.waypoints : \[\]\)\s*\.map\(normalizeRouteWaypoint\)\s*\.filter\(Boolean\)/,
-  'Schedule should normalize coach-route GPS waypoints before mounting the OpenStreetMap background.',
+  /const routeWaypoints = useMemo\(\s*\(\) => \(Array\.isArray\(routeRecommendation\?\.waypoints\) \? routeRecommendation\.waypoints : \[\]\)\s*\.map\(normalizeRouteWaypoint\)\s*\.filter\(Boolean\),\s*\[routeRecommendation\]/,
+  'Schedule should memoize normalized coach-route GPS waypoints before mounting the OpenStreetMap background.',
 );
 
 assert.match(
@@ -122,7 +122,7 @@ assert.match(
   'History route sketches should stay visible above themed fallback-panel backgrounds.',
 );
 
-// Auto-plan from recent runs
+// Auto-plan from the personal heatmap and current workout.
 assert.match(
   scheduleSource,
   /\/api\/route\/plan/,
@@ -143,8 +143,14 @@ assert.match(
 
 assert.match(
   scheduleSource,
-  /requireStreetGraph: false/,
-  'Schedule should reject a badly distance-matched recent-run fallback instead of presenting it as the planned route.',
+  /apiJson\('\/api\/route\/plan\/anchor'\)/,
+  'Schedule should load the personal heatmap hotspot for route planning.',
+);
+
+assert.doesNotMatch(
+  scheduleSource,
+  /recentRunFallback|rawTarget > 0 \? rawTarget : 5/,
+  'Schedule should not replace personalized heatmap routes with a latest-run preview or invented target.',
 );
 
 for (const key of [

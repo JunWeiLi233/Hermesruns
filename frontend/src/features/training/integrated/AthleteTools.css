@@ -1,0 +1,28 @@
+.athlete-tools-actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:0 0 18px; }
+.athlete-tools-modal { width:min(960px,calc(100vw - 32px)); max-height:90dvh; overflow:auto; }
+.athlete-tools-content { min-width:0; color:inherit; }
+.athlete-tools-content .tw-panel { border:1px solid var(--border-color,#d8dcdf); border-radius:12px; padding:18px; margin-bottom:16px; }
+.athlete-tools-content .tw-panel>header { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:18px; }
+.athlete-tools-content .tw-panel h2 { font-size:1.15rem; margin:0; }
+.athlete-tools-content .ds-field,.athlete-tools-job { display:grid; gap:8px; margin-bottom:14px; }
+.athlete-tools-content input:not([type=checkbox]),.athlete-tools-content select,.athlete-tools-content textarea,.athlete-tools-job input { box-sizing:border-box; width:100%; min-height:42px; padding:10px; border:1px solid var(--border-color,#aaa); border-radius:8px; background:var(--bg-card,#fff); color:inherit; font:inherit; }
+.athlete-tools-content .ds-button { min-height:42px; padding:9px 16px; border:1px solid var(--border-color,#aaa); border-radius:8px; background:var(--bg-card,#fff); color:inherit; font:inherit; cursor:pointer; }
+.athlete-tools-content .ds-button:disabled { cursor:default; opacity:.5; }
+.athlete-tools-content .tw-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.athlete-tools-content .tw-checklist { display:grid; gap:12px; border:0; padding:0; margin:0 0 18px; }
+.athlete-tools-content .tw-checklist label { display:flex; align-items:center; gap:8px; min-height:32px; }
+.athlete-tools-content .ds-table-scroll { overflow:auto; max-width:100%; }
+.athlete-tools-content .ds-table { width:100%; border-collapse:collapse; margin:12px 0; }
+.athlete-tools-content .ds-table :is(th,td) { text-align:start; padding:10px; border-bottom:1px solid var(--border-color,#ddd); white-space:nowrap; }
+.athlete-tools-content .ds-chart { width:100%; max-height:260px; }
+.athlete-tools-content .ds-gridline { stroke:var(--border-color,#ddd); }
+.athlete-tools-content .tw-line { fill:none; stroke:#427264; stroke-width:2; }
+.athlete-tools-content .tw-line-1 { stroke:#9c6624; }
+.athlete-tools-content .tw-line-2 { stroke:#446ec3; }
+.athlete-tools-content .tw-card-list { display:grid; gap:12px; padding:0; list-style:none; }
+.athlete-tools-content .tw-card { border-bottom:1px solid var(--border-color,#ddd); padding:12px 0; overflow-wrap:anywhere; }
+.athlete-tools-content .tw-card time { display:block; font-size:.85rem; }
+.athlete-tools-import { border-top:1px solid var(--border-color,#ddd); margin-top:20px; padding-top:16px; }
+.athlete-tools-import summary { cursor:pointer; padding:8px 0; }
+.athlete-tools-job { margin-top:12px; }
+@media(max-width:600px) { .athlete-tools-modal { width:calc(100vw - 16px); } .athlete-tools-content .tw-panel { padding:12px; } }

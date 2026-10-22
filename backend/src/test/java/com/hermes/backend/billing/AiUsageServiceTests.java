@@ -43,6 +43,7 @@ class AiUsageServiceTests {
         runner.setEmail("test@hermes.com");
         runner.setAiDailyScansUsed(0);
         runner.setAiDailyResetDate(LocalDate.now());
+        org.mockito.Mockito.lenient().when(runnerRepository.findByIdForUpdate(1L)).thenReturn(java.util.Optional.of(runner));
         return runner;
     }
 
@@ -146,5 +147,19 @@ class AiUsageServiceTests {
         service.tryConsumeQuota(runner);
 
         verify(runnerRepository, never()).save(runner);
+    }
+
+    @Test
+    void failedOldRequestCannotRefundTodaysQuota() {
+        Runner request = freshRunner();
+        request.setAiDailyResetDate(LocalDate.now().minusDays(1));
+        Runner current = new Runner();
+        current.setId(1L);
+        current.setAiDailyResetDate(LocalDate.now());
+        current.setAiDailyScansUsed(2);
+        when(runnerRepository.findByIdForUpdate(1L)).thenReturn(java.util.Optional.of(current));
+        service.rollbackConsumedQuota(request);
+        assertThat(current.getAiDailyScansUsed()).isEqualTo(2);
+        verify(runnerRepository, never()).save(any());
     }
 }

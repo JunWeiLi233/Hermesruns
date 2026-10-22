@@ -13,7 +13,7 @@ const indexHtml = readFileSync(path.join(frontendRoot, '..', 'index.html'), 'utf
 const home = getSeoMetadata('/', 'en');
 assert.equal(home.indexable, true);
 assert.equal(home.canonicalUrl, 'https://hermesruns.com/');
-assert.match(home.title, /Running Analytics/);
+assert.match(home.title, /Adaptive Running Plans/);
 assert.doesNotMatch(home.title, /Strava/, 'The homepage title should lead with the product, not a data source.');
 assert.doesNotMatch(home.description, /Strava/, 'The homepage description should lead with the product, not a data source.');
 assert.ok(home.description.length >= 120 && home.description.length <= 160, 'Homepage description should fit the recommended snippet length.');
@@ -61,28 +61,9 @@ assert.match(chineseHome.title, /HermesRuns$/);
 
 assert.match(appSource, /<SeoHead \/>/);
 assert.match(seoSource, /X-Robots|robots/);
-for (const marker of [
-  'rel="canonical"',
-  'og:image',
-  'twitter:image',
-  String.raw`application/ld\+json`,
-  String.raw`hermesruns\.com/og-image\.png`,
-]) {
-  assert.match(indexHtml, new RegExp(marker), `index.html should contain ${marker}.`);
-}
-
-assert.match(indexHtml, /id="hermes-seo-fallback"/, 'Homepage should include crawlable fallback content.');
-assert.match(indexHtml, /<h1[^>]*>Running analytics you can check<\/h1>/);
-assert.match(indexHtml, /href="\/signup"/);
-assert.match(indexHtml, /href="\/privacy"/);
-assert.match(indexHtml, /href="\/terms"/);
-assert.match(indexHtml, /alt="HermesRuns: running analytics you can check"/);
-assert.match(indexHtml, /<h2[^>]*>One running analytics app for the decisions that matter<\/h2>/);
-assert.match(indexHtml, /<h3>VO2max and training zones<\/h3>/);
-assert.match(indexHtml, /<h3>Route heatmaps<\/h3>/);
-assert.match(indexHtml, /<h3>Shoe mileage tracking<\/h3>/);
-assert.match(indexHtml, /<h2[^>]*>Running analytics FAQ<\/h2>/);
-assert.match(indexHtml, /"@type": "FAQPage"/);
-assert.match(indexHtml, /"dateModified": "2026-10-09"/);
+assert.match(indexHtml, /name="robots" content="noindex,nofollow,noarchive"/,
+  'The private SPA shell must default to noindex; public heads are generated per route.');
+assert.doesNotMatch(indexHtml, /hermes-seo-fallback|<noscript>/,
+  'Public documents must use the real React content rather than a separate fallback.');
 
 console.log('[PASS] Route-aware SEO metadata contract passed.');

@@ -1,0 +1,37 @@
+@import '../design/tokens.css';
+@import '../design/styles.css';
+@import '../tokens.css';
+@import '../workspace.css';
+
+.icu-design.hermes-training-integrated {
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  gap: 20px;
+  padding: 0;
+  background: transparent;
+  --ds-accent: #a43727;
+  --ds-focus: #a43727;
+  --ds-font-sans: var(--font-body, sans-serif);
+}
+.hermes-training-integrated .tw-panel { min-width: 0; }
+.integrated-athlete-page { margin: 24px; padding: 24px !important; }
+.integrated-page-tools { margin-block: 18px; }
+body.theme-light .modal-card.athlete-tools-modal { background: #fff; color: #201a17; }
+body.theme-light .athlete-tools-modal .modal-header h3 { color: #201a17; }
+.authored-day-entries .tw-session { min-width: 0; padding: 10px; }
+.authored-day-entries .ds-button { padding: 6px; font-size: .8rem; }
+.schedule-plan-week-grid:has(.authored-day-entries) { align-items: start; }
+.schedule-plan-week-grid:has(.authored-day-entries) .schedule-plan-day { justify-content: flex-start; }
+.training-integration-roster { display: grid; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.training-integration-roster li { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-block: 12px; border-bottom: 1px solid var(--ds-border); }
+.training-integration-roster li > div { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.training-integration-anchor-form { display: grid; gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+.training-integration-anchor-form > button { justify-self: start; }
+.training-integration-bulk > summary { padding: 16px; cursor: pointer; border: 1px solid var(--ds-border); border-radius: var(--ds-radius-sm); }
+.training-integration-bulk[open] > summary { margin-bottom: 16px; }
+@media (max-width: 48rem) { .training-integration-anchor-form { grid-template-columns: minmax(0, 1fr); } }
+.icu-design.hermes-training-integrated .ds-button.ds-primary { background: var(--ds-accent); color: #fff; border-color: var(--ds-accent); transition: box-shadow var(--ds-motion-fast) var(--ds-motion-ease); }
+.icu-design.hermes-training-integrated .ds-button.ds-primary:disabled { background: var(--ds-surface-muted); color: var(--ds-text-muted); border-color: var(--ds-border); }
+#root .icu-design.hermes-training-integrated .ds-button.ds-primary { background: var(--ds-accent); color: #fff; border-color: var(--ds-accent); }
+#root .icu-design.hermes-training-integrated .ds-button.ds-primary:disabled { background: var(--ds-surface-muted); color: var(--ds-text-muted); border-color: var(--ds-border); }

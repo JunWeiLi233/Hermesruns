@@ -49,6 +49,13 @@ public class HttpsEnforcementFilter implements Filter {
         }
 
         boolean explicitHealthEndpoint = "/internal/health".equals(req.getRequestURI());
+        if ("/internal/ready".equals(req.getRequestURI())
+                && ("GET".equalsIgnoreCase(req.getMethod()) || "HEAD".equalsIgnoreCase(req.getMethod()))) {
+            // Let the real readiness controller validate the database. A probe must
+            // not redirect to TLS or return the filter's unconditional liveness OK.
+            chain.doFilter(request, response);
+            return;
+        }
         boolean railwayRootProbe = "/".equals(req.getRequestURI())
                 && "healthcheck.railway.app".equalsIgnoreCase(req.getServerName());
         if ("GET".equalsIgnoreCase(req.getMethod()) && (explicitHealthEndpoint || railwayRootProbe)) {

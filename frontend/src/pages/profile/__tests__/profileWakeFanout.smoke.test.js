@@ -15,8 +15,8 @@ const analysis = readFileSync(path.join(root, 'pages/analysis/Analysis.jsx'), 'u
 // Measured first-paint fan-out (happy path, auth already hydrated):
 // Profile: 1x /api/profile/dashboard (+ idle weekly-digest + optional full-history)
 // Analysis: profile/me + activities/analysis + coach/today + injury-risk/status = 4
-// Runs: activities + profile/me + strava/status + route-previews batch = 4
-// Cross-page remount within TTL must reuse cachedApiJson for profile/me + activities*.
+// Runs: one bounded history page + profile/me + strava/status + route-previews batch = 4
+// Cross-page remounts reuse profile metadata; Runs revalidates a bounded page.
 
 assert.match(
   resourceCache,
@@ -38,36 +38,36 @@ assert.match(
 
 assert.match(
   runs,
-  /cachedApiJson\('\/api\/activities'\)/,
-  'Runs first paint must go through cachedApiJson for /api/activities.',
+  /withRequestDeadline\(\(signal\) => fetchActivityHistoryPage\(historyQuery, null, \{ signal \}\)/,
+  'Runs first paint must request one cancellable bounded history page.',
 );
 
 assert.match(
   runs,
-  /cachedApiJson\('\/api\/profile\/me'\)/,
+  /cachedApiJson\('\/api\/profile\/me'(?:, \{ signal \})?\)/,
   'Runs first paint must go through cachedApiJson for /api/profile/me.',
 );
 
 assert.match(
   chrome,
-  /cachedApiJson\('\/api\/profile\/me'\)/,
+  /cachedApiJson\('\/api\/profile\/me'(?:, \{ signal \})?\)/,
   'Authenticated shell chrome must reuse cached profile/me instead of a raw duplicate fetch.',
 );
 
 assert.match(
   analysis,
-  /cachedApiJson\('\/api\/profile\/me'\)/,
+  /cachedApiJson\('\/api\/profile\/me'(?:, \{ signal \})?\)/,
   'Analysis must keep cachedApiJson for profile/me.',
 );
 
 assert.match(
   analysis,
-  /cachedApiJson\('\/api\/activities\/analysis'\)/,
+  /cachedApiJson\('\/api\/activities\/analysis'(?:, \{ signal \})?\)/,
   'Analysis must keep cachedApiJson for activities/analysis.',
 );
 
 assert.equal(
-  (runs.match(/apiJson\('\/api\/activities'\)/g) || []).length,
+  (runs.match(/apiJson\('\/api\/activities'(?:, \{ signal \})?\)/g) || []).length,
   0,
   'Runs must not raw-apiJson /api/activities on mount (duplicates Analysis/Profile cache).',
 );

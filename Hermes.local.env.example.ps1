@@ -13,6 +13,15 @@
 # Set to "production" for public-facing deployments (enforces stricter validation).
 $env:HERMES_ENV = "development"
 
+# Apply training workspace migrations when starting a local development database.
+# Production uses release migrations and keeps this false.
+$env:APP_TRAININGWORKSPACE_MIGRATE = "true"
+
+# Exact ruleset release controls. Both default off; experimental release requires runner consent.
+# Qualified approval must remain empty until the exact version has a signed review.
+$env:APP_RUN_PLANS_APPROVED_RULESET = ""
+$env:APP_RUN_PLANS_EXPERIMENTAL_RULESET = ""
+
 # Enforce HTTPS redirects at the app layer (safe behind reverse proxy with TLS).
 $env:APP_FORCE_HTTPS = "false"
 
@@ -191,6 +200,19 @@ $env:APP_CARTO_BASEMAPS_API_KEY = ""
 # Gemini AI API key for shoe image mileage extraction and cloud-backed course-map scans.
 # Obtain from https://aistudio.google.com/apikey
 $env:APP_AI_API_KEY = "your-gemini-api-key"
+
+# Global AI safety reservations (USD); also set the provider account's own spending cap.
+$env:APP_AI_BUDGET_ENABLED = "true"
+$env:APP_AI_BUDGET_DAILY_REQUEST_LIMIT = "200"
+$env:APP_AI_BUDGET_MONTHLY_REQUEST_LIMIT = "2000"
+$env:APP_AI_BUDGET_DAILY_USD_LIMIT = "5.00"
+$env:APP_AI_BUDGET_MONTHLY_USD_LIMIT = "50.00"
+$env:APP_AI_BUDGET_RESERVATION_USD_PER_REQUEST = "0.10"
+
+$env:APP_API_RATE_LIMIT_GLOBAL_IP_PER_MINUTE = "600"
+$env:APP_API_RATE_LIMIT_GLOBAL_USER_PER_MINUTE = "900"
+$env:APP_API_RATE_LIMIT_CHECKOUT_IP_PER_MINUTE = "5"
+$env:APP_API_RATE_LIMIT_CHECKOUT_USER_PER_MINUTE = "5"
 
 # AI model to use (default: gemini-2.5-flash).
 $env:APP_AI_MODEL = "gemini-2.5-flash"

@@ -49,8 +49,8 @@ export function buildCourseMapWorkspaceSource({ queueItem = null, detail = null 
     city: detail?.city || queueItem?.city || '',
     country: detail?.country || queueItem?.country || '',
     officialWebsite: queueItem?.officialWebsite || detail?.officialWebsite || '',
-    lat: queueItem?.lat ?? detail?.lat ?? null,
-    lng: queueItem?.lng ?? detail?.lng ?? null,
+    lat: queueItem?.lat ?? queueItem?.latitude ?? detail?.lat ?? detail?.latitude ?? null,
+    lng: queueItem?.lng ?? queueItem?.longitude ?? detail?.lng ?? detail?.longitude ?? null,
     distanceKm: queueItem?.distanceKm ?? detail?.distanceKm ?? null,
   };
 }

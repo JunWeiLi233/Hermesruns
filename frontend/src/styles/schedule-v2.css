@@ -1,0 +1,267 @@
+/* Schedule reference: compact calendar, session / route rail, coach / gear rail.
+   Keep this after the shared shell and legacy schedule styles. */
+body #root .schedule-plan-page {
+  --sc-page: #f2f2f7;
+  --sc-card: #fff;
+  --sc-ink: #1c1917;
+  --sc-muted: #625c56;
+  --sc-faint: #716b65;
+  --sc-line: rgba(28, 25, 23, .1);
+  --sc-fill: #f7f7f7;
+  --sc-accent: #a0392a;
+  --sc-green: #248a3d;
+  --sc-map: #eceee7;
+  background: var(--sc-page) !important;
+}
+body:is(.theme-midnight, .theme-high-contrast) #root .schedule-plan-page {
+  --sc-page: #141716;
+  --sc-card: #202422;
+  --sc-ink: #f4f1eb;
+  --sc-muted: #c2bdb5;
+  --sc-faint: #aba69f;
+  --sc-line: rgba(255, 255, 255, .12);
+  --sc-fill: #292e2a;
+  --sc-accent: #edac9f;
+  --sc-green: #9cd2aa;
+  --sc-map: #2a322c;
+}
+body #root .schedule-plan-page::before,
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas::before { display: none !important; }
+body #root .schedule-plan-page .runner-shell-main { background: transparent !important; }
+body #root .schedule-plan-page .runner-shell-canvas.schedule-plan-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 24px !important;
+  width: 100% !important;
+  max-width: 1600px !important;
+  margin: 0 auto !important;
+  padding: 32px 36px 40px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--sc-ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas :is(h1,h2,h3,h4,p) { margin: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas :is(h1,h2,h3,h4,strong) { color: var(--sc-ink) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas :is(button,summary) { font: inherit; letter-spacing: 0; text-transform: none; cursor: pointer; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas :is(button,summary):focus-visible { outline: 3px solid var(--sc-accent); outline-offset: 4px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas button:disabled { opacity: .4; cursor: default; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-hero {
+  display: flex; align-items: end; justify-content: space-between; gap: 24px;
+  min-height: 0; padding: 0 !important; overflow: visible;
+  background: transparent !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important;
+}
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-hero-copy { max-width: 760px; min-width: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-hero h1 {
+  font-family: "Manrope", var(--font-display); font-size: clamp(27px, 3vw, 38px); font-style: italic;
+  font-weight: 800; line-height: 1.2; letter-spacing: -.045em; transform: none;
+}
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-hero-description { margin-top: 8px; color: var(--sc-muted); font-size: 14px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-hero [role="note"] { margin-top: 8px; color: var(--sc-muted); font-size: 12px; }
+.schedule-plan-volume { flex: 0 1 320px; min-width: 250px; padding-bottom: 2px; }
+.schedule-plan-volume-labels { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.schedule-plan-volume-labels > span { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--sc-muted); }
+.schedule-plan-volume-labels p { text-align: right; white-space: nowrap; }
+.schedule-plan-volume-labels strong { font-size: 19px; font-variant-numeric: tabular-nums; }
+.schedule-plan-volume-labels p span { font-size: 12px; color: var(--sc-muted); }
+.schedule-plan-volume-track { margin-top: 7px; height: 6px; border-radius: 6px; background: var(--sc-line); overflow: hidden; }
+.schedule-plan-volume-track > span { display: block; height: 100%; border-radius: inherit; background: var(--sc-accent); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-calendar { padding: 22px 24px 24px; background: var(--sc-card); border-radius: 20px; min-width: 0; }
+.schedule-plan-calendar-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 18px; }
+.schedule-plan-week-nav { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-week-nav h2 { font: 700 14px "Manrope", sans-serif; letter-spacing: -.02em; text-transform: none; white-space: nowrap; }
+.schedule-plan-week-nav > button { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 10px; background: var(--sc-fill); color: var(--sc-muted); }
+.schedule-plan-week-nav > .schedule-plan-current-week { width: auto; padding: 0 10px; font-size: 12px !important; }
+body #root .schedule-plan-page .schedule-plan-calendar .integrated-page-tools { margin: 0; padding: 0; border: 0; background: transparent; min-width: 0; }
+body #root .schedule-plan-page .schedule-plan-calendar .athlete-tools-actions { gap: 6px; justify-content: flex-end; }
+body #root .schedule-plan-page .schedule-plan-calendar .runner-shell-inline-btn { min-height: 34px; padding: 0 12px; border: 1px solid var(--sc-line); border-radius: 999px; background: transparent; color: var(--sc-muted); font-size: 12px; font-weight: 600; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-week-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 8px; margin: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-day {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-start; gap: 0;
+  min-height: 160px; min-width: 0; padding: 0; border: 0 !important; border-radius: 16px;
+  color: var(--sc-ink) !important; background: var(--sc-fill) !important;
+  box-shadow: none !important; transform: none; overflow: visible;
+}
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-day.is-selected { background: var(--sc-card) !important; box-shadow: inset 0 0 0 1.5px var(--sc-ink) !important; }
+.schedule-plan-day-select { display: flex; flex-direction: column; gap: 0; width: 100%; flex: 1; min-width: 0; padding: 12px; border: 0; border-radius: inherit; background: transparent; color: inherit; text-align: left; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-day-head { display: flex; justify-content: space-between; align-items: center; gap: 4px; width: 100%; min-height: 20px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-day-label { font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--sc-muted) !important; text-transform: capitalize; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .is-today .schedule-plan-day-label { color: var(--sc-accent) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-day-today-badge { position: static; display: inline-flex; align-items: center; min-height: 20px; padding: 0 6px; margin: 0; border-radius: 999px; background: var(--sc-accent) !important; color: var(--sc-card) !important; font-size: 10px; font-weight: 800; letter-spacing: 0; line-height: 1; }
+.schedule-plan-day-check { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; background: rgba(36,138,61,.12); color: var(--sc-green); font-size: 12px; }
+.schedule-plan-day-rule { width: 100%; height: 3px; flex-shrink: 0; margin: 7px 0 9px; background: #9cd2aa; }
+.schedule-plan-day--quality .schedule-plan-day-rule { background: var(--sc-accent); }
+.schedule-plan-day--peak .schedule-plan-day-rule { background: #e0a43a; }
+.schedule-plan-day--recovery .schedule-plan-day-rule { background: #cfe6c4; }
+.schedule-plan-day--rest .schedule-plan-day-rule { background: var(--sc-line); }
+.schedule-plan-day-title { font-size: 13px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.schedule-plan-day-distance { margin-top: 2px; color: var(--sc-muted); font-size: 12px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-day-tag { display: block; margin-top: auto; padding-top: 10px; font-size: 11px; color: var(--sc-faint) !important; letter-spacing: 0; text-transform: none; }
+.schedule-plan-day-done { margin-top: 6px; font-size: 11px; color: var(--sc-green); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-day-deferred-badge { margin-top: 6px; padding: 0; border: 0; background: transparent; color: #916000 !important; font-size: 11px; letter-spacing: 0; line-height: 1.4; }
+.schedule-plan-day-extras:empty { display: none; }
+.schedule-plan-day-extras { padding: 0 10px 10px; font-size: 11px; }
+.schedule-plan-day-extras button { max-width: 100%; }
+.schedule-plan-published-status { margin: 8px 0 !important; font-size: 12px; }
+.schedule-plan-management { margin: -12px 0; color: var(--sc-muted); font-size: 12px; }
+.schedule-plan-management > summary { width: fit-content; padding: 2px 0; }
+.schedule-plan-management[open] > summary { margin-bottom: 12px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-bottom-grid { display: grid; grid-template-columns: minmax(0,1.61fr) minmax(0,1fr) !important; gap: 16px; margin: 0; align-items: start; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas :is(.schedule-plan-left-rail,.schedule-plan-right-rail) { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas :is(.schedule-plan-next-card,.schedule-plan-route-card,.schedule-plan-coach-card,.schedule-plan-gear-card) {
+  min-width: 0; width: 100%; margin: 0; border: 0 !important; border-radius: 20px !important; background: var(--sc-card) !important; box-shadow: none !important; overflow: hidden;
+}
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-card { display: grid; grid-template-columns: minmax(0,1.56fr) minmax(0,1fr); min-height: 306px; padding: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content { position: static; display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 24px 28px; min-width: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content > span { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--sc-accent) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content h3 { margin-top: 5px; font-family: "Manrope",var(--font-display); font-size: clamp(22px,2vw,27px); font-style: italic; font-weight: 800; line-height: 1.25; letter-spacing: -.04em; transform: none; }
+.schedule-plan-session-meta { color: var(--sc-muted); margin-top: 5px; font-size: 13px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content > p { margin: 16px 0; color: var(--sc-muted) !important; font-size: 13px; line-height: 1.65; max-width: none; }
+.schedule-plan-session-photo { min-width: 0; background: #065a83; }
+.schedule-plan-session-photo img { width: 100%; height: 100%; min-height: 306px; display: block; object-fit: cover; object-position: 45% center; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-card { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 0; padding: 16px 0; margin-top: auto; border: 0; border-top: 1px solid var(--sc-line); border-radius: 0; background: transparent !important; box-shadow: none !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-ring { position: relative; flex: 0 0 56px; width: 56px; height: 56px; margin: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-track { fill: none; stroke: var(--sc-line) !important; stroke-width: 18; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-progress { fill: none; stroke: var(--sc-accent) !important; stroke-width: 18; stroke-linecap: round; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-center { position: absolute; inset: 0; display: grid; place-items: center; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-center strong { font-family: inherit; font-size: 17px; font-style: normal; letter-spacing: 0; transform: none; }
+.schedule-plan-readiness-copy { display: flex; flex-direction: column; gap: 1px; }
+.schedule-plan-readiness-copy > span { color: var(--sc-muted); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.schedule-plan-readiness-copy > strong { font-size: 14px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-copy p { color: var(--sc-muted) !important; font-size: 12px; line-height: 1.5; }
+.schedule-plan-session-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content .schedule-plan-session-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; margin: 0; padding: 0 18px; border: 0; border-radius: 999px; background: var(--sc-ink) !important; color: var(--sc-card) !important; font-size: 13px; font-weight: 600; }
+.schedule-plan-session-primary svg { width: 16px; height: 16px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content .schedule-plan-session-details { min-height: 40px; margin: 0; padding: 0 18px; border: 0; border-radius: 999px; background: var(--sc-fill); color: var(--sc-ink); font-size: 13px; font-weight: 500; }
+.schedule-plan-session-expanded { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--sc-line); font-size: 12px; color: var(--sc-muted); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-card { position: relative; display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); padding: 0; min-height: 285px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-map { position: relative; inset: auto; width: 100%; height: 100%; min-height: 285px; opacity: 1; border-radius: 0; background-color: var(--sc-map); background-image: linear-gradient(var(--sc-line) 1px,transparent 1px),linear-gradient(90deg,var(--sc-line) 1px,transparent 1px); background-size: 28px 28px; overflow: hidden; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-leaflet-map { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-map::after { display: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-map-svg { position: absolute; inset: 12%; width: 76%; height: 76%; opacity: 1; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-map-line { stroke: var(--sc-accent); stroke-width: 3; fill: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-map-shadow { stroke: var(--sc-card); stroke-width: 7; fill: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-content { position: relative; inset: auto; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 16px; width: 100%; min-width: 0; padding: 22px 24px; background: transparent; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-content > div > span { color: var(--sc-muted) !important; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-content h3 { margin: 4px 0 0; font-size: 18px; font-weight: 700; font-style: normal; letter-spacing: -.025em; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-meta { margin-top: 4px; gap: 4px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-meta span { color: var(--sc-muted) !important; font-size: 12px; line-height: 1.5; letter-spacing: 0; text-transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-insight { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px 14px; margin-top: 14px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-insight span { padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--sc-ink) !important; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-target { display: block; margin-top: 12px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-target-metric span { color: var(--sc-muted) !important; font-size: 11px; letter-spacing: 0; text-transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-target-metric strong { margin-top: 2px; font-size: 17px; color: var(--sc-ink) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-target p { color: var(--sc-muted) !important; font-size: 11px; line-height: 1.5; margin-top: 4px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-watch-btn { display: inline-flex; gap: 8px; align-items: center; justify-content: center; min-height: 38px; padding: 0 16px; border: 1px solid var(--sc-line); border-radius: 999px; background: transparent; color: var(--sc-ink) !important; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-empty-panel { display: flex; flex-direction: column; justify-content: center; gap: 12px; height: 100%; min-height: 285px; padding: 24px; background: transparent; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-empty-badge { min-height: 0; padding: 4px 8px; background: var(--sc-card); color: var(--sc-muted); font-size: 11px; letter-spacing: 0; text-transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-empty-copy :is(strong,span) { color: var(--sc-muted) !important; font-size: 12px; line-height: 1.6; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-card { padding: 24px 26px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-head { justify-content: space-between; align-items: start; gap: 10px; margin: 0 0 18px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-head h3 { font-family: "Manrope",var(--font-display); font-size: 23px; font-style: italic; line-height: 1.3; letter-spacing: -.04em; text-transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-head p { margin-top: 4px; font-size: 12px; color: var(--sc-muted) !important; letter-spacing: 0; line-height: 1.5; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-badge { flex-shrink: 0; padding: 4px 8px 4px 4px; border: 0; border-radius: 999px; background: var(--sc-fill); color: var(--sc-ink); font-size: 11px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-badge img,
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-badge .coach-identity-avatar { width: 20px; height: 20px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-weekly-summary { padding: 0; border: 0; border-radius: 0; background: transparent !important; box-shadow: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-weekly-summary-kicker { color: var(--sc-accent) !important; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-weekly-summary-body { margin-top: 8px; font-size: 13px; line-height: 1.7; color: var(--sc-ink) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-focus-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--sc-line); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-focus-pill { min-width: 0; padding: 0; border: 0; border-radius: 0; background: transparent !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-focus-pill span { display: block; font-size: 11px; line-height: 1.4; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--sc-muted) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-focus-pill strong { display: block; margin-top: 4px; font-family: inherit; font-size: 14px; font-style: normal; font-weight: 700; letter-spacing: 0; line-height: 1.4; overflow-wrap: anywhere; transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .is-improving .schedule-plan-coach-focus-pill:first-child strong { color: var(--sc-green) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-signal-group { display: grid; gap: 7px; margin-top: 20px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-signal-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 12px; color: var(--sc-ink) !important; letter-spacing: 0; text-transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-signal-row em { font-size: 11px; font-weight: 400; font-style: normal; color: var(--sc-faint) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-signal-row strong { font-family: inherit; font-size: 12px; font-weight: 400; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-signal-bar { height: 6px; margin-bottom: 8px; background: var(--sc-line); border-radius: 4px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-signal-bar > span { display: block; height: 100%; border-radius: inherit; background: #ffd38a; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-signal-bar.is-unsupported { background: repeating-linear-gradient(135deg,var(--sc-line) 0 4px,transparent 4px 8px); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-signal-bar > .is-sleep { background: #9cd2aa; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-secondary-btn { display: inline-flex; gap: 4px; align-items: center; min-height: 36px; margin-top: 8px; padding: 0; background: transparent; border: 0; color: var(--sc-accent) !important; font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-card { padding: 20px 22px; }
+.schedule-plan-gear-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-head h3 { font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--sc-muted) !important; }
+.schedule-plan-gear-head button { padding: 0; border: 0; background: transparent; color: var(--sc-faint); font-size: 11px !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-row { display: flex; align-items: center; gap: 12px; margin: 0; padding: 0; border: 0; background: transparent; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-thumb { display: grid; place-items: center; width: 52px; height: 52px; flex: 0 0 52px; border-radius: 12px; background: var(--sc-fill) !important; overflow: hidden; }
+.schedule-plan-gear-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.schedule-plan-gear-thumb svg { width: 28px; height: 28px; color: var(--sc-muted); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-row strong { font-size: 14px; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-row p { margin-top: 2px; font-size: 12px; line-height: 1.5; color: var(--sc-muted) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-bar { height: 6px; margin-top: 12px; border-radius: 4px; background: var(--sc-line); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-bar span { display: block; height: 100%; border-radius: inherit; background: var(--sc-ink); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .runner-shell-footer { margin: 0; padding: 8px 0 0; border: 0; }
+@media (max-width: 1200px) {
+  .schedule-plan-calendar-toolbar { flex-wrap: wrap; }
+  body #root .schedule-plan-page .runner-shell-canvas.schedule-plan-canvas { padding-inline: 24px !important; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content { padding: 22px; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-card { padding: 22px; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-head { flex-wrap: wrap; }
+}
+@media (max-width: 1000px) {
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-hero { align-items: stretch; flex-direction: column; gap: 16px; }
+  .schedule-plan-volume { flex: auto; width: min(100%,360px); min-width: 0; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-bottom-grid { grid-template-columns: minmax(0,1fr) !important; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-right-rail { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr); align-items: start; }
+}
+@media (max-width: 640px) {
+  body #root .schedule-plan-page .runner-shell-canvas.schedule-plan-canvas { padding: 24px 16px 32px !important; gap: 18px !important; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-hero h1 { font-size: clamp(1.8rem,9vw,2.25rem); }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-calendar { padding: 16px 12px; border-radius: 18px; }
+  .schedule-plan-calendar-toolbar { gap: 12px; margin-bottom: 14px; }
+  .schedule-plan-week-nav { gap: 12px; flex-wrap: wrap; }
+  body #root .schedule-plan-page .schedule-plan-calendar .athlete-tools-actions { justify-content: flex-start; gap: 6px; }
+  body #root .schedule-plan-page .schedule-plan-calendar .runner-shell-inline-btn { min-height: 36px; font-size: 11px; padding-inline: 10px; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-week-grid { display: grid; grid-template-columns: repeat(7,minmax(130px,1fr)); overflow-x: auto; gap: 8px; padding: 3px 3px 10px; scroll-snap-type: x proximity; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-day { min-height: 156px; scroll-snap-align: start; }
+  .schedule-plan-day-select { min-height: 156px; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-card { grid-template-columns: minmax(0,1fr); }
+  .schedule-plan-session-photo { height: 180px; grid-row: 1; }
+  .schedule-plan-session-photo img { height: 180px; min-height: 0; object-position: center 45%; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content { padding: 22px; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-card { grid-template-columns: minmax(0,1fr); }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-map { min-height: 220px; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-empty-panel { min-height: 220px; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-right-rail { display: flex; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-head { flex-wrap: nowrap; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas :is(.schedule-plan-session-primary,.schedule-plan-session-details,.schedule-plan-watch-btn) { min-height: 44px; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-watch-btn { width: auto; }
+  body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-head button { min-height: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .schedule-plan-page .schedule-plan-canvas * { scroll-behavior: auto !important; transition: none !important; }
+}
+
+/* Explicitly reset the shared legacy card and button variants on this surface. */
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-card { align-items: stretch !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-card {
+  display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important;
+  min-height: 0 !important; padding: 16px 0 !important; border: 0 !important; border-top: 1px solid var(--sc-line) !important; border-radius: 0 !important;
+}
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-next-content { align-self: stretch !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-focus-pill { border: 0 !important; box-shadow: none !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-head p { font-weight: 400 !important; text-transform: none !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-meta span { font-weight: 400 !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-gear-row p { font-weight: 400 !important; text-transform: none !important; letter-spacing: 0 !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas :is(.schedule-plan-secondary-btn,.schedule-plan-watch-btn) { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-watch-btn { border: 1px solid var(--sc-line) !important; border-radius: 999px !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .schedule-plan-calendar .runner-shell-inline-btn { border: 1px solid var(--sc-line) !important; border-radius: 999px !important; background: transparent !important; color: var(--sc-muted) !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-empty-panel.has-route-sketch { position: absolute; inset: auto 10px 10px; height: auto; min-height: 0; padding: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .has-route-sketch :is(.schedule-plan-route-empty-copy,.schedule-plan-route-empty-badges) { display: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-copy { text-align: left !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-readiness-copy p { text-align: left !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-badge { gap: 6px !important; padding: 4px 8px 4px 4px !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-badge strong { font-size: 11px !important; font-weight: 600 !important; white-space: nowrap; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-badge .coach-identity-copy > span { display: none; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-coach-head h3 { white-space: nowrap; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-facts { margin: 16px 0 0; padding: 0; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-facts > div { display: block; margin: 0; padding: 0; min-width: 0; border: 0; background: transparent !important; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-facts dt { margin: 0 0 3px; font-size: 11px; font-weight: 400; color: var(--sc-muted); }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-facts dd { margin: 0; font-size: 12px; font-weight: 500; color: var(--sc-ink); line-height: 1.5; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-facts .schedule-plan-route-distance { font-size: 17px; font-weight: 700; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-map-finish { fill: #248a3d; stroke: #fff; stroke-width: 1.4; }
+body #root .runner-shell-page.schedule-plan-page.runner-dashboard-page .runner-shell-canvas.schedule-plan-canvas .schedule-plan-route-map-start { fill: var(--sc-accent); stroke: #fff; stroke-width: 1.4; }

@@ -28,6 +28,8 @@ tools/jdk17/
 tools/*.zip
 
 # env / secrets files
+# Database archives and restored release-check clusters contain private account/activity data.
+/.private-backups/
 .env
 .env.*
 !.env.example
@@ -403,3 +405,5 @@ SKILL.md
 /tools/coderabbit-config.test.mjs
 /tools/test-support/round-close-fixture.mjs
 /frontend/src/utils/copilotPromptFiles.smoke.test.js
+# Machine-local pin for the reviewed serving artifact; do not replace it with an unreviewed build.
+/backend/reviewed-release.json

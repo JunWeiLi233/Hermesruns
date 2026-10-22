@@ -66,12 +66,21 @@ public class AuthService {
     private static final int SESSION_DAYS = 30;
     private static final int ADMIN_MFA_HOURS = 8;
 
+    @org.springframework.transaction.annotation.Transactional
     public String issueSessionToken(Runner runner) {
+        // Never save a detached pre-deletion Runner over a concurrent account revocation.
+        runner = runnerRepository.findByIdForUpdate(runner.getId())
+                .filter(current -> !current.isDeleted())
+                .orElseThrow(() -> new IllegalStateException("Account is unavailable."));
         clearAdminMfaProof(runner);
         return issueSessionTokenInternal(runner);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public String issueMfaVerifiedAdminSessionToken(Runner runner, String method) {
+        runner = runnerRepository.findByIdForUpdate(runner.getId())
+                .filter(current -> !current.isDeleted())
+                .orElseThrow(() -> new IllegalStateException("Account is unavailable."));
         if (!isAdmin(runner)) {
             throw new IllegalArgumentException("Only administrators may receive an MFA-backed admin session.");
         }
@@ -97,7 +106,10 @@ public class AuthService {
         return token;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void invalidateSession(Runner runner) {
+        runner = runnerRepository.findByIdForUpdate(runner.getId()).orElse(null);
+        if (runner == null) return;
         runner.setSessionToken(null);
         runner.setTokenIssuedAt(null);
         clearAdminMfaProof(runner);

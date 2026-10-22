@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Locale;
 
 final class ActivityAnalyticsHelper {
+    /** Minimum leftover distance shown by both lap and pace-profile summaries. */
+    static final double MIN_PARTIAL_SPLIT_METERS = 100.0;
 
     static final int ROUTE_PREVIEW_POINT_LIMIT = 40;
 
@@ -120,7 +122,7 @@ final class ActivityAnalyticsHelper {
         // The stretch after the last whole kilometre is a split too, as the pace profile has it: a 7.99 km run has eight rows,
         // not seven. A scrap shorter than the profile's minimum is left out, as it is there.
         double rest = total - laps * 1000.0;
-        if (rest >= PaceProfileCalculator.MIN_PARTIAL_SPLIT_METERS) {
+        if (rest >= MIN_PARTIAL_SPLIT_METERS) {
             double startM = laps * 1000.0;
             Double startSec = interpolateSecondsAtDistance(pts, startM);
             Double endSec = interpolateSecondsAtDistance(pts, total);

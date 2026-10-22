@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '../../api';
+import useRecommendationRevision from '../../hooks/useRecommendationRevision';
 
 /** Whether an answer has the parts the cards draw. Anything else is treated as a failed load, not drawn half. */
 function isGoals(data) {
@@ -20,6 +21,7 @@ function isGoals(data) {
  * status }` where status is the HTTP status (409 for a goal that exists already), 0 when the request never got an answer.
  */
 export default function useGoals({ runId = null, defer = false } = {}) {
+  const recommendationRevision = useRecommendationRevision();
   const [state, setState] = useState({ status: 'loading', data: null });
   const [attempt, setAttempt] = useState(0);
   const [idle, setIdle] = useState(!defer);
@@ -54,7 +56,7 @@ export default function useGoals({ runId = null, defer = false } = {}) {
         setState((current) => (current.data ? current : { status: 'error', data: null }));
       });
     return () => controller.abort();
-  }, [url, idle, attempt]);
+  }, [url, idle, attempt, recommendationRevision]);
 
   const reload = useCallback(() => {
     setState((current) => (current.data ? current : { status: 'loading', data: null }));

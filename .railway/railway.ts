@@ -6,7 +6,7 @@ export const partial = "hermes-web";
 
 export default defineRailway(() => {
   const web = service("hermes-web", {
-    healthcheck: "/",
+    healthcheck: "/internal/ready",
     healthcheckTimeout: 180,
     // dockerfilePath from CaC: "Dockerfile"
     // builder from CaC: "DOCKERFILE"

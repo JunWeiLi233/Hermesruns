@@ -12,6 +12,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockServletContext;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -20,6 +22,62 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AdminSecurityFilterTests {
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/admin", "/admin/", "/workflows"})
+    void concealsPortalWhenEmptyServletPathLeavesFullDispatchPathInPathInfo(String path)
+            throws ServletException, IOException {
+        AuthService authService = mock(AuthService.class);
+        AdminSecurityFilter filter = new AdminSecurityFilter(authService);
+        MockHttpServletRequest request = MockMvcRequestBuilders.get(path).buildRequest(new MockServletContext());
+        assertThat(request.getServletPath()).isEmpty();
+        assertThat(request.getPathInfo()).isEqualTo(path);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(404);
+        assertThat(response.getHeader("Cache-Control")).isEqualTo("no-store");
+        assertThat(chain.getRequest()).isNull();
+        verifyNoInteractions(authService);
+    }
+
+    @Test
+    void allowsMfaVerifiedAdminApiWhenDispatchPathIsEntirelyInPathInfo() throws ServletException, IOException {
+        AuthService authService = mock(AuthService.class);
+        Runner admin = runner("ADMIN", LocalDateTime.now().minusMinutes(5));
+        when(authService.findByAuthorizationHeader("Bearer admin-token")).thenReturn(Optional.of(admin));
+        when(authService.isAdmin(admin)).thenReturn(true);
+        when(authService.hasFreshAdminMfa(admin)).thenReturn(true);
+        AdminSecurityFilter filter = new AdminSecurityFilter(authService);
+        MockHttpServletRequest request = MockMvcRequestBuilders.get("/api/admin/jobs")
+                .header("Authorization", "Bearer admin-token").buildRequest(new MockServletContext());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(chain.getRequest()).isSameAs(request);
+        verify(authService).hasFreshAdminMfa(admin);
+    }
+
+    @Test
+    void refusesEncodedAdminApiWhenDecodedDispatchPathIsEntirelyInPathInfo() throws ServletException, IOException {
+        AuthService authService = mock(AuthService.class);
+        AdminSecurityFilter filter = new AdminSecurityFilter(authService);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/%61dmin/jobs");
+        request.setPathInfo("/api/admin/jobs");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(403);
+        assertThat(chain.getRequest()).isNull();
+        verifyNoInteractions(authService);
+    }
 
     @Test
     void concealsFrontendAdminLoginPagesWithoutAdminSession() throws ServletException, IOException {

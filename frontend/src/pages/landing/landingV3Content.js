@@ -87,7 +87,7 @@ export const PLANS = {
     unitKey: 'landing.home_plan_supporter_unit',
     ctaKey: 'landing.home_plan_supporter_cta',
     // Cleared (set to an empty string) when payments go live; the page then shows no status line.
-    statusKey: 'landing.studio_pricing_supporter_status',
+    statusKey: 'landing.home_supporter_status',
     itemKeys: [
       'landing.home_plan_supporter_item_1',
       'landing.home_plan_supporter_item_2',
@@ -99,9 +99,12 @@ export const PLANS = {
 };
 
 export const FAQS = [
+  { id: 'about', questionKey: 'landing.home_faq_about_q', answerKey: 'landing.home_faq_about_a' },
   { id: 'gps', questionKey: 'landing.home_faq_gps_q', answerKey: 'landing.home_faq_gps_a' },
   { id: 'miss', questionKey: 'landing.home_faq_miss_q', answerKey: 'landing.home_faq_miss_a' },
   { id: 'race', questionKey: 'landing.home_faq_race_q', answerKey: 'landing.home_faq_race_a' },
   { id: 'history', questionKey: 'landing.home_faq_history_q', answerKey: 'landing.home_faq_history_a' },
+  { id: 'data', questionKey: 'landing.home_faq_data_q', answerKey: 'landing.home_faq_data_a' },
+  { id: 'export', questionKey: 'landing.home_faq_export_q', answerKey: 'landing.home_faq_export_a' },
   { id: 'charge', questionKey: 'landing.home_faq_charge_q', answerKey: 'landing.home_faq_charge_a' },
 ];

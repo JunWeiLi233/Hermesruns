@@ -1,3 +1,4 @@
+import { resolveCoachReadinessScore, resolveCoachReadinessLabel, resolveCoachWeeklyTarget } from '../../utils/personalizedCoachPlan';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { preload } from 'react-dom';
 import { useNavigate } from 'react-router';
@@ -13,8 +14,11 @@ import Modal from '../../components/Modal';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
-import { runIsWithinLastDays } from '../../utils/calendarDays';
+import { runIsWithinLastDays, runnersToday } from '../../utils/calendarDays';
 import { formatDate, formatDistance, formatDuration, formatPaceSeconds } from '../../utils/format';
+import { accountWeekStart, activitySortTime, calendarDate, formatActivityTime, getAccountDate, getActivityDateKey } from '../../utils/timeZone';
+import { useAccountDate } from '../../hooks/useAccountDate';
+import useRecommendationRevision from '../../hooks/useRecommendationRevision';
 import {
   buildProgressionAtlas,
   canCompareProgression,
@@ -36,6 +40,8 @@ import PageSkeleton from '../../components/PageSkeleton';
 import GoalsCard from '../../components/goals/GoalsCard';
 import BestEffortsAnalysis from './BestEffortsAnalysis';
 import ProgressionChart from './ProgressionChart';
+import TeamProfileCard from '../team/TeamProfileCard';
+import WeeklyLoadCard from './WeeklyLoadCard';
 
 const DASHBOARD_HERO_IMAGE = '/images/races/dashboard-hero.webp';
 // Start the largest visible image while the dashboard data is still loading.
@@ -71,6 +77,11 @@ function buildDashboardCacheSnapshot(dashboardData) {
     name: run?.name,
     startTime: run?.startTime,
     startDate: run?.startDate,
+    activityInstant: run?.activityInstant,
+    accountLocalDate: run?.accountLocalDate,
+    accountLocalTime: run?.accountLocalTime,
+    accountTimeZone: run?.accountTimeZone,
+    timeRepresentation: run?.timeRepresentation,
     distanceKm: run?.distanceKm,
     distanceMeters: run?.distanceMeters,
     movingTimeSeconds: run?.movingTimeSeconds,
@@ -122,7 +133,7 @@ function writeJsonStorage(key, value) {
       return;
     } catch { /* keep evicting */ }
     try {
-      const evictPrefixes = ['hermes_profile_dashboard_', 'hermes_runs_v1_'];
+      const evictPrefixes = ['hermes_profile_dashboard_', 'hermes_runs_v1_', 'hermes_runs_v2_', 'hermes_runs_v3_'];
       const doomed = [];
       for (let i = 0; i < window.localStorage.length; i += 1) {
         const storedKey = window.localStorage.key(i);
@@ -173,15 +184,6 @@ function formatDurationCompact(totalSeconds) {
   return `${minutes}:${String(secs).padStart(2, '0')}`;
 }
 
-function startOfIsoWeek(date) {
-  const copy = new Date(date);
-  copy.setHours(0, 0, 0, 0);
-  const day = copy.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  copy.setDate(copy.getDate() + diff);
-  return copy;
-}
-
 function formatPaceDisplay(secondsPerKm, t) {
   if (!Number.isFinite(secondsPerKm) || secondsPerKm <= 0) return '--';
   return `${formatPaceSeconds(secondsPerKm)} ${t('run_detail.unit_pace')}`;
@@ -215,22 +217,24 @@ function getDisplayName(profile, fallback) {
   return raw.replace(/^./, (char) => char.toUpperCase());
 }
 
-function buildWeekBars(runs, lang) {
-  const now = new Date();
-  const weekStart = startOfIsoWeek(now);
+export function buildWeekBars(runs, lang, timeZone, todayKey, coachPayload) {
+  const now = calendarDate(todayKey || getAccountDate(timeZone));
+  const weekStart = calendarDate(accountWeekStart(todayKey || getAccountDate(timeZone)));
   const dayNames = Array.from({ length: 7 }, (_, index) => {
     const day = new Date(weekStart);
-    day.setDate(weekStart.getDate() + index);
-    return day.toLocaleDateString(lang, { weekday: 'short' }).slice(0, 3).toUpperCase();
+    day.setUTCDate(weekStart.getUTCDate() + index);
+    return day.toLocaleDateString(lang, { weekday: 'short', timeZone: 'UTC' });
   });
 
   const actual = Array.from({ length: 7 }, () => 0);
   const projected = Array.from({ length: 7 }, () => 0);
+  const projectedKnown = Array.from({ length: 7 }, () => false);
+  const prescriptionsByDay = Array.from({ length: 7 }, () => null);
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 7);
+  weekEnd.setUTCDate(weekStart.getUTCDate() + 7);
 
   runs.forEach((run) => {
-    const started = new Date(run.startTime || run.startDate || 0);
+    const started = calendarDate(getActivityDateKey(run, timeZone));
     if (Number.isNaN(started.getTime())) return;
     const distanceKm = resolveRunDistanceKm(run);
     if (started >= weekStart && started < weekEnd) {
@@ -239,29 +243,23 @@ function buildWeekBars(runs, lang) {
     }
   });
 
+  const prescriptions = new Map((coachPayload?.weekSchedule || []).map(row => [row.scheduledDate, row]));
+  // Current prescriptions take precedence over the week's earlier comparison targets.
+  for (const row of coachPayload?.schedule || []) prescriptions.set(row.scheduledDate, row);
+  if (coachPayload?.today?.scheduledDate) prescriptions.set(coachPayload.today.scheduledDate, coachPayload.today);
   for (let weekday = 0; weekday < 7; weekday += 1) {
-    let total = 0;
-    let count = 0;
-    for (let lookback = 1; lookback <= 4; lookback += 1) {
-      const sampleStart = new Date(weekStart);
-      sampleStart.setDate(weekStart.getDate() - (lookback * 7) + weekday);
-      const sampleEnd = new Date(sampleStart);
-      sampleEnd.setDate(sampleStart.getDate() + 1);
-      const sampleDistance = runs.reduce((sum, run) => {
-        const started = new Date(run.startTime || run.startDate || 0);
-        if (Number.isNaN(started.getTime()) || started < sampleStart || started >= sampleEnd) return sum;
-        return sum + resolveRunDistanceKm(run);
-      }, 0);
-      if (sampleDistance > 0) {
-        total += sampleDistance;
-        count += 1;
-      }
-    }
-    projected[weekday] = count > 0 ? total / count : actual[weekday];
+    const date = new Date(weekStart);
+    date.setUTCDate(weekStart.getUTCDate() + weekday);
+    const row = prescriptions.get(date.toISOString().slice(0, 10));
+    if (!row || row.reasonCode === 'history_required') continue;
+    const distance = row.workoutType === 'REST' || row.workoutType === 'CROSS_TRAIN' ? 0 : row.plannedDistanceKm;
+    if (!Number.isFinite(distance) || distance < 0) continue;
+    projected[weekday] = distance;
+    projectedKnown[weekday] = true;
+    prescriptionsByDay[weekday] = row;
   }
-
   const maxValue = Math.max(1, ...actual, ...projected);
-  const todayIndex = Math.max(0, Math.min(6, Math.floor((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - weekStart) / 86400000)));
+  const todayIndex = Math.max(0, Math.min(6, Math.floor((now - weekStart) / 86400000)));
 
   return dayNames.map((label, index) => ({
     key: label,
@@ -269,6 +267,12 @@ function buildWeekBars(runs, lang) {
     label,
     actual: actual[index],
     projected: projected[index],
+    projectedKnown: projectedKnown[index],
+    originalProjected: Number.isFinite(prescriptionsByDay[index]?.originalDistanceKm)
+      && prescriptionsByDay[index].originalDistanceKm >= 0
+      ? prescriptionsByDay[index].originalDistanceKm : projected[index],
+    workoutType: prescriptionsByDay[index]?.workoutType,
+    reasonCode: prescriptionsByDay[index]?.reasonCode,
     actualPct: Math.max(8, Math.round((actual[index] / maxValue) * 100)),
     projectedPct: Math.max(8, Math.round((projected[index] / maxValue) * 100)),
     actualAnchorTopPct: 100 - Math.max(8, Math.round((actual[index] / maxValue) * 100)),
@@ -290,44 +294,9 @@ function buildWorkoutHeadline(today, recommendation, t) {
 
 function buildReadinessModel(recommendationBundle, coachState, t) {
   const recommendation = recommendationBundle?.recommendation;
-  const metrics = recommendationBundle?.metrics || {};
-  const tone = recommendationBundle?.tone?.key || 'easy';
-  let score = 82;
+  const score = resolveCoachReadinessScore({ state: coachState });
 
-  if (tone === 'quality') score += 8;
-  if (tone === 'easy') score -= 4;
-  if (tone === 'recovery') score -= 12;
-  if (tone === 'restart') score -= 18;
-
-  if (metrics.acwr != null) {
-    if (metrics.acwr >= 0.9 && metrics.acwr <= 1.15) score += 6;
-    if (metrics.acwr > 1.2) score -= 8;
-    if (metrics.acwr < 0.75) score -= 4;
-  }
-
-  if (metrics.recoveryHours > 24) score -= 12;
-  else if (metrics.recoveryHours > 12) score -= 6;
-  else if (metrics.recoveryHours <= 8) score += 4;
-
-  if (coachState?.lastSleepScore != null) {
-    if (coachState.lastSleepScore >= 80) score += 6;
-    else if (coachState.lastSleepScore < 60) score -= 8;
-  }
-
-  const restingDelta = coachState?.baselineRestingHr != null && coachState?.lastNightRestingHr != null
-    ? coachState.lastNightRestingHr - coachState.baselineRestingHr
-    : null;
-  if (restingDelta != null) {
-    if (restingDelta <= -2) score += 4;
-    if (restingDelta >= 5) score -= 8;
-  }
-
-  score = Math.max(42, Math.min(96, Math.round(score)));
-
-  let label = t('profile.dashboard_readiness_ready');
-  if (score >= 90) label = t('profile.dashboard_readiness_peaking');
-  else if (score <= 55) label = t('profile.dashboard_readiness_reset');
-  else if (score <= 72) label = t('profile.dashboard_readiness_build');
+  const label = resolveCoachReadinessLabel({ state: coachState }, t);
 
   return {
     score,
@@ -336,12 +305,12 @@ function buildReadinessModel(recommendationBundle, coachState, t) {
   };
 }
 
-function buildStaminaFallback(readiness, heroPace, restingHrValue) {
+function buildStaminaFallback(readiness, heroPace) {
   return {
     scorePercent: readiness.score,
-    recoveryCapPercent: Math.min(100, readiness.score + 2),
+    recoveryCapPercent: readiness.score,
     targetPaceSecondsPerKm: null,
-    targetHeartRateBpm: restingHrValue,
+    targetHeartRateBpm: null,
     direction: 'steady',
     fallbackPaceLabel: heroPace || '--',
   };
@@ -371,12 +340,10 @@ function buildSessionMetric(run, lang, unit, t) {
 }
 
 function formatRunDate(run, lang) {
-  const started = new Date(run?.startTime || run?.startDate || 0);
-  if (Number.isNaN(started.getTime())) return '--';
-  return started.toLocaleDateString(lang, {
+  return formatActivityTime(run, lang, {
     month: 'short',
     day: 'numeric',
-  });
+  }) || '--';
 }
 
 export function buildRecordSnapshot(personalRecords, runs) {
@@ -522,7 +489,7 @@ function isRecord(value) {
 
 function sortRunsByMostRecent(runs) {
   const list = Array.isArray(runs) ? [...runs] : [];
-  list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+  list.sort((a, b) => activitySortTime(b) - activitySortTime(a));
   return list;
 }
 
@@ -565,7 +532,7 @@ async function loadProfileDashboardFallbackData() {
   };
 }
 
-async function loadProfileDashboardFallbackEnrichmentData() {
+export async function loadProfileDashboardFallbackEnrichmentData(publishCoach) {
   const [
     coachStateData,
     coachTodayData,
@@ -575,7 +542,10 @@ async function loadProfileDashboardFallbackEnrichmentData() {
     quotaData,
   ] = await Promise.all([
     apiJson('/api/coach/state').catch(() => null),
-    apiJson('/api/coach/today').catch(() => null),
+    apiJson('/api/coach/today').then(data => {
+      publishCoach?.(data);
+      return data;
+    }).catch(() => null),
     apiJson('/api/profile/personal-records').catch(() => null),
     apiJson('/api/races').catch(() => null),
     apiJson('/api/training/muscle/plan').catch(() => null),
@@ -651,6 +621,7 @@ function getCelebrationLabel(entry, t) {
 }
 
 export default function ProfileDashboard() {
+  const recommendationRevision = useRecommendationRevision();
   const { isAuthenticated, email: authEmail } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
@@ -661,6 +632,7 @@ export default function ProfileDashboard() {
   const [runs, setRuns] = useState([]);
   const [coachState, setCoachState] = useState(null);
   const [coachToday, setCoachToday] = useState(null);
+  const accountToday = useAccountDate(coachToday?.plan?.timeZone || profile?.timeZone);
   const [_races, _setRaces] = useState([]);
   const [nextRace, setNextRace] = useState(null);
   const [loadState, setLoadState] = useState('loading');
@@ -669,7 +641,6 @@ export default function ProfileDashboard() {
   const [dismissedComeback, setDismissedComeback] = useState(false);
   // pending | settled | timed_out �� only render comeback after coach enrichment settles
   const [comebackGateStatus, setComebackGateStatus] = useState('pending');
-  const [activeWeeklyBar, setActiveWeeklyBar] = useState(null);
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
   const [compareProgression, setCompareProgression] = useState(readProgressionCompare);
   const [_musclePlan, setMusclePlan] = useState(null);
@@ -808,11 +779,16 @@ export default function ProfileDashboard() {
         const settleComebackGate = () => {
           if (isCurrentLoad()) setComebackGateStatus('settled');
         };
+        const publishCoach = (data) => {
+          if (!isCurrentLoad()) return;
+          setCoachToday(data);
+          if (data?.state) setCoachState(data.state);
+        };
 
         if (dashboardData.source === 'batch') {
           applyDashboardEnrichment(dashboardData);
-          if (dashboardData.deferredEnrichment) {
-            void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
+          if (dashboardData.deferredEnrichment || !dashboardData.coachToday?.today) {
+            void loadProfileDashboardFallbackEnrichmentData(publishCoach).then((enrichmentData) => {
               if (!isCurrentLoad()) return;
               applyDashboardEnrichment(enrichmentData);
               settleComebackGate();
@@ -823,7 +799,7 @@ export default function ProfileDashboard() {
             settleComebackGate();
           }
         } else {
-          void loadProfileDashboardFallbackEnrichmentData().then((enrichmentData) => {
+          void loadProfileDashboardFallbackEnrichmentData(publishCoach).then((enrichmentData) => {
             if (!isCurrentLoad()) return;
             applyDashboardEnrichment(enrichmentData);
             settleComebackGate();
@@ -854,7 +830,7 @@ export default function ProfileDashboard() {
     return () => {
       dashboardLoadGenerationRef.current += 1;
     };
-  }, [isAuthenticated, navigate, loadDashboard]);
+  }, [isAuthenticated, navigate, loadDashboard, recommendationRevision]);
 
   useEffect(() => {
     if (comebackGateStatus !== 'pending' || loadState === 'loading') return undefined;
@@ -981,28 +957,29 @@ export default function ProfileDashboard() {
 
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
   const currentDateLine = useMemo(() => {
-    const now = new Date();
+    const now = calendarDate(accountToday);
     return now.toLocaleDateString(lang, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
+      timeZone: 'UTC',
     });
-  }, [lang]);
+  }, [lang, accountToday]);
 
   const dashboardMetricRuns = useMemo(() => {
     if (useFullDashboardMetrics || runs.length <= DASHBOARD_FIRST_PAINT_RUN_LIMIT) return runs;
     return runs.slice(0, DASHBOARD_FIRST_PAINT_RUN_LIMIT);
   }, [runs, useFullDashboardMetrics]);
   const todayBundle = useMemo(
-    () => getTodayRunRecommendation({ runs: dashboardMetricRuns, t, lang, unit, coachPayload: coachToday }),
-    [dashboardMetricRuns, t, lang, unit, coachToday],
+    () => getTodayRunRecommendation({ runs: dashboardMetricRuns, t, lang, unit, coachPayload: coachToday, timeZone: profile?.timeZone, todayKey: accountToday }),
+    [dashboardMetricRuns, t, lang, unit, coachToday, profile?.timeZone, accountToday],
   );
-  const readiness = useMemo(() => buildReadinessModel(todayBundle, coachState, t), [coachState, t, todayBundle]);
-  const weeklyBars = useMemo(() => buildWeekBars(dashboardMetricRuns, lang), [lang, dashboardMetricRuns]);
+  const readiness = useMemo(() => buildReadinessModel(todayBundle, coachToday?.state || coachState, t), [coachToday, coachState, t, todayBundle]);
+  const weeklyBars = useMemo(() => buildWeekBars(dashboardMetricRuns, lang, profile?.timeZone, accountToday, coachToday), [lang, dashboardMetricRuns, profile?.timeZone, accountToday, coachToday]);
   const profileVdot = useMemo(() => estimateCurrentVdot(dashboardMetricRuns), [dashboardMetricRuns]);
   const vdotTrend = useMemo(() => computeVdotTrend(dashboardMetricRuns), [dashboardMetricRuns]);
-  const streak = useMemo(() => calculateStreaks(dashboardMetricRuns), [dashboardMetricRuns]);
-  const daysOff = useMemo(() => getDaysSinceLastRun(dashboardMetricRuns), [dashboardMetricRuns]);
+  const streak = useMemo(() => calculateStreaks(dashboardMetricRuns, profile?.timeZone, accountToday), [dashboardMetricRuns, profile?.timeZone, accountToday]);
+  const daysOff = useMemo(() => getDaysSinceLastRun(dashboardMetricRuns, profile?.timeZone, accountToday), [dashboardMetricRuns, profile?.timeZone, accountToday]);
   // Wait for coach enrichment to settle before rendering. Timed-out / failed
   // enrichment never shows the card (avoids first-paint comeback flash).
   const shouldShowComebackCard = (
@@ -1038,7 +1015,6 @@ export default function ProfileDashboard() {
     }).filter(Boolean);
   }, [profileVdot, dashboardMetricRuns, lang]);
 
-  const restingHrValue = coachState?.lastNightRestingHr ?? coachState?.profileRestingHeartRateBpm ?? null;
 
   const raceCountdown = useMemo(() => {
     if (!nextRace?.parsedDate) return null;
@@ -1048,7 +1024,7 @@ export default function ProfileDashboard() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }, [nextRace]);
 
-  const heroWorkout = coachToday?.today || null;
+  const heroWorkout = todayBundle.recommendation.source !== 'unavailable' ? coachToday?.today : null;
   const heroWorkoutTitle = buildWorkoutHeadline(heroWorkout, todayBundle.recommendation, t);
   const heroDuration = heroWorkout?.plannedDurationMinutes
     ? formatPlannedDuration(heroWorkout.plannedDurationMinutes)
@@ -1056,30 +1032,36 @@ export default function ProfileDashboard() {
   const heroPace = todayBundle.recommendation?.pace || '--';
   // The last 7 calendar days, added up from the runs the page holds, the way Load balance adds them up (BUG-026); the coach's own
   // figure is worked out on a clock window and only when something changes, so the two used to disagree.
-  const volumeKm7d = useMemo(() => runs.reduce((sum, run) => (
-    runIsWithinLastDays(run, 7) ? sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)) : sum
-  ), 0), [runs]);
+  const volumeKm7d = useMemo(() => {
+    const today = runnersToday(runs);
+    return runs.reduce((sum, run) => (
+      runIsWithinLastDays(run, 7, today) ? sum + (Number(run.distanceKm || 0) || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0)) : sum
+    ), 0);
+  }, [runs]);
   const heroLoad = formatDistance(volumeKm7d, 1, lang, unit);
-  const weeklyActualTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);
-  const weeklyProjectedTotal = weeklyBars.reduce((sum, bar) => sum + Number(bar.projected || 0), 0);
+  const currentWeekStart = accountWeekStart(accountToday);
+  const weeklyActualTotal = coachToday?.plan?.weeklyBudgets?.find(week => week.start === currentWeekStart)?.completedKm
+    ?? weeklyBars.reduce((sum, bar) => sum + Number(bar.actual || 0), 0);
+  const weeklyProjectedTotal = resolveCoachWeeklyTarget(coachToday, currentWeekStart, currentWeekStart, null);
   const weeklyCompletion = weeklyProjectedTotal > 0
     ? Math.max(0, Math.min(100, Math.round((weeklyActualTotal / weeklyProjectedTotal) * 100)))
-    : 0;
+    : null;
   const stamina = useMemo(
-    () => coachState?.stamina || buildStaminaFallback(readiness, heroPace, restingHrValue),
-    [coachState?.stamina, heroPace, readiness, restingHrValue],
+    () => coachState?.stamina || buildStaminaFallback(readiness, heroPace),
+    [coachState?.stamina, heroPace, readiness],
   );
   const staminaPaceLabel = stamina.targetPaceSecondsPerKm != null
     ? formatPaceSeconds(stamina.targetPaceSecondsPerKm)
     : stamina.fallbackPaceLabel || '--';
   const staminaHeartLabel = stamina.targetHeartRateBpm != null ? String(stamina.targetHeartRateBpm) : '--';
-  const staminaScorePercent = Math.max(0, Math.min(100, Number(stamina.scorePercent || 0)));
-  const staminaCapPercent = Math.max(0, Math.min(100, Number(stamina.recoveryCapPercent || 0)));
+  const staminaScorePercent = stamina.scorePercent == null ? null : Math.max(0, Math.min(100, Number(stamina.scorePercent)));
+  const staminaCapPercent = stamina.recoveryCapPercent == null ? null
+    : Math.max(0, Math.min(100, Number(stamina.recoveryCapPercent)));
   const progressionCanCompare = canCompareProgression(activeProgressionFrame);
   const progressionComparing = compareProgression && progressionCanCompare;
   const progressionAtlas = useMemo(
-    () => buildProgressionAtlas(dashboardMetricRuns, activeProgressionFrame, lang, new Date(), { compare: progressionComparing }),
-    [activeProgressionFrame, lang, dashboardMetricRuns, progressionComparing],
+    () => buildProgressionAtlas(dashboardMetricRuns, activeProgressionFrame, lang, new Date(`${accountToday}T12:00:00`), { compare: progressionComparing }),
+    [activeProgressionFrame, lang, dashboardMetricRuns, accountToday, progressionComparing],
   );
   const progressionDeltas = useMemo(
     () => (progressionAtlas.comparison ? describeProgressionDeltas(progressionAtlas.comparison.deltas, { t, lang, unit }) : null),
@@ -1253,7 +1235,7 @@ export default function ProfileDashboard() {
                         </linearGradient>
                       </defs>
                     </svg>
-                    <div className="hd-readiness-value"><strong>{readiness.score}</strong></div>
+                    <div className="hd-readiness-value"><strong>{readiness.score ?? '—'}</strong></div>
                   </div>
                   <div className="hd-readiness-meta">
                     <span className="hd-readiness-label">{t('profile.dashboard_redesign.hero_readiness')}</span>
@@ -1401,9 +1383,9 @@ export default function ProfileDashboard() {
                     </div>
                     <strong className="hd-metric-value">{formatDistance(weeklyActualTotal, 1, lang, unit)}</strong>
                     <div className="hd-metric-trend">
-                      <span className="hd-metric-completion">{weeklyCompletion}%</span>
+                      <span className="hd-metric-completion">{weeklyCompletion == null ? '—' : `${weeklyCompletion}%`}</span>
                       <span className="hd-metric-detail">
-                        {t('profile.dashboard_redesign.metrics_of_projected')} {formatDistance(weeklyProjectedTotal, 1, lang, unit)}
+                        {t('profile.dashboard_redesign.metrics_of_projected')} {weeklyProjectedTotal == null ? '—' : formatDistance(weeklyProjectedTotal, 1, lang, unit)}
                       </span>
                     </div>
                   </article>
@@ -1434,53 +1416,7 @@ export default function ProfileDashboard() {
                 {/* 4. Training Grid */}
                 <div className="hd-training-grid">
                   {/* Weekly bar chart */}
-                  <article className="hd-weekly-card">
-                    <div className="hd-card-head">
-                      <div>
-                        <span className="hd-card-kicker">{t('profile.dashboard_redesign.weekly_kicker')}</span>
-                        <h3 className="hd-card-title">{t('profile.dashboard_redesign.weekly_title')}</h3>
-                      </div>
-                      <div className="hd-weekly-legend">
-                        <span><i className="hd-legend-dot actual" />{t('profile.dashboard_redesign.weekly_actual')}</span>
-                        <span><i className="hd-legend-dot projected" />{t('profile.dashboard_redesign.weekly_projected')}</span>
-                      </div>
-                    </div>
-                    <div className="hd-bar-chart">
-                      {weeklyBars.map((bar) => {
-                        const maxVal = Math.max(1, ...weeklyBars.map(b => Math.max(b.actual, b.projected)));
-                        const actualH = Math.max(6, (bar.actual / maxVal) * 100);
-                        const projH = Math.max(6, (bar.projected / maxVal) * 100);
-                        return (
-                          <div
-                            key={bar.key}
-                            className={`hd-bar-col${bar.isToday ? ' is-today' : ''}`}
-                            role="img"
-                            tabIndex={0}
-                            aria-label={`${bar.label}: ${t('profile.dashboard_redesign.weekly_actual')} ${formatDistance(bar.actual, 1, lang, unit)}; ${t('profile.dashboard_redesign.weekly_projected')} ${formatDistance(bar.projected, 1, lang, unit)}`}
-                            onMouseEnter={() => setActiveWeeklyBar(bar)}
-                            onMouseLeave={() => setActiveWeeklyBar(null)}
-                            onFocus={() => setActiveWeeklyBar(bar)}
-                            onBlur={() => setActiveWeeklyBar(null)}
-                            onPointerDown={() => setActiveWeeklyBar(bar)}
-                            onKeyDown={(event) => {
-                              if (event.key === 'Escape') setActiveWeeklyBar(null);
-                            }}
-                          >
-                            <div className="hd-bar-track">
-                              <div className="hd-bar projected" style={{ height: `${projH}%` }} />
-                              <div className="hd-bar actual" style={{ height: `${actualH}%` }} />
-                            </div>
-                            <span className="hd-bar-label">{bar.label}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {activeWeeklyBar && (
-                      <div className="hd-bar-tooltip" aria-hidden="true">
-                        <strong>{activeWeeklyBar.label}</strong>: {formatDistance(activeWeeklyBar.actual, 1, lang, unit)} {t('profile.dashboard_redesign.weekly_actual')} / {formatDistance(activeWeeklyBar.projected, 1, lang, unit)} {t('profile.dashboard_redesign.weekly_projected')}
-                      </div>
-                    )}
-                  </article>
+                  <WeeklyLoadCard bars={weeklyBars} plannedDistanceKm={weeklyProjectedTotal} lang={lang} unit={unit} t={t} />
                   {/* Recent sessions */}
                   <article className="hd-sessions-card">
                     <div className="hd-card-head">
@@ -1666,10 +1602,7 @@ export default function ProfileDashboard() {
                   );
                 })()}
 
-                {/* 5c. Goals (asked for when the browser is idle) */}
-                <GoalsCard defer />
-
-                {/* 5d. Best efforts (loads when opened) */}
+                <GoalsCard defer showRecommendationEvidence={false} />
                 <BestEffortsAnalysis />
 
                 {/* 6. Bottom Grid */}
@@ -1712,7 +1645,7 @@ export default function ProfileDashboard() {
                       <div className="hd-stamina-meter-group">
                         <div className="hd-stamina-meter-head">
                           <span>{t('profile.dashboard_redesign.stamina_score')}</span>
-                          <strong>{staminaScorePercent}%</strong>
+                          <strong>{staminaScorePercent == null ? '—' : staminaScorePercent + '%'}</strong>
                         </div>
                         <div className="hd-stamina-meter">
                           <div className="hd-stamina-fill" style={{ transform: `scaleX(${staminaScorePercent / 100})` }} />
@@ -1721,7 +1654,7 @@ export default function ProfileDashboard() {
                       <div className="hd-stamina-meter-group">
                         <div className="hd-stamina-meter-head">
                           <span>{t('profile.dashboard_redesign.stamina_cap')}</span>
-                          <strong>{staminaCapPercent}%</strong>
+                          <strong>{staminaCapPercent == null ? '—' : `${staminaCapPercent}%`}</strong>
                         </div>
                         <div className="hd-stamina-meter">
                           <div className="hd-stamina-fill cap" style={{ transform: `scaleX(${staminaCapPercent / 100})` }} />
@@ -1836,6 +1769,8 @@ export default function ProfileDashboard() {
                 </section>
               </>
             )}
+
+            <TeamProfileCard />
 
             <footer className="runner-shell-footer runner-dashboard-footer">
               <FooterNavLinks />

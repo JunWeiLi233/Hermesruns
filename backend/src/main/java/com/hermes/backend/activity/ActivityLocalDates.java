@@ -6,6 +6,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * The calendar day a run belongs to, in the runner's own time zone.
@@ -28,10 +30,39 @@ public final class ActivityLocalDates {
             LocalDateTime added = activity.getCreatedAt();
             return added == null ? LocalDate.now() : added.toLocalDate();
         }
-        if (activity.isStravaApiSourced()) {
+        return of(start, activity.isStravaApiSourced(), runner);
+    }
+
+    public static LocalDate of(LocalDateTime start, boolean stravaApiSourced, Runner runner) {
+        if (stravaApiSourced) {
             return start.toLocalDate();
         }
         return start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zoneOf(runner)).toLocalDate();
+    }
+
+    /** Additive read contract. Legacy Strava wall times lack the source zone/UTC instant;
+     * do not manufacture an instant from the account's current zone. */
+    public static Map<String, Object> responseFields(LocalDateTime start, boolean stravaApiSourced, Runner runner) {
+        return responseFields(start, stravaApiSourced, zoneOf(runner));
+    }
+
+    public static Map<String, Object> responseFields(LocalDateTime start, boolean stravaApiSourced, ZoneId zone) {
+        Map<String, Object> fields = new LinkedHashMap<>();
+        LocalDateTime local = localStart(start, stravaApiSourced, zone);
+        fields.put("activityInstant", start == null || stravaApiSourced ? null : start.toInstant(ZoneOffset.UTC).toString());
+        fields.put("accountLocalDate", local == null ? null : local.toLocalDate().toString());
+        fields.put("accountLocalTime", local == null ? null : local.toLocalTime().toString());
+        fields.put("accountTimeZone", zone.getId());
+        fields.put("timeRepresentation", start == null ? "UNKNOWN" : stravaApiSourced ? "STRAVA_LOCAL_WALL_TIME" : "UTC_INSTANT");
+        return fields;
+    }
+
+    /** Clock time on the account calendar for the lightweight coaching projection. */
+    public static LocalDateTime localStartTimeOf(RunMetricsProjection run, Runner runner) {
+        LocalDateTime start = run.getStartTime();
+        if (start == null) return run.getEffectiveStartTime();
+        return Boolean.TRUE.equals(run.getStravaApiSourced()) ? start
+                : start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zoneOf(runner)).toLocalDateTime();
     }
 
     /**

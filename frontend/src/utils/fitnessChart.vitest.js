@@ -2,14 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_FITNESS_RANGE,
   FITNESS_RANGES,
+  FLAT_SHARE,
+  TREND_ARROW,
   buildFitnessChart,
   describeForm,
   fitnessTooltipPosition,
   formatChange,
   formatShortDate,
   isoDay,
+  movementOver,
   niceCeiling,
   rangeStart,
+  restDaysToZeroForm,
+  trendDirection,
 } from './fitnessChart';
 
 /** `count` days from 1 Sep 2026 with the numbers the server would send. */
@@ -256,6 +261,254 @@ describe('buildFitnessChart', () => {
   it('is a pure function of its input', () => {
     const series = { points: days(20), projection: days(3) };
     expect(buildFitnessChart(series, { width: 500 })).toEqual(buildFitnessChart(series, { width: 500 }));
+  });
+});
+
+describe('the strip of daily effort', () => {
+  const loads = [0, 60, 120, 0, 240, 90, 30, 0, 150, 60];
+  const series = { points: days(10, { load: (i) => loads[i] }), projection: days(4, { load: () => 999 }).map((day, i) => ({ ...day, date: isoDay(new Date(2026, 8, 20 + i, 12)) })) };
+
+  it('is not there unless asked for, and then the chart is the height it was given', () => {
+    const plain = buildFitnessChart(series, { width: 640, height: 300 });
+
+    expect(plain.withEffort).toBe(false);
+    expect(plain.height).toBe(300);
+    expect(plain.effortPath).toBe('');
+    expect(plain.effortTicks).toEqual([]);
+    expect(plain.entries.every((entry) => entry.barH === 0)).toBe(true);
+    expect(plain.bottom).toBe(plain.formBottom);
+    expect(buildFitnessChart(series, { height: 300, withForm: false }).bottom).toBe(300 - 26);
+  });
+
+  it('adds a strip below the form panel and makes the chart taller by it, leaving the other panels where they were', () => {
+    const plain = buildFitnessChart(series, { width: 640, height: 300 });
+    const chart = buildFitnessChart(series, { width: 640, height: 300, withEffort: true });
+
+    expect(chart.withEffort).toBe(true);
+    expect(chart.mainTop).toBe(plain.mainTop);
+    expect(chart.mainBottom).toBe(plain.mainBottom);
+    expect(chart.formTop).toBe(plain.formTop);
+    expect(chart.formBottom).toBe(plain.formBottom);
+    expect(chart.effortTop).toBe(chart.formBottom + 24);
+    expect(chart.effortBottom - chart.effortTop).toBe(58);
+    expect(chart.height).toBe(300 + 24 + 58);
+    expect(chart.height - chart.effortBottom).toBe(26);
+    expect(chart.bottom).toBe(chart.effortBottom);
+  });
+
+  it('makes the strip smaller on a short chart, and puts it under the lines when there is no form panel', () => {
+    expect(buildFitnessChart(series, { height: 250, withEffort: true }).height).toBe(250 + 24 + 46);
+
+    const noForm = buildFitnessChart(series, { height: 300, withForm: false, withEffort: true });
+    expect(noForm.effortTop).toBe(noForm.mainBottom + 24);
+    expect(noForm.bottom).toBe(noForm.effortBottom);
+  });
+
+  it('draws a bar for each day with effort, as tall as its share of the scale, standing on the baseline', () => {
+    const chart = buildFitnessChart(series, { width: 640, height: 300, withEffort: true });
+    const stripH = chart.effortBottom - chart.effortTop;
+
+    expect(chart.effortMax).toBe(250);                         // 240 rounded up to a number a person would pick
+    chart.entries.slice(0, 10).forEach((entry, i) => {
+      if (loads[i] === 0) {
+        expect(entry.barH).toBe(0);
+        return;
+      }
+      expect(entry.barH).toBeCloseTo((loads[i] / 250) * stripH, 9);
+      expect(entry.barY + entry.barH).toBeCloseTo(chart.effortBottom, 9);
+      expect(entry.barX + chart.barWidth / 2).toBeCloseTo(entry.x, 9);
+    });
+    expect(chart.effortPath.split('M')).toHaveLength(1 + loads.filter((load) => load > 0).length);
+    expect(chart.effortTicks).toEqual([
+      { value: 0, y: chart.effortBottom },
+      { value: 250, y: chart.effortTop },
+    ]);
+  });
+
+  it('draws no bar for a day of the projection, whatever the server sends for it', () => {
+    const chart = buildFitnessChart(series, { width: 640, height: 300, withEffort: true });
+
+    expect(chart.entries.slice(10).every((entry) => entry.projected && entry.barH === 0)).toBe(true);
+    expect(chart.effortMax).toBe(250);
+  });
+
+  it('keeps the bars apart and inside the chart, however many days there are', () => {
+    for (const count of [3, 40, 365]) {
+      const chart = buildFitnessChart({ points: days(count), projection: [] }, { width: 800, height: 300, withEffort: true });
+      const pitch = (800 - chart.padL - chart.padR) / (count - 1);
+
+      expect(chart.barWidth).toBeGreaterThanOrEqual(1);
+      expect(chart.barWidth).toBeLessThanOrEqual(12);
+      if (pitch > 1.4) expect(chart.barWidth).toBeLessThan(pitch);
+      expect(chart.entries[0].barX).toBeGreaterThanOrEqual(chart.padL - 6.01);
+      expect(chart.entries[count - 1].barX + chart.barWidth).toBeLessThanOrEqual(800 - chart.padR + 6.01);
+    }
+  });
+
+  it('never lets the scale read under 10, so a quiet window is not blown up, and gives a bar at least a pixel', () => {
+    const quiet = buildFitnessChart({ points: days(5, { load: (i) => (i === 2 ? 0.1 : 0) }), projection: [] }, { height: 300, withEffort: true });
+    expect(quiet.effortMax).toBe(10);
+    expect(quiet.entries[2].barH).toBe(1);
+
+    const none = buildFitnessChart({ points: days(5, { load: () => 0 }), projection: [] }, { height: 300, withEffort: true });
+    expect(none.effortMax).toBe(10);
+    expect(none.effortPath).toBe('');
+  });
+
+  it('treats an effort that is not a number, or is negative, as no effort', () => {
+    const chart = buildFitnessChart({ points: days(4, { load: (i) => [null, -20, 'many', 50][i] }), projection: [] }, { height: 300, withEffort: true });
+
+    expect(chart.entries.map((entry) => entry.barH > 0)).toEqual([false, false, false, true]);
+    expect(chart.effortMax).toBe(50);
+  });
+
+  it('is a pure function of its input', () => {
+    expect(buildFitnessChart(series, { width: 500, withEffort: true })).toEqual(buildFitnessChart(series, { width: 500, withEffort: true }));
+  });
+});
+
+describe('trendDirection', () => {
+  it('is up for a rise and down for a fall of more than a thirtieth of where it started', () => {
+    expect(FLAT_SHARE).toBe(0.03);
+    expect(trendDirection(4.2, 50)).toBe('up');
+    expect(trendDirection(-4.2, 50)).toBe('down');
+    expect(trendDirection(1.5, 50)).toBe('up');         // exactly 3%: not under it
+    expect(trendDirection(-1.5, 50)).toBe('down');
+  });
+
+  it('is flat for a change under three percent of where it started', () => {
+    expect(trendDirection(1.4, 50)).toBe('flat');
+    expect(trendDirection(-1.4, 50)).toBe('flat');
+    expect(trendDirection(2.9, 100)).toBe('flat');
+  });
+
+  it('is flat for a change that prints as 0.0, however small the number it started from', () => {
+    expect(trendDirection(0, 50)).toBe('flat');
+    expect(trendDirection(0.04, 0.5)).toBe('flat');
+    expect(trendDirection(-0.04, 0.5)).toBe('flat');
+    expect(trendDirection(0.06, 0.5)).toBe('up');
+  });
+
+  it('goes by the sign alone when there is nothing to take a share of', () => {
+    expect(trendDirection(3, 0)).toBe('up');
+    expect(trendDirection(-3, undefined)).toBe('down');
+    expect(trendDirection(-3, Number.NaN)).toBe('down');
+  });
+
+  it('is flat for a change that is not a number', () => {
+    expect(trendDirection(Number.NaN, 50)).toBe('flat');
+    expect(trendDirection(undefined, 50)).toBe('flat');
+  });
+
+  it('has an arrow for each way', () => {
+    expect(TREND_ARROW).toEqual({ up: '↑', down: '↓', flat: '→' });
+  });
+});
+
+describe('movementOver', () => {
+  const points = Array.from({ length: 20 }, (_, i) => ({ date: `d${i}`, fitness: 40 + i, fatigue: 90 - 2 * i, form: -50 + 3 * i }));
+
+  it('is the difference of the last day and the day that many days before it, as a runner could read it off the chart', () => {
+    const fitness = movementOver(points, 'fitness', 14);
+
+    expect(fitness).toMatchObject({ days: 14, change: 14, before: 45 });
+    expect(fitness.ratio).toBeCloseTo(14 / 45, 12);
+    expect(fitness.direction).toBe('up');
+    expect(movementOver(points, 'fatigue', 7)).toMatchObject({ change: -14, before: 66, direction: 'down' });
+    expect(movementOver(points, 'form', 14)).toMatchObject({ change: 42, direction: 'up' });
+  });
+
+  it('needs a day that many days back: fifteen days for fourteen', () => {
+    expect(movementOver(points.slice(0, 15), 'fitness', 14)).not.toBeNull();
+    expect(movementOver(points.slice(0, 14), 'fitness', 14)).toBeNull();
+    expect(movementOver([], 'fitness', 14)).toBeNull();
+    expect(movementOver(null, 'fitness', 14)).toBeNull();
+    expect(movementOver(points, 'fitness', 0)).toBeNull();
+  });
+
+  it('has no share when it started at nothing or below', () => {
+    const fromZero = movementOver([{ fitness: 0 }, { fitness: 5 }, { fitness: 9 }], 'fitness', 2);
+    const fromBelow = movementOver([{ form: -8 }, { form: -2 }, { form: 6 }], 'form', 2);
+
+    expect(fromZero).toMatchObject({ change: 9, ratio: null, direction: 'up' });
+    expect(fromBelow).toMatchObject({ change: 14, ratio: null, direction: 'up' });
+  });
+
+  it('judges a change of form against the larger of where it started and where it ended, since form can cross zero', () => {
+    // From -0.4 to +0.3: a swing of 0.7 across zero is not a thirtieth of 0.4, but it prints as 0.7, so it is a move.
+    expect(movementOver([{ form: -0.4 }, { form: 0 }, { form: 0.3 }], 'form', 2).direction).toBe('up');
+    // From 100 to 101: a thirtieth of 101 is 3.4, so a step of 1 is level.
+    expect(movementOver([{ form: 100 }, { form: 100.5 }, { form: 101 }], 'form', 2).direction).toBe('flat');
+  });
+
+  it('has nothing for numbers that are not numbers', () => {
+    expect(movementOver([{ fitness: 1 }, { fitness: Number.NaN }, { fitness: 3 }], 'fitness', 2)).not.toBeNull();
+    expect(movementOver([{ fitness: 1 }, { fitness: 2 }, { fitness: Number.NaN }], 'fitness', 2)).toBeNull();
+    expect(movementOver([{ fitness: 1 }, { fitness: 2 }, { fitness: 3 }], 'form', 2)).toBeNull();
+  });
+});
+
+describe('restDaysToZeroForm', () => {
+  /** The dotted stretch the server sends for a runner at (fitness, fatigue) today who does not run: the same recursion. */
+  function rested(fitness, fatigue, count = 14) {
+    return Array.from({ length: count }, (_, k) => {
+      const f = fitness * Math.exp(-(k + 1) / 42);
+      const g = fatigue * Math.exp(-(k + 1) / 7);
+      return { date: isoDay(new Date(2026, 9, 11 + k, 12)), fitness: f, fatigue: g, form: f - g };
+    });
+  }
+  const today = (fitness, fatigue) => ({ date: '2026-10-10', fitness, fatigue, form: fitness - fatigue });
+
+  it('counts the days of rest until form reaches zero, with tomorrow as 1', () => {
+    // Form is zero at k = 8.4 x ln(fatigue / fitness) days: 3.4 for 60 and 90, so the 4th day is the first that is above it.
+    const result = restDaysToZeroForm({ current: today(60, 90), projection: rested(60, 90) });
+
+    expect(result).toEqual({ state: 'days', days: 4, date: '2026-10-14' });
+  });
+
+  it('says tomorrow when the very next day gets there', () => {
+    const result = restDaysToZeroForm({ current: today(60, 61), projection: rested(60, 61) });
+
+    expect(result).toEqual({ state: 'days', days: 1, date: '2026-10-11' });
+  });
+
+  it('has nothing to say when form is zero or above already', () => {
+    expect(restDaysToZeroForm({ current: today(90, 60), projection: rested(90, 60) })).toEqual({ state: 'none' });
+    expect(restDaysToZeroForm({ current: today(60, 60), projection: rested(60, 60) })).toEqual({ state: 'none' });
+  });
+
+  it('reads form the way the card prints it: a form that prints as 0.0 is zero', () => {
+    expect(restDaysToZeroForm({ current: today(60, 60.04), projection: rested(60, 60.04) })).toEqual({ state: 'none' });
+    const projection = [
+      { date: '2026-10-11', form: -3 },
+      { date: '2026-10-12', form: -0.04 },
+      { date: '2026-10-13', form: 1 },
+    ];
+    expect(restDaysToZeroForm({ current: { form: -6 }, projection })).toEqual({ state: 'days', days: 2, date: '2026-10-12' });
+  });
+
+  it('says it is later than the stretch when none of its days gets there', () => {
+    // 400 effort in one day from nothing: fatigue is 5.7 times fitness, and zero is 14.6 days away.
+    const result = restDaysToZeroForm({ current: today(9.4, 53.2), projection: rested(9.4, 53.2) });
+
+    expect(result).toEqual({ state: 'later', days: 14 });
+  });
+
+  it('has nothing to read without a stretch after today, without today, or with numbers that are not numbers', () => {
+    expect(restDaysToZeroForm({ current: today(60, 90), projection: [] })).toEqual({ state: 'none' });
+    expect(restDaysToZeroForm({ current: today(60, 90) })).toEqual({ state: 'none' });
+    expect(restDaysToZeroForm({ projection: rested(60, 90) })).toEqual({ state: 'none' });
+    expect(restDaysToZeroForm(null)).toEqual({ state: 'none' });
+    expect(restDaysToZeroForm(undefined)).toEqual({ state: 'none' });
+    expect(restDaysToZeroForm({ current: { form: Number.NaN }, projection: rested(60, 90) })).toEqual({ state: 'none' });
+    expect(restDaysToZeroForm({ current: today(60, 90), projection: [{ date: '2026-10-11', form: Number.NaN }, null] })).toEqual({ state: 'later', days: 2 });
+  });
+
+  it('agrees with the closed form for a range of runners', () => {
+    for (const [fitness, fatigue] of [[40, 55], [80, 140], [120, 150], [30, 100], [55, 56]]) {
+      const result = restDaysToZeroForm({ current: today(fitness, fatigue), projection: rested(fitness, fatigue, 30) });
+      expect(result.days).toBe(Math.ceil(8.4 * Math.log(fatigue / fitness)));
+    }
   });
 });
 

@@ -61,6 +61,20 @@ public interface ActivityBestEffortRepository extends JpaRepository<ActivityBest
     List<ActivityBestEffort> findRankedBetween(@Param("runnerId") Long runnerId, @Param("key") String key,
                                                @Param("from") LocalDate from, @Param("to") LocalDate to, Pageable page);
 
+    /**
+     * The runner's fastest visible effort at one distance that was measured from a stream (not an estimate from a run's
+     * average pace) on a day from {@code from} (included) to {@code to} (included); fastest first, so a page of one is
+     * the best. The pace curve is made of these.
+     */
+    @Query("""
+            SELECT b FROM ActivityBestEffort b JOIN FETCH b.activity
+            WHERE b.runner.id = :runnerId AND b.distanceKey = :key AND b.hidden = FALSE AND b.estimated = FALSE
+              AND b.localDate >= :from AND b.localDate <= :to
+            ORDER BY b.effectiveSeconds ASC, b.localDate ASC, b.activity.id ASC
+            """)
+    List<ActivityBestEffort> findFastestMeasuredBetween(@Param("runnerId") Long runnerId, @Param("key") String key,
+                                                        @Param("from") LocalDate from, @Param("to") LocalDate to, Pageable page);
+
     /** Per calendar year at one distance, oldest first: how many visible efforts the runner has and the best time. {@code [year, count, best]}. */
     @Query("""
             SELECT YEAR(b.localDate), COUNT(b), MIN(b.effectiveSeconds) FROM ActivityBestEffort b

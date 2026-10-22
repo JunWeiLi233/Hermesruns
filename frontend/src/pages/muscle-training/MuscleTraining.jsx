@@ -1559,7 +1559,7 @@ export default function MuscleTraining() {
   const [recommendedReasonCode, setRecommendedReasonCode] = useState(null);
   const [selectedWeekDate, setSelectedWeekDate] = useState(null);
   const [openWeekExerciseKey, setOpenWeekExerciseKey] = useState(null);
-  const [isSessionStarted, setIsSessionStarted] = useState(false);
+  const [startedSessionDate, setStartedSessionDate] = useState(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -1810,7 +1810,7 @@ export default function MuscleTraining() {
     [plan],
   );
   const todayPlan = useMemo(() => (plan?.days || [])[0] || null, [plan]);
-  useEffect(() => { setIsSessionStarted(false); }, [todayPlan?.date]);
+  const isSessionStarted = Boolean(todayPlan?.date && startedSessionDate === todayPlan.date);
   const gridStrengthDay = strengthCoachDecision?.appliedDate
     ? (plan?.days || []).find((day) => (
       day.date === strengthCoachDecision.appliedDate && day.strength
@@ -2139,7 +2139,7 @@ export default function MuscleTraining() {
         apiJson('/api/training/muscle/check-ins').catch(() => null),
       ]);
       applyPlanOnly(nextPlan);
-      setIsSessionStarted(false);
+      setStartedSessionDate(null);
       if (Array.isArray(nextCheckIns)) setMuscleCheckIns(nextCheckIns);
       setCheckInNotice(copy.checkInSaved);
     } catch (cause) {
@@ -2309,7 +2309,7 @@ export default function MuscleTraining() {
                         if (isSessionStarted) {
                           handleDailyCheckIn();
                         } else {
-                          setIsSessionStarted(true);
+                          setStartedSessionDate(todayPlan.date);
                           setOpenWeekExerciseKey(activeWeekDay.items[0] ? getProtocolItemKey(activeWeekDay.items[0]) : null);
                         }
                       }}

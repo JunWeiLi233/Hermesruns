@@ -10,6 +10,7 @@ import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.activity.ElevationAscent;
 import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.runner.Runner;
+import com.hermes.backend.runner.RunnerRepository;
 import com.hermes.backend.weather.AcclimatizationService;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -38,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class ActivityImportService {
     private static final Logger logger = LoggerFactory.getLogger(ActivityImportService.class);
     private final ActivityRepository activityRepository;
+    private final RunnerRepository runnerRepository;
     private final List<ActivityFileParser> fileParsers;
     private final ActivityPointRepository activityPointRepository;
     private final ActivityDataAccess activityDataAccess;
@@ -54,6 +56,7 @@ public class ActivityImportService {
 
     public ActivityImportService(
             ActivityRepository activityRepository,
+            RunnerRepository runnerRepository,
             List<ActivityFileParser> fileParsers,
             ActivityPointRepository activityPointRepository,
             ActivityDataAccess activityDataAccess,
@@ -61,6 +64,7 @@ public class ActivityImportService {
             AcclimatizationService acclimatizationService
     ) {
         this.activityRepository = activityRepository;
+        this.runnerRepository = runnerRepository;
         this.fileParsers = fileParsers;
         this.activityPointRepository = activityPointRepository;
         this.activityDataAccess = activityDataAccess;
@@ -77,6 +81,13 @@ public class ActivityImportService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Please choose a GPX, TCX, FIT, or ZIP workout file to import.");
         }
+
+        // The existing duplicate contract spans file providers and re-exported bytes. Lock the
+        // owner before checking either fingerprint, and hold it through insertion, archive
+        // rollback and BEFORE_COMMIT coaching aggregation. A JVM mutex or catching a unique-key
+        // failure after insert cannot make this decision safe across application instances.
+        runner = runnerRepository.findByIdForUpdate(runner.getId())
+                .orElseThrow(() -> new IllegalArgumentException("The importing runner no longer exists."));
 
         try {
             String fileName = file.getOriginalFilename();
@@ -261,6 +272,27 @@ public class ActivityImportService {
             }
         }
 
+        int total = parsedActivity.points() == null ? 0 : parsedActivity.points().size();
+        int stride = Math.max(1, (int) Math.ceil(total / (double) MAX_POINTS_PER_ACTIVITY));
+        int count = (int) Math.ceil(total / (double) stride);
+        persistParsedActivity(runner, provider, fileName, checksum, parsedActivity, false);
+        return new ImportResult(provider.name(), 1, count, 0, 0, "Import completed successfully.", List.of());
+    }
+
+    /** Canonical writer with an explicit lossless multisport policy, called only after Explorer validation. */
+    @Transactional
+    public Activity importIndependentActivity(Runner owner, String fileName, String checksum, ParsedActivityData parsed) {
+        Runner runner = runnerRepository.findByIdForUpdate(owner.getId())
+                .filter(candidate -> !candidate.isDeleted())
+                .orElseThrow(() -> new IllegalArgumentException("The importing account is unavailable."));
+        if (parsed.source() == null || parsed.startTime() == null || parsed.points().size() > 200_000) {
+            throw new IllegalArgumentException("A complete supported source is required.");
+        }
+        return persistParsedActivity(runner, ImportProvider.MANUAL, fileName, checksum, parsed, true);
+    }
+
+    private Activity persistParsedActivity(Runner runner, ImportProvider provider, String fileName, String checksum,
+            ParsedActivityData parsedActivity, boolean lossless) {
         Activity activity = new Activity();
         activity.setRunner(runner);
         activity.setProvider(provider);
@@ -278,7 +310,6 @@ public class ActivityImportService {
         Double averageHeartRate = parsedActivity.averageHeartRate();
         Double maxHeartRate = parsedActivity.maxHeartRate();
         if (averageHeartRate == null && maxHeartRate == null) {
-            // GPX and TCX give heart rate only on each point: work the summary out from them.
             HeartRateSummary fromPoints = HeartRateSummary.of(parsedActivity.points());
             if (fromPoints != null) {
                 averageHeartRate = fromPoints.average();
@@ -287,12 +318,11 @@ public class ActivityImportService {
         }
         activity.setAverageHeartRate(averageHeartRate);
         activity.setMaxHeartRate(maxHeartRate);
-        // A file carries the elevation of every point, not the climb; every other source brings one. Without elevation in
-        // the file there is no figure, which is not the same as no climb.
         activity.setTotalElevationGain(climbOf(parsedActivity.points()));
+        activity.setSourceImportedLapsJson(com.hermes.backend.activity.analysis.SessionAnalysisSources.encode(parsedActivity.sourceLaps()));
 
         // Weather adjustment
-        try {
+        if (parsedActivity.activityType() == ActivityType.RUN) try {
             Integer penalty = acclimatizationService.calculatePenaltyForActivity(activity);
             activity.setPacePenaltySecPerKm(penalty);
             activity.setWeatherAdjusted(penalty != null && penalty > 0);
@@ -303,12 +333,11 @@ public class ActivityImportService {
         // Persist the Activity first so we can bulk-insert ActivityPoint rows
         // without keeping the entire points list inside the Activity's JPA collection.
         Activity savedActivity = activityRepository.save(activity);
-        applicationEventPublisher.publishEvent(new ActivityIngestedEvent(runner.getId(), savedActivity.getId()));
 
         List<ActivityPoint> batch = new ArrayList<>(POINTS_BATCH_SIZE);
         List<ParsedTrackPoint> allPoints = parsedActivity.points();
         int totalPoints = allPoints != null ? allPoints.size() : 0;
-        int stride = totalPoints > MAX_POINTS_PER_ACTIVITY
+        int stride = !lossless && totalPoints > MAX_POINTS_PER_ACTIVITY
                 ? Math.max(1, (int) Math.ceil(totalPoints / (double) MAX_POINTS_PER_ACTIVITY))
                 : 1;
 
@@ -343,19 +372,14 @@ public class ActivityImportService {
             activityDataAccess.savePoints(batch);
         }
         // Help GC earlier on small-RAM servers.
-        if (allPoints != null) {
+        if (allPoints != null && !lossless) {
             try { allPoints.clear(); } catch (Exception ignored) { logger.trace("GC helper: allPoints.clear() failed", ignored); }
         }
 
-        return new ImportResult(
-                provider.name(),
-                1,
-                keptPoints,
-                0,
-                0,
-                "Import completed successfully.",
-                List.of()
-        );
+        if (parsedActivity.activityType() == ActivityType.RUN) {
+            applicationEventPublisher.publishEvent(new ActivityIngestedEvent(runner.getId(), savedActivity.getId()));
+        }
+        return savedActivity;
     }
 
     private String resolveActivityName(ParsedActivityData parsedActivity, String fileName) {

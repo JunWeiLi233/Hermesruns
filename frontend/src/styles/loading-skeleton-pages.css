@@ -1,0 +1,407 @@
+/* Current page compositions. These styles travel with the route fallback and
+   work before any lazy page stylesheet arrives. See docs/skeleton-layout-audit.md. */
+.page-skeleton--current {
+  --hermes-skeleton-surface: #fff;
+  --hermes-skeleton-base: rgba(60, 60, 67, .08);
+  --hermes-skeleton-line: rgba(28, 25, 23, .08);
+  --hermes-skeleton-shadow: none;
+  background: #f2f2f8;
+}
+.page-skeleton.page-skeleton--current .page-skeleton__canvas {
+  display: flex !important;
+  flex-direction: column;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 28px clamp(20px, 4.2vw, 64px) 64px !important;
+  gap: 20px !important;
+  box-sizing: border-box;
+}
+.page-skeleton.page-skeleton--settings .page-skeleton__canvas { padding: 32px 24px 40px !important; background: #f4f4f8; }
+.page-skeleton.page-skeleton--analysis-load .page-skeleton__canvas { padding: 0 32px 64px !important; }
+.page-skeleton.page-skeleton--muscle-training .page-skeleton__canvas { padding: 8px 60px 64px !important; }
+.page-skeleton.page-skeleton--analysis .page-skeleton__canvas { padding: 16px 24px 56px !important; }
+.page-skeleton--runs { background: #f7f5f3; }
+.page-skeleton.page-skeleton--current .page-skeleton__panel {
+  min-width: 0;
+  padding: 24px 28px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--hermes-skeleton-surface);
+  box-shadow: none;
+}
+.page-skeleton--current .page-skeleton__rail,
+.page-skeleton--current .page-skeleton__topbar { background: rgba(255, 255, 255, .72); box-shadow: none; }
+.page-skeleton--current .page-skeleton__topbar { min-height: 88px; }
+.page-skeleton--current .page-skeleton__runner-footer { margin-top: 20px; }
+.page-skeleton__current-heading { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.page-skeleton__current-label { width: min(130px, 80%); height: 12px; border-radius: 4px; }
+.page-skeleton__current-title { width: min(480px, 90%); height: 44px; border-radius: 8px; }
+.page-skeleton__current-subtitle { width: min(240px, 85%); height: 24px; border-radius: 6px; }
+.page-skeleton__current-value { width: min(110px, 85%); height: 38px; border-radius: 8px; }
+.page-skeleton__current-note { width: min(190px, 90%); height: 10px; border-radius: 4px; }
+.page-skeleton__current-heading .page-skeleton__lines { max-width: 520px; margin: 0; gap: 8px; }
+.page-skeleton__current-heading .page-skeleton__lines > span { height: 12px; border-radius: 4px; }
+.page-skeleton__current-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; }
+.page-skeleton__current-actions > span { width: 104px; max-width: 100%; height: 38px; border-radius: 999px; }
+.page-skeleton__current-metrics { display: grid; grid-template-columns: repeat(var(--skeleton-metric-count, 3), minmax(0, 1fr)); gap: 20px; min-width: 0; }
+.page-skeleton__current-metrics > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.page-skeleton__current-section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; }
+.page-skeleton__current-section-head > .page-skeleton__current-heading,
+.page-skeleton__ledger-head > .page-skeleton__current-heading { flex: 1 1 240px; }
+.page-skeleton__current-section-head > .page-skeleton__current-metrics { flex: 1 1 120px; }
+.page-skeleton__current-chart { width: 100%; height: 280px; border-radius: 12px; }
+.page-skeleton__current-calendar { width: 100%; height: 164px; border-radius: 12px; }
+.page-skeleton__current-meter { width: 100%; height: 12px; border-radius: 6px; }
+.page-skeleton__current-bars { display: flex; align-items: end; gap: 12px; width: 100%; height: 240px; }
+.page-skeleton__current-bars > span { flex: 1; min-width: 0; border-radius: 4px 4px 0 0; }
+.page-skeleton--current .page-skeleton__row { min-height: 62px; padding: 12px 0; }
+.page-skeleton--current .page-skeleton__stat-card { min-height: 130px; }
+.page-skeleton__ledger,
+.page-skeleton__detail-v2,
+.page-skeleton__analysis-v2,
+.page-skeleton__load-v2,
+.page-skeleton__injury-v2,
+.page-skeleton__coach-v2,
+.page-skeleton__insight-v2,
+.page-skeleton__shoes-v2,
+.page-skeleton__races-v2,
+.page-skeleton__today-v2,
+.page-skeleton__prediction-v2,
+.page-skeleton__strength-v2,
+.page-skeleton__import-v2 { display: grid; gap: 20px; min-width: 0; }
+.page-skeleton--current .page-skeleton__panel > * + * { margin-top: 16px; }
+.page-skeleton--current .page-skeleton__panel > .page-skeleton__current-heading:first-child { margin-top: 0; }
+
+/* Activity ledger: header, five totals + volume, toolbar, month groups. */
+.page-skeleton__ledger { gap: 24px; }
+.page-skeleton__athlete-tools { padding-bottom: 18px; }
+.page-skeleton__athlete-tools .page-skeleton__current-actions > span { width: 160px; height: 36px; border-radius: 6px; }
+.page-skeleton__ledger-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; }
+.page-skeleton__ledger-summary { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 32px; padding-block: 24px; border-block: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__ledger-summary .page-skeleton__current-value { height: 34px; }
+.page-skeleton__ledger-volume { display: grid; gap: 12px; }
+.page-skeleton__ledger-volume .page-skeleton__current-bars { height: 64px; gap: 8px; }
+.page-skeleton__ledger-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.page-skeleton__ledger-search { width: 240px; max-width: 100%; height: 40px; border-radius: 10px; }
+.page-skeleton__ledger-toolbar .page-skeleton__current-actions > span { width: 68px; height: 34px; border-radius: 8px; }
+.page-skeleton__ledger-month-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__ledger-month-head > span { width: 160px; height: 20px; border-radius: 5px; }
+.page-skeleton__ledger-month-head > span + span { width: 120px; height: 12px; }
+.page-skeleton__ledger-columns { display: grid; grid-template-columns: minmax(0, 1fr) repeat(3, 90px); gap: 24px; padding: 14px 24px 14px 80px; }
+.page-skeleton__ledger-columns > span { width: 70%; height: 10px; border-radius: 4px; }
+.page-skeleton .page-skeleton__ledger-row { display: grid; grid-template-columns: 48px 64px minmax(0, 1fr) repeat(3, 90px); align-items: center; gap: 24px; min-height: 92px; padding: 16px 24px 16px 0; border: 0; border-bottom: 1px solid var(--hermes-skeleton-line); border-radius: 0; background: transparent; box-shadow: none; }
+.page-skeleton__ledger-row > span { width: 72%; height: 18px; border-radius: 5px; }
+.page-skeleton__ledger-row > .page-skeleton__ledger-thumb { width: 64px; height: 64px; border-radius: 12px; }
+.page-skeleton__ledger-date { display: grid; gap: 8px; justify-items: center; }
+.page-skeleton__ledger-date > span { width: 28px; height: 28px; border-radius: 5px; }
+.page-skeleton__ledger-date > span + span { width: 26px; height: 10px; }
+.page-skeleton__ledger-row .page-skeleton__lines { margin: 0; max-width: 300px; }
+
+/* Map-led activity detail and telemetry. */
+.page-skeleton__detail-hero-v2 { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, 1fr); gap: 20px; }
+.page-skeleton__detail-map { width: 100%; min-height: 480px; border-radius: 20px; }
+.page-skeleton__detail-summary { display: flex; flex-direction: column; gap: 22px; }
+.page-skeleton__detail-summary .page-skeleton__current-metrics { margin-top: auto; }
+.page-skeleton.page-skeleton--current .page-skeleton__detail-coach { display: grid; grid-template-columns: 120px minmax(0, 1fr) minmax(0, .7fr); align-items: center; gap: 24px; }
+.page-skeleton__detail-coach > * { margin: 0 !important; }
+.page-skeleton__detail-telemetry .page-skeleton__current-actions > span { width: 72px; height: 32px; }
+.page-skeleton__detail-telemetry .page-skeleton__current-chart { height: 300px; }
+.page-skeleton__detail-lower { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); gap: 20px; align-items: start; }
+.page-skeleton__detail-side { display: grid; gap: 16px; }
+.page-skeleton__detail-training { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.page-skeleton__detail-gear { display: grid; grid-template-columns: 100px minmax(0, 1fr); align-items: center; gap: 16px; }
+.page-skeleton__detail-gear > span { height: 80px; border-radius: 12px; }
+
+/* Fitness overview, insight pages and race forecast. */
+.page-skeleton__analysis-v2 { gap: 32px; }
+.page-skeleton__analysis-v2-hero { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 16px; }
+.page-skeleton__analysis-v2-hero > .page-skeleton__panel { min-height: 408px; }
+.page-skeleton__analysis-v2-predictions > .page-skeleton__current-heading > .page-skeleton__current-label,
+.page-skeleton__analysis-v2-predictions > .page-skeleton__current-heading > .page-skeleton__lines { display: none; }
+.page-skeleton__analysis-v2-checks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.page-skeleton__analysis-v2-zone-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.page-skeleton__analysis-v2-zone-grid > div { display: grid; align-content: start; gap: 20px; min-width: 0; }
+.page-skeleton__load-top,
+.page-skeleton__injury-top,
+.page-skeleton__coach-top,
+.page-skeleton__prediction-top { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 20px; }
+.page-skeleton__injury-evidence { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr); gap: 20px; align-items: start; }
+.page-skeleton__coach-evidence,
+.page-skeleton__coach-bottom,
+.page-skeleton__insight-top { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.page-skeleton__insight-bottom,
+.page-skeleton__prediction-levers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.page-skeleton__prediction-result { width: min(320px, 90%); height: clamp(56px, 7vw, 96px); border-radius: 10px; }
+
+/* Rotation shelf, followed by race season and discovery. */
+.page-skeleton__shoes-toolbar-v2 { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding: 10px; border-radius: 16px; background: var(--hermes-skeleton-surface); }
+.page-skeleton__shoes-toolbar-v2 .page-skeleton__current-actions > span { width: 64px; height: 34px; border-radius: 8px; }
+.page-skeleton__shoes-shelf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.page-skeleton__shoe-v2-art { width: 100%; height: 200px; border-radius: 16px; }
+.page-skeleton__shoe-v2-card .page-skeleton__current-actions > span { width: 64px; height: 32px; }
+.page-skeleton__races-top { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; }
+.page-skeleton.page-skeleton--current .page-skeleton__races-cover { display: flex; flex-direction: column; justify-content: end; min-height: 320px; background: var(--hermes-skeleton-base); }
+.page-skeleton__races-months { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 8px; }
+.page-skeleton__races-months > div { display: grid; gap: 12px; min-width: 0; }
+.page-skeleton__races-months span { width: 100%; height: 90px; border-radius: 8px; }
+.page-skeleton__races-months span:first-child { width: 75%; height: 10px; }
+.page-skeleton__races-records { display: grid; gap: 16px; }
+.page-skeleton__races-results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.page-skeleton__races-results > div { display: grid; gap: 16px; min-width: 0; }
+.page-skeleton__races-result-art { width: 100%; height: 180px; border-radius: 12px; }
+.page-skeleton.page-skeleton--race-detail .page-skeleton__canvas { padding: 16px 20px 72px !important; background: #f7f5f3; }
+.page-skeleton__race-v2 { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 16px; align-items: start; }
+.page-skeleton.page-skeleton--current .page-skeleton__race-summary { padding: 0; overflow: hidden; }
+.page-skeleton__race-cover { width: 100%; height: 200px; }
+.page-skeleton__race-body { display: grid; gap: 24px; padding: 24px; margin: 0 !important; }
+.page-skeleton__race-stage { display: grid; gap: 16px; min-width: 0; }
+.page-skeleton__race-map { width: 100%; height: 520px; border-radius: 24px; }
+.page-skeleton__race-elevation { width: 100%; height: 180px; border-radius: 10px; }
+
+/* Readiness is part of the Today hero; three cards follow the session. */
+.page-skeleton.page-skeleton--today-run .page-skeleton__canvas { padding: 52px calc(32px + clamp(20px, 3vw, 48px)) 48px !important; }
+.page-skeleton__today-hero-v2 { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 0; border-radius: 24px; overflow: hidden; background: var(--hermes-skeleton-surface); }
+.page-skeleton.page-skeleton--current .page-skeleton__today-gate { background: #e8f1ea; border-radius: 0; }
+.page-skeleton.page-skeleton--current .page-skeleton__today-session { padding: 32px; border-radius: 0; }
+.page-skeleton__today-score { width: 140px; max-width: 100%; height: 100px; border-radius: 10px; }
+.page-skeleton__today-structure { display: grid; gap: 14px; padding-block: 14px; }
+.page-skeleton__today-structure > .page-skeleton__current-meter { height: 32px; }
+.page-skeleton__today-structure .page-skeleton__current-value { height: 18px; }
+.page-skeleton__today-support { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr)); gap: 16px; }
+
+/* Strength week and selected day's exercise list. */
+.page-skeleton__strength-v2 { max-width: 1216px; width: 100%; margin-inline: auto; }
+.page-skeleton__strength-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.page-skeleton__strength-week > div { display: grid; align-content: space-between; gap: 12px; min-width: 0; min-height: 178px; padding: 14px; border-radius: 18px; background: var(--hermes-skeleton-surface); }
+.page-skeleton__strength-week .page-skeleton__lines { margin: 0; gap: 8px; }
+.page-skeleton__strength-body { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr); gap: 20px; align-items: start; }
+.page-skeleton__strength-side { display: grid; gap: 20px; }
+.page-skeleton__strength-side .page-skeleton__current-calendar { height: auto; aspect-ratio: 12 / 7; }
+.page-skeleton__strength-exercise { display: grid; grid-template-columns: 24px 64px minmax(0, 1fr) 60px; align-items: center; gap: 14px; padding: 14px 0; border-top: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__strength-exercise > span { height: 20px; border-radius: 5px; }
+.page-skeleton__strength-exercise > span:nth-child(2) { height: 64px; border-radius: 12px; }
+.page-skeleton__strength-exercise .page-skeleton__lines { margin: 0; }
+
+/* Settings keeps the index and only the requested group, matching hidden tabs. */
+.page-skeleton__settings-v2 { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 24px; width: 100%; margin-inline: auto; }
+.page-skeleton__settings-index { display: grid; align-content: start; gap: 24px; min-width: 0; }
+.page-skeleton__settings-identity { display: flex; align-items: center; gap: 12px; }
+.page-skeleton__settings-identity .page-skeleton__current-heading { flex: 1; }
+.page-skeleton__settings-identity .page-skeleton__current-subtitle { height: 18px; }
+.page-skeleton__settings-identity .page-skeleton__lines { display: none; }
+.page-skeleton__settings-photo { width: 44px; height: 44px; flex: 0 0 44px; border-radius: 50%; }
+.page-skeleton.page-skeleton--current .page-skeleton__settings-index .page-skeleton__panel { padding: 16px; }
+.page-skeleton__settings-index .page-skeleton__rows { margin: 8px 0 0; }
+.page-skeleton__settings-index .page-skeleton__row { min-height: 24px; padding: 4px 0; gap: 8px; }
+.page-skeleton__settings-index .page-skeleton__row-icon { width: 14px; height: 14px; }
+.page-skeleton__settings-index .page-skeleton__row-copy > span + span,
+.page-skeleton__settings-index .page-skeleton__row-value { display: none; }
+.page-skeleton__settings-section-nav { display: grid; gap: 2px; }
+.page-skeleton__settings-section-nav > div { display: flex; align-items: center; min-height: 38px; padding: 0 12px; border-radius: 10px; }
+.page-skeleton__settings-section-nav > .is-active { background: var(--hermes-skeleton-surface); }
+.page-skeleton__settings-section-nav span { width: 120px; max-width: 100%; height: 12px; border-radius: 4px; }
+.page-skeleton__settings-content { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.page-skeleton.page-skeleton--current .page-skeleton__settings-group { padding: 0; }
+.page-skeleton__settings-avatar-row,
+.page-skeleton__settings-input-row,
+.page-skeleton__settings-option { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-bottom: 1px solid var(--hermes-skeleton-line); margin: 0 !important; }
+.page-skeleton__settings-avatar-row > .page-skeleton__lines { flex: 1; margin: 0; }
+.page-skeleton__settings-input-row { display: grid; grid-template-columns: 180px minmax(0, 1fr); }
+.page-skeleton__settings-input { width: 100%; height: 38px; border-radius: 10px; }
+.page-skeleton__settings-option { min-height: 76px; }
+.page-skeleton__settings-option > .page-skeleton__lines { flex: 1; margin: 0; }
+.page-skeleton__settings-option .page-skeleton__current-actions > span { width: 52px; height: 32px; border-radius: 8px; }
+.page-skeleton__settings-group > .page-skeleton__current-actions { justify-content: flex-end; padding: 14px 18px; margin: 0; }
+.page-skeleton__settings-group > .page-skeleton__rows { padding: 16px 18px; }
+.page-skeleton__settings-training { display: grid; gap: 20px; }
+
+/* Import is a source selector/dropzone beside a three-step guide. */
+.page-skeleton__import-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .38fr); gap: 32px; align-items: start; }
+.page-skeleton__import-dropzone { width: 100%; height: 260px; border: 1px dashed var(--hermes-skeleton-line); border-radius: 20px; }
+.page-skeleton__import-upload > .page-skeleton__current-actions:last-child { justify-content: flex-end; }
+
+/* Public photo-led landing: full-height hero, never the retired shoe layout. */
+.page-skeleton.page-skeleton--landing-v3 { padding: 0; background: #f6f4ef; }
+.page-skeleton__landing-v3 { width: 100%; }
+.page-skeleton__landing-photo-hero { position: relative; display: flex; flex-direction: column; min-height: 860px; background: #2a2420; --hermes-skeleton-base: rgba(255, 255, 255, .12); --hermes-skeleton-highlight: rgba(255, 255, 255, .25); }
+.page-skeleton__landing-v3-nav { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 84px; width: min(1280px, 100%); padding-inline: 32px; margin-inline: auto; box-sizing: border-box; }
+.page-skeleton__landing-v3-brand { width: 170px; max-width: 40%; height: 28px; border-radius: 6px; }
+.page-skeleton__landing-v3-nav > .page-skeleton__current-actions:first-of-type > span { width: 70px; height: 14px; }
+.page-skeleton__landing-v3-copy { display: flex; flex: 1; flex-direction: column; align-items: start; justify-content: flex-end; gap: 28px; width: min(1280px, 100%); padding: 40px 32px 96px; margin-inline: auto; box-sizing: border-box; }
+.page-skeleton__landing-v3-title { width: min(680px, 90%); height: clamp(56px, 7vw, 94px); border-radius: 10px; }
+.page-skeleton__landing-v3-title + .page-skeleton__landing-v3-title { width: min(520px, 75%); margin-top: -20px; }
+.page-skeleton__landing-v3-copy .page-skeleton__lines { width: min(480px, 100%); margin: 0; }
+.page-skeleton__landing-v3-copy .page-skeleton__lines > span { height: 20px; }
+.page-skeleton__landing-v3-copy .page-skeleton__current-actions > span { width: 180px; height: 56px; }
+.page-skeleton__landing-sync { display: flex; justify-content: center; padding: 28px 24px; }
+.page-skeleton__landing-sync .page-skeleton__current-actions { gap: 48px; }
+.page-skeleton__landing-sync .page-skeleton__current-actions > span { height: 18px; }
+.page-skeleton__landing-goals,
+.page-skeleton__landing-features,
+.page-skeleton__landing-promises,
+.page-skeleton__landing-pricing,
+.page-skeleton__landing-faq { display: grid; gap: 48px; width: min(1280px, 100%); padding: 112px 32px; margin-inline: auto; box-sizing: border-box; }
+.page-skeleton__landing-goals > .page-skeleton__current-heading,
+.page-skeleton__landing-promises > .page-skeleton__current-heading,
+.page-skeleton__landing-pricing > .page-skeleton__current-heading,
+.page-skeleton__landing-faq > .page-skeleton__current-heading { align-items: center; }
+.page-skeleton__landing-goal-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
+.page-skeleton__landing-goal-grid > span { height: 320px; border-radius: 24px; }
+.page-skeleton__landing-feature { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 72px; }
+.page-skeleton__landing-feature:nth-child(even) > :first-child { order: 1; }
+.page-skeleton__landing-feature-photo { width: 100%; height: 540px; border-radius: 28px; }
+.page-skeleton__landing-app { display: grid; grid-template-columns: minmax(0, 1fr) 310px; align-items: center; gap: 72px; padding: 112px max(32px, calc((100vw - 1216px) / 2)); background: #211e1a; --hermes-skeleton-base: rgba(255, 255, 255, .12); --hermes-skeleton-highlight: rgba(255, 255, 255, .25); }
+.page-skeleton__landing-app > span { height: 600px; border-radius: 40px; }
+.page-skeleton__landing-promises > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.page-skeleton__landing-promise-photo { width: 100%; height: 300px; margin-bottom: 28px; border-radius: 20px; }
+.page-skeleton__landing-pricing > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.page-skeleton__landing-pricing { max-width: 944px; }
+.page-skeleton__landing-pricing .page-skeleton__panel > * + * { margin-top: 20px; }
+.page-skeleton__landing-faq { max-width: 880px; }
+.page-skeleton__landing-faq .page-skeleton__row { min-height: 84px; }
+.page-skeleton__landing-cta { display: flex; flex-direction: column; align-items: center; gap: 32px; padding: 120px 32px; background: var(--hermes-skeleton-base); }
+.page-skeleton__landing-cta .page-skeleton__current-heading { align-items: center; width: min(680px, 100%); }
+.page-skeleton__landing-v3-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 24px; padding: 48px 32px; }
+
+/* Legal pages: route-specific editorial hero and numbered policy rows. */
+.page-skeleton.page-skeleton--legal { display: block; width: 100%; max-width: none; margin: 0; padding: 28px; background: #f7f5f3; }
+.page-skeleton__legal-v2 { width: min(1040px, 100%); margin: 0 auto; padding: 32px; border-radius: 24px; background: var(--hermes-skeleton-surface); }
+.page-skeleton__legal-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: 32px; }
+.page-skeleton__legal-hero { display: grid; gap: 40px; padding-block: 64px 48px; }
+.page-skeleton__legal-hero > div { display: grid; gap: 20px; }
+.page-skeleton--privacy .page-skeleton__legal-hero { grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); }
+.page-skeleton__legal-shield { width: 72px; height: 72px; margin-bottom: 20px; border-radius: 50%; }
+.page-skeleton__legal-signals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; padding-block: 24px; border-block: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__legal-signals > div { display: grid; gap: 16px; }
+.page-skeleton__legal-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 32px; padding: 32px 0; border-bottom: 1px solid var(--hermes-skeleton-line); }
+.page-skeleton__legal-row > .page-skeleton__current-label { width: 60px; }
+.page-skeleton__legal-row .page-skeleton__lines { max-width: 760px; }
+.page-skeleton__legal-footer { display: grid; gap: 20px; padding-top: 40px; }
+
+@media (max-width: 1180px) {
+  .page-skeleton__ledger-summary { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__ledger-volume { max-width: 360px; }
+  .page-skeleton__shoes-shelf { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page-skeleton__strength-body { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__strength-week { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 1100px) {
+  .page-skeleton__detail-hero-v2,
+  .page-skeleton__detail-lower,
+  .page-skeleton__load-top,
+  .page-skeleton__injury-top,
+  .page-skeleton__injury-evidence,
+  .page-skeleton__coach-top,
+  .page-skeleton__coach-evidence,
+  .page-skeleton__coach-bottom,
+  .page-skeleton__prediction-top,
+  .page-skeleton__races-top,
+  .page-skeleton__today-hero-v2,
+  .page-skeleton__strength-body,
+  .page-skeleton__settings-v2,
+  .page-skeleton__import-grid { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__settings-index { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .page-skeleton__settings-section-nav { display: flex; flex-wrap: nowrap; grid-column: 1 / -1; overflow: hidden; }
+  .page-skeleton__settings-section-nav > div { flex: 0 0 100px; }
+  .page-skeleton__today-support { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page-skeleton__today-support > :first-child { grid-column: 1 / -1; }
+  .page-skeleton__race-v2 { grid-template-columns: 340px minmax(0, 1fr); }
+  .page-skeleton__races-months { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (max-width: 1000px) {
+  .page-skeleton__analysis-v2-hero { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__analysis-v2-checks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .page-skeleton.page-skeleton--current .page-skeleton__canvas { padding: 22px 16px 64px !important; }
+  .page-skeleton.page-skeleton--current .page-skeleton__topbar { min-height: 64px; }
+  .page-skeleton__current-title { height: 36px; }
+  .page-skeleton__race-v2,
+  .page-skeleton__analysis-v2-zone-grid,
+  .page-skeleton__detail-training,
+  .page-skeleton__insight-top { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__race-map { height: 420px; }
+  .page-skeleton__detail-map { min-height: 340px; }
+  .page-skeleton__ledger .page-skeleton__current-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .page-skeleton__analysis-v2-zones .page-skeleton__current-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .page-skeleton__ledger-columns { grid-template-columns: minmax(0, 1fr) repeat(3, 52px); gap: 12px; padding: 12px 0 12px 56px; }
+  .page-skeleton .page-skeleton__ledger-row { grid-template-columns: 40px 48px minmax(0, 1fr) repeat(3, 52px); gap: 12px; padding-right: 0; }
+  .page-skeleton__ledger-row > .page-skeleton__ledger-thumb { width: 48px; height: 48px; }
+  .page-skeleton__strength-week { overflow: hidden; }
+  .page-skeleton__strength-week > div { padding: 12px 8px; }
+  .page-skeleton__landing-v3-nav > .page-skeleton__current-actions:first-of-type { display: none; }
+  .page-skeleton__landing-goal-grid { grid-template-columns: repeat(5, minmax(160px, 1fr)); overflow: hidden; }
+  .page-skeleton__landing-feature,
+  .page-skeleton__landing-app { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .page-skeleton__landing-feature:nth-child(even) > :first-child { order: 0; }
+  .page-skeleton__landing-app > span { width: min(310px, 100%); margin: 0 auto; }
+  .page-skeleton__landing-promises > div { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton.page-skeleton--legal { padding: 14px; }
+  .page-skeleton__legal-v2 { width: 100%; padding: 18px; }
+  .page-skeleton--privacy .page-skeleton__legal-hero { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__legal-signals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .page-skeleton.page-skeleton--current .page-skeleton__panel { padding: 20px; }
+  .page-skeleton__current-actions > span { width: 88px; }
+  .page-skeleton__current-metrics { gap: 12px; }
+  .page-skeleton__current-value { height: 30px; }
+  .page-skeleton__current-chart { height: 220px; }
+  .page-skeleton__ledger .page-skeleton__current-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page-skeleton__ledger-columns { display: none; }
+  .page-skeleton .page-skeleton__ledger-row { grid-template-columns: 32px 40px minmax(0, 1fr) repeat(2, 40px); gap: 8px; }
+  .page-skeleton__ledger-row > .page-skeleton__ledger-thumb { width: 40px; height: 40px; }
+  .page-skeleton__ledger-row > span:last-child { display: none; }
+  .page-skeleton.page-skeleton--current .page-skeleton__detail-coach,
+  .page-skeleton__analysis-v2-checks,
+  .page-skeleton__insight-bottom,
+  .page-skeleton__prediction-levers,
+  .page-skeleton__shoes-shelf,
+  .page-skeleton__races-results,
+  .page-skeleton__today-support { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__today-session > .page-skeleton__current-metrics { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__analysis-v2-zones .page-skeleton__current-metrics { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__today-support > :first-child { grid-column: auto; }
+  .page-skeleton__strength-exercise { grid-template-columns: 18px 48px minmax(0, 1fr) 36px; gap: 8px; }
+  .page-skeleton__strength-exercise > span:nth-child(2) { height: 48px; }
+  .page-skeleton__settings-input-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .page-skeleton__settings-index { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__settings-option { flex-wrap: wrap; }
+  .page-skeleton.page-skeleton--current .page-skeleton__settings-group { padding: 0; }
+  .page-skeleton.page-skeleton--current .page-skeleton__race-summary { padding: 0; }
+  .page-skeleton__landing-v3-nav { padding-inline: 20px; gap: 12px; }
+  .page-skeleton__landing-v3-nav .page-skeleton__current-actions { gap: 6px; }
+  .page-skeleton__landing-v3-nav .page-skeleton__current-actions > span { width: 64px; }
+  .page-skeleton__landing-v3-copy { padding: 40px 20px 64px; }
+  .page-skeleton__landing-v3-title { height: 56px; }
+  .page-skeleton__landing-v3-copy .page-skeleton__current-actions > span { width: 140px; }
+  .page-skeleton__landing-goals,
+  .page-skeleton__landing-features,
+  .page-skeleton__landing-promises,
+  .page-skeleton__landing-pricing,
+  .page-skeleton__landing-faq { padding: 64px 20px; gap: 32px; }
+  .page-skeleton__landing-feature-photo { height: 380px; }
+  .page-skeleton__landing-pricing > div { grid-template-columns: minmax(0, 1fr); }
+  .page-skeleton__landing-sync .page-skeleton__current-actions { justify-content: center; gap: 20px; }
+  .page-skeleton__legal-hero { padding-block: 32px; }
+  .page-skeleton__legal-row { grid-template-columns: 48px minmax(0, 1fr); gap: 16px; }
+  .page-skeleton__legal-row > .page-skeleton__current-label { width: 36px; }
+}
+
+@media (max-width: 760px) {
+  .page-skeleton__landing-photo-hero { min-height: 720px; }
+}
+@media (max-width: 720px) {
+  .page-skeleton__strength-week { grid-template-columns: repeat(7, minmax(132px, 1fr)); }
+  .page-skeleton__strength-week > div { min-height: 128px; }
+}
+
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--current {
+  --hermes-skeleton-surface: #242a34;
+  --hermes-skeleton-base: rgba(247, 240, 232, .11);
+  --hermes-skeleton-line: rgba(247, 240, 232, .12);
+}
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton--current .page-skeleton__today-gate { background: #20372b; }
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton.page-skeleton--race-detail .page-skeleton__canvas,
+body:is(.theme-midnight, .theme-high-contrast) .page-skeleton.page-skeleton--legal { background: #17191d; }

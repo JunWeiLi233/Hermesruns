@@ -1,0 +1,12 @@
+.heatmap-native-page .runner-shell-canvas{padding:0;min-width:0}
+.heatmap-native-switch{display:flex;justify-content:flex-end;padding:12px 24px;font-size:13px}
+.hermes-heatmap-workspace{min-width:0}
+.hermes-heatmap-workspace .sh-design{min-height:calc(100vh - 120px)}
+.hermes-heatmap-workspace .sh-main{width:100%;max-width:1440px;margin:auto;padding:24px}
+.hermes-heatmap-workspace .ex-native-nav{display:flex;justify-content:flex-start;gap:6px;flex-wrap:wrap;height:auto;min-height:56px;padding:8px 24px}
+.hermes-heatmap-workspace .ex-native-nav a{padding:10px 14px;min-height:44px;border-radius:6px;text-decoration:none}
+.hermes-heatmap-workspace .ex-native-nav a[aria-current=page]{background:var(--sh-surface-muted);font-weight:650}
+.heatmap-native-error{padding:32px}
+.heatmap-workspace-switch{position:fixed;z-index:800;bottom:20px;left:20px;max-width:min(520px,calc(100vw - 40px));display:flex;align-items:center;gap:16px;padding:12px 16px;border:1px solid var(--border-color,#ccd4cf);border-radius:10px;background:var(--card-bg,#fff);color:var(--text-primary,#182b24);box-shadow:0 2px 12px #0002;font-size:13px}
+.heatmap-workspace-switch a,.heatmap-workspace-switch button{color:inherit;min-height:44px;display:inline-flex;align-items:center}
+@media(max-width:640px){.hermes-heatmap-workspace .sh-main{padding:16px}.hermes-heatmap-workspace .ex-native-nav{padding:8px 12px}.heatmap-native-switch{padding:10px 16px}}

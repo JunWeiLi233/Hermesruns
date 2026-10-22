@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiJson } from '../../../api';
+import { cachedApiJson, clearResourceCache } from '../../../api/resourceCache';
 import en from '../../../i18n/locales/en';
 import zh from '../../../i18n/locales/zh-CN';
 import RunLabelsCard from '../RunLabelsCard';
@@ -46,6 +47,20 @@ function renderCard(runId = 7) {
   return render(<MemoryRouter><RunLabelsCard runId={runId} /></MemoryRouter>);
 }
 
+it('shows compact labels and reveals the existing editor when opened', async () => {
+  served = labels({ runType: 'WORKOUT', tags: ['Tempo'] });
+  const user = userEvent.setup();
+  render(<MemoryRouter><RunLabelsCard runId={7} compact /></MemoryRouter>);
+  const summary = await screen.findByText('Tempo', { selector: 'summary span' });
+  const disclosure = summary.closest('details');
+  expect(disclosure).not.toBeNull();
+  expect(disclosure).not.toHaveAttribute('open');
+  await user.click(disclosure.querySelector('summary'));
+  expect(disclosure).toHaveAttribute('open');
+  expect(screen.getByRole('radio', { name: t('run_labels.type_WORKOUT') })).toBeChecked();
+  expect(screen.getByRole('textbox', { name: t('run_labels.tag_input') })).toBeVisible();
+});
+
 async function ready() {
   const card = await screen.findByRole('region', { name: t('run_labels.title') });
   await screen.findByRole('group', { name: t('run_labels.type_group') });
@@ -75,7 +90,76 @@ beforeEach(() => {
     return {};
   });
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  clearResourceCache();
+});
+
+describe('the run list the Analysis pages keep', () => {
+  // Analysis loads the runs once and keeps them for a couple of minutes; the VO2max page reads the races off their types.
+  // The cache is kept for a signed-in account only, so the test is signed in.
+  beforeEach(() => localStorage.setItem('hermes_email', 'runner@example.test'));
+  afterEach(() => localStorage.removeItem('hermes_email'));
+  const analysisReads = () => apiJson.mock.calls.filter(([url]) => url === '/api/activities/analysis');
+  const warm = async () => {
+    await cachedApiJson('/api/activities/analysis');
+    await cachedApiJson('/api/activities/analysis');
+    expect(analysisReads()).toHaveLength(1);              // the second read came from the cache
+  };
+
+  it('is loaded again once a type is saved, so a race is on the VO2max page the moment it is flagged', async () => {
+    await warm();
+    renderCard();
+    await ready();
+
+    await userEvent.click(screen.getByRole('radio', { name: t('run_labels.type_RACE') }));
+    await waitFor(() => expect(patched).toEqual([{ runType: 'RACE' }]));
+    await waitFor(() => expect(screen.getByRole('group', { name: t('run_labels.type_group') })).not.toHaveAttribute('aria-busy'));
+
+    await cachedApiJson('/api/activities/analysis');
+    expect(analysisReads()).toHaveLength(2);
+  });
+
+  it('is loaded again when the type is cleared, so the race goes', async () => {
+    served = labels({ runType: 'RACE' });
+    await warm();
+    renderCard();
+    await ready();
+
+    await userEvent.click(screen.getByRole('radio', { name: t('run_labels.type_none') }));
+    await waitFor(() => expect(patched).toEqual([{ runType: null }]));
+    await waitFor(() => expect(screen.getByRole('group', { name: t('run_labels.type_group') })).not.toHaveAttribute('aria-busy'));
+
+    await cachedApiJson('/api/activities/analysis');
+    expect(analysisReads()).toHaveLength(2);
+  });
+
+  it('is kept when only the tags change, which the lists do not carry', async () => {
+    await warm();
+    renderCard();
+    await ready();
+
+    await userEvent.type(screen.getByRole('textbox', { name: t('run_labels.tag_input') }), 'hills{Enter}');
+    await waitFor(() => expect(patched).toEqual([{ tags: ['hills'] }]));
+    await waitFor(() => expect(screen.getByRole('list', { name: t('run_labels.tags_label') })).toHaveTextContent('hills'));
+
+    await cachedApiJson('/api/activities/analysis');
+    expect(analysisReads()).toHaveLength(1);
+  });
+
+  it('is kept when the save fails, since nothing changed', async () => {
+    patchAnswer = () => new Error('nope');
+    await warm();
+    renderCard();
+    await ready();
+
+    await userEvent.click(screen.getByRole('radio', { name: t('run_labels.type_RACE') }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(t('run_labels.save_failed'));
+
+    await cachedApiJson('/api/activities/analysis');
+    expect(analysisReads()).toHaveLength(1);
+  });
+});
 
 describe('after the run was edited elsewhere', () => {
   it('asks again when told to, and shows what the edit changed', async () => {
@@ -580,7 +664,7 @@ describe('around the card', () => {
   it('links to the training log', async () => {
     renderCard();
     await ready();
-    expect(screen.getByRole('link', { name: t('run_labels.log_link') })).toHaveAttribute('href', '/training-log');
+    expect(screen.getByRole('link', { name: t('run_labels.log_link') })).toHaveAttribute('href', '/runs#training-log');
   });
 
   it('asks for the labels of the run it is given, and of no other', async () => {

@@ -88,7 +88,7 @@ function collectFiles(dir) {
       } else if (
         entry.isFile()
         && ['.jsx', '.js', '.tsx', '.ts'].includes(extname(entry.name))
-        && !/\.(?:smoke\.)?test\.[jt]sx?$/.test(entry.name)
+        && !/\.(?:smoke\.)?(?:test|vitest)\.[jt]sx?$/.test(entry.name)
       ) {
         files.push(full);
       }
@@ -110,6 +110,11 @@ function collectTranslationUsages(content) {
   for (const pattern of TRANSLATION_CALL_PATTERNS) {
     let match;
     while ((match = pattern.exec(content)) !== null) {
+      // Only a complete literal argument can be checked against the catalog.
+      // A prefix such as t('admin.nav_' + tab) is a dynamic key, like a template literal.
+      const afterLiteral = content.slice(pattern.lastIndex)
+        .replace(/^(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\r\n]*)*/, '');
+      if (!/^[,)]/.test(afterLiteral)) continue;
       usages.push({
         key: match[1],
         index: match.index,

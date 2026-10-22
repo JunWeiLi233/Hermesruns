@@ -5,6 +5,9 @@ echo       STARTING HERMES TECH STACK
 echo ==========================================
 
 set "ROOT=%~dp0"
+:: CMD can inherit PowerShell 7 module paths from its parent. Prefer the built-in
+:: Windows modules for the Windows PowerShell processes this launcher uses.
+set "PSModulePath=%SystemRoot%\System32\WindowsPowerShell\v1.0\Modules;%PSModulePath%"
 set "HERMES_BACKEND_LOG=%ROOT%backend_log.txt"
 set "APP_URL=http://localhost:8080"
 set "HEALTH_URL=http://localhost:8080"
@@ -20,7 +23,7 @@ if exist "%LOCAL_ENV_PS1%" (
         "$ErrorActionPreference = 'Stop';" ^
         "$envPath = [IO.Path]::GetFullPath('%LOCAL_ENV_PS1%');" ^
         "$bootPath = [IO.Path]::GetFullPath('%LOCAL_ENV_BOOT%');" ^
-        "$vars = @('APP_DB_URL','APP_DB_DRIVER','APP_DB_USERNAME','APP_DB_PASSWORD','STRAVA_CLIENT_ID','STRAVA_CLIENT_SECRET','STRAVA_REDIRECT_URI','APP_STRAVA_CLIENT_ID','APP_STRAVA_CLIENT_SECRET','APP_STRAVA_REDIRECT_URI','APP_DATA_ENCRYPTION_KEY','APP_GOOGLE_CLIENT_ID','APP_GOOGLE_CLIENT_SECRET','APP_GOOGLE_REDIRECT_URI','GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REDIRECT_URI','APP_BOOTSTRAP_ADMIN_EMAIL','APP_BOOTSTRAP_ADMIN_PASSWORD','APP_LOCAL_SHARED_RUNNER_ENABLED','APP_LOCAL_SHARED_RUNNER_EMAIL','APP_LOCAL_SHARED_RUNNER_PASSWORD','APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME','APP_LOCAL_TERRITORY_RIVAL_ENABLED','APP_LOCAL_TERRITORY_RIVAL_EMAIL','APP_LOCAL_TERRITORY_RIVAL_PASSWORD','APP_LOCAL_TERRITORY_RIVAL_DISPLAY_NAME','APP_LOCAL_TERRITORY_FLUSHING_ENABLED','APP_LOCAL_TERRITORY_FLUSHING_EMAIL','APP_LOCAL_TERRITORY_FLUSHING_PASSWORD','APP_LOCAL_TERRITORY_FLUSHING_DISPLAY_NAME','APP_LOCAL_TERRITORY_FLUSHING_INNER_ENABLED','APP_LOCAL_TERRITORY_FLUSHING_INNER_EMAIL','APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD','APP_LOCAL_TERRITORY_FLUSHING_INNER_DISPLAY_NAME','APP_LOCAL_TERRITORY_BERLIN_ENABLED','APP_LOCAL_TERRITORY_BERLIN_EMAIL','APP_LOCAL_TERRITORY_BERLIN_PASSWORD','APP_LOCAL_TERRITORY_BERLIN_DISPLAY_NAME','APP_JPA_DDL_AUTO','APP_AI_API_KEY','APP_AI_MODEL','APP_AI_PROVIDER','APP_AI_COURSE_MAP_PROVIDER','APP_ROUTE_EXTRACTION_PYTHON_COMMAND','APP_ROUTE_EXTRACTION_QWEN_MODEL_ID','APP_ROUTE_EXTRACTION_QWEN_DEVICE_MAP','APP_ROUTE_EXTRACTION_QWEN_CACHE_DIR','APP_ROUTE_EXTRACTION_QWEN_ALIGNMENT_SCRIPT','APP_ROUTE_EXTRACTION_QWEN_PARAMETERS_SCRIPT','APP_ROUTE_EXTRACTION_QWEN_ANCHOR_SCRIPT','APP_CARTO_BASEMAPS_API_KEY','SPRING_MAIL_HOST','SPRING_MAIL_PORT','SPRING_MAIL_USERNAME','SPRING_MAIL_PASSWORD','APP_MAIL_FROM','APP_PUBLIC_BASE_URL','HERMES_ADMIN_MFA_ENABLED','HERMES_WEBAUTHN_RP_ID','HERMES_WEBAUTHN_RP_NAME','HERMES_WEBAUTHN_ALLOWED_ORIGINS','HERMES_ADMIN_MFA_BOOTSTRAP_TOKEN','HERMES_ADMIN_ACCESS_ENABLED','HERMES_ADMIN_ACCESS_TEAM_DOMAIN','HERMES_ADMIN_ACCESS_AUDIENCE','HERMES_ADMIN_ACCESS_ALLOWED_EMAILS','HERMES_ENV','SPRING_PROFILES_ACTIVE','APP_ENABLE_HSTS','APP_CORS_ALLOWED_ORIGINS','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_PRO_MONTHLY');" ^
+        "$vars = @('APP_DB_URL','APP_DB_DRIVER','APP_DB_USERNAME','APP_DB_PASSWORD','STRAVA_CLIENT_ID','STRAVA_CLIENT_SECRET','STRAVA_REDIRECT_URI','APP_STRAVA_CLIENT_ID','APP_STRAVA_CLIENT_SECRET','APP_STRAVA_REDIRECT_URI','APP_DATA_ENCRYPTION_KEY','APP_GOOGLE_CLIENT_ID','APP_GOOGLE_CLIENT_SECRET','APP_GOOGLE_REDIRECT_URI','GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET','GOOGLE_REDIRECT_URI','APP_BOOTSTRAP_ADMIN_EMAIL','APP_BOOTSTRAP_ADMIN_PASSWORD','APP_LOCAL_SHARED_RUNNER_ENABLED','APP_LOCAL_SHARED_RUNNER_EMAIL','APP_LOCAL_SHARED_RUNNER_PASSWORD','APP_LOCAL_SHARED_RUNNER_DISPLAY_NAME','APP_LOCAL_TERRITORY_RIVAL_ENABLED','APP_LOCAL_TERRITORY_RIVAL_EMAIL','APP_LOCAL_TERRITORY_RIVAL_PASSWORD','APP_LOCAL_TERRITORY_RIVAL_DISPLAY_NAME','APP_LOCAL_TERRITORY_FLUSHING_ENABLED','APP_LOCAL_TERRITORY_FLUSHING_EMAIL','APP_LOCAL_TERRITORY_FLUSHING_PASSWORD','APP_LOCAL_TERRITORY_FLUSHING_DISPLAY_NAME','APP_LOCAL_TERRITORY_FLUSHING_INNER_ENABLED','APP_LOCAL_TERRITORY_FLUSHING_INNER_EMAIL','APP_LOCAL_TERRITORY_FLUSHING_INNER_PASSWORD','APP_LOCAL_TERRITORY_FLUSHING_INNER_DISPLAY_NAME','APP_LOCAL_TERRITORY_BERLIN_ENABLED','APP_LOCAL_TERRITORY_BERLIN_EMAIL','APP_LOCAL_TERRITORY_BERLIN_PASSWORD','APP_LOCAL_TERRITORY_BERLIN_DISPLAY_NAME','APP_JPA_DDL_AUTO','APP_TRAININGWORKSPACE_MIGRATE','APP_RUN_PLANS_EXPERIMENTAL_RULESET','APP_RUN_PLANS_APPROVED_RULESET','APP_AI_API_KEY','APP_AI_MODEL','APP_AI_PROVIDER','APP_AI_COURSE_MAP_PROVIDER','APP_ROUTE_EXTRACTION_PYTHON_COMMAND','APP_ROUTE_EXTRACTION_QWEN_MODEL_ID','APP_ROUTE_EXTRACTION_QWEN_DEVICE_MAP','APP_ROUTE_EXTRACTION_QWEN_CACHE_DIR','APP_ROUTE_EXTRACTION_QWEN_ALIGNMENT_SCRIPT','APP_ROUTE_EXTRACTION_QWEN_PARAMETERS_SCRIPT','APP_ROUTE_EXTRACTION_QWEN_ANCHOR_SCRIPT','APP_CARTO_BASEMAPS_API_KEY','SPRING_MAIL_HOST','SPRING_MAIL_PORT','SPRING_MAIL_USERNAME','SPRING_MAIL_PASSWORD','APP_MAIL_FROM','APP_PUBLIC_BASE_URL','HERMES_ADMIN_MFA_ENABLED','HERMES_WEBAUTHN_RP_ID','HERMES_WEBAUTHN_RP_NAME','HERMES_WEBAUTHN_ALLOWED_ORIGINS','HERMES_ADMIN_MFA_BOOTSTRAP_TOKEN','HERMES_ADMIN_ACCESS_ENABLED','HERMES_ADMIN_ACCESS_TEAM_DOMAIN','HERMES_ADMIN_ACCESS_AUDIENCE','HERMES_ADMIN_ACCESS_ALLOWED_EMAILS','HERMES_ENV','SPRING_PROFILES_ACTIVE','APP_ENABLE_HSTS','APP_CORS_ALLOWED_ORIGINS','STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_PRO_MONTHLY');" ^
         ". $envPath;" ^
         "$lines = @(foreach ($name in $vars) { $value = [Environment]::GetEnvironmentVariable($name, 'Process'); if (-not [string]::IsNullOrWhiteSpace($value)) { 'set ""' + $name + '=' + ($value -replace '%%', '%%%%') + '""' } });" ^
         "[IO.File]::WriteAllLines($bootPath, $lines, [Text.Encoding]::ASCII)"
@@ -48,58 +51,22 @@ if exist "%ROOT%.venv\Scripts\python.exe" (
 :: argfile of the listening java process) and abort unless it is THIS tree.
 :: Resolver exit codes: 0 = same tree, or no listener after stale-marker cleanup,
 ::                      2 = :8080 is owned by another tree,
-::                      4 = owner unidentifiable;
-::                      any other nonzero errorlevel (unexpected powershell
-::                      failure) is also routed to the unknown path below.
+::                      4 = listener owner unidentifiable,
+::                      5 or another unexpected code = the check itself failed.
 set "GUARD_FILE=%TEMP%\hermes_guard_%RANDOM%.txt"
-powershell -NoProfile -Command ^
-    "$ErrorActionPreference = 'SilentlyContinue';" ^
-    "$thisRoot = '%ROOT%'.TrimEnd('\');" ^
-    "$marker = Join-Path $env:USERPROFILE '.hermes\runtime.json';" ^
-    "$listenerPids = @(netstat -ano | Select-String ':8080\s+.*LISTENING' | ForEach-Object { ($_ -replace '.*\s', '').Trim() } | Where-Object { $_ -match '^\d+$' -and $_ -ne '0' } | Sort-Object -Unique);" ^
-    "if ($listenerPids.Count -eq 0) {" ^
-    "  if (Test-Path $marker) {" ^
-    "    $markerRoot = $null;" ^
-    "    try {" ^
-    "      $m = Get-Content $marker -Raw | ConvertFrom-Json;" ^
-    "      $markerRoot = ([string]$m.projectRoot).TrimEnd('\')" ^
-    "    } catch { }" ^
-    "    Remove-Item $marker -Force -ErrorAction SilentlyContinue;" ^
-    "    if (Test-Path $marker) { Remove-Item '%GUARD_FILE%' -ErrorAction SilentlyContinue; exit 4 };" ^
-    "    if ($markerRoot -and $markerRoot -ne $thisRoot) { Write-Host ('[Hermes] Cleared stale runtime marker from inactive tree: ' + $markerRoot) } else { Write-Host '[Hermes] Cleared stale runtime marker; port 8080 is free.' }" ^
-    "  };" ^
-    "  Remove-Item '%GUARD_FILE%' -ErrorAction SilentlyContinue; exit 0" ^
-    "};" ^
-    "$owner = $null;" ^
-    "foreach ($procId in $listenerPids) {" ^
-    "  $tree = $null;" ^
-    "  $proc = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $procId);" ^
-    "  if (Test-Path $marker) {" ^
-    "    try {" ^
-    "      $m = Get-Content $marker -Raw | ConvertFrom-Json;" ^
-    "      if ($m.projectRoot -and ([string]$m.pid) -eq ([string]$procId) -and $proc -and $proc.Name -eq 'java.exe' -and $proc.CommandLine -match 'BackendApplication') { $tree = ([string]$m.projectRoot).TrimEnd('\') }" ^
-    "    } catch { }" ^
-    "  };" ^
-    "  if (-not $tree -and $proc -and $proc.CommandLine -match 'BackendApplication') {" ^
-    "    if ($proc.CommandLine -match '@(\S+\.argfile)') {" ^
-    "      $argfile = $Matches[1];" ^
-    "      if (Test-Path $argfile) {" ^
-    "        $cp = (Get-Content $argfile -TotalCount 1).Trim().Trim([char]34).Replace('\\', '\');" ^
-    "        $entry = $cp.Split(';')[0];" ^
-    "        if ($entry -match '^(.+?)\\backend\\target\\classes$') { $tree = $Matches[1] }" ^
-    "      }" ^
-    "    };" ^
-    "    if (-not $tree) { foreach ($piece in ($proc.CommandLine -split '[ ;]')) { $t = $piece.Trim().Trim([char]34); if ($t -match '^([A-Za-z]:\\.*?)\\backend\\target\\classes') { $tree = $Matches[1]; break } } }" ^
-    "  };" ^
-    "  if (-not $tree) { Remove-Item '%GUARD_FILE%' -ErrorAction SilentlyContinue; exit 4 };" ^
-    "  if ($tree -ne $thisRoot) { $owner = $tree; break }" ^
-    "};" ^
-    "if ($owner) { [IO.File]::WriteAllText('%GUARD_FILE%', $owner, [Text.Encoding]::ASCII); exit 2 };" ^
-    "exit 0"
-if errorlevel 4 goto :guard_unknown
-if errorlevel 2 goto :guard_cross_tree
-if errorlevel 1 goto :guard_unknown
-goto :takeover
+"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%ROOT%tools\assert-runtime-owner.ps1" -ProjectRoot "%ROOT%." -GuardFile "%GUARD_FILE%"
+set "GUARD_EXIT=%ERRORLEVEL%"
+if "%GUARD_EXIT%"=="0" goto :takeover
+if "%GUARD_EXIT%"=="2" goto :guard_cross_tree
+if "%GUARD_EXIT%"=="4" goto :guard_unknown
+goto :guard_failed
+
+:guard_failed
+if exist "%GUARD_FILE%" del "%GUARD_FILE%" >nul 2>nul
+echo [Hermes] Could not run the port ownership check ^(exit %GUARD_EXIT%^).
+echo [Hermes] Check Windows PowerShell and access to the Windows networking and process commands, then retry.
+if not defined HERMES_NO_PAUSE pause
+exit /b 1
 
 :guard_cross_tree
 for /f "usebackq delims=" %%T in ("%GUARD_FILE%") do set "FOUND_ROOT=%%T"
@@ -172,6 +139,10 @@ if not defined HERMES_NO_PAUSE pause
 exit /b 1
 
 :takeover
+if exist "%ROOT%backend\reviewed-release.json" (
+    call "%ROOT%tools\run-backend.cmd" --check-only
+    if errorlevel 1 goto :startup_failed
+)
 :: Takeover was allowed by the guard (same tree, no listener, no stale foreign
 :: marker, or forced).
 powershell -NoProfile -Command ^
@@ -191,8 +162,13 @@ if not errorlevel 1 (
 )
 
 :: 1. Build frontend static assets before any backend window can serve an old app shell.
+if exist "%ROOT%backend\reviewed-release.json" goto :frontend_ready
 echo [1/5] Building frontend static assets...
 pushd "%ROOT%frontend"
+if errorlevel 1 (
+    echo [Hermes] Cannot enter the frontend directory. Check the Hermes installation path.
+    goto :startup_failed
+)
 node scripts\run-vite-build.mjs
 if errorlevel 1 (
     echo [Hermes] Frontend build failed. Fix Vite/build errors before starting Hermes.
@@ -201,13 +177,16 @@ if errorlevel 1 (
 )
 popd
 
+:frontend_ready
 :: 2. Check backend requirements before opening any windows
 echo [2/5] Checking Spring Boot requirements...
-call tools\run-backend.cmd --check-only
+call "%ROOT%tools\run-backend.cmd" --check-only
 if errorlevel 1 goto :startup_failed
 
 :: 3. Build a temp boot script that carries all env vars into the new window
 echo @echo off > "%BOOT_SCRIPT%"
+if defined APP_RUN_PLANS_EXPERIMENTAL_RULESET echo set "APP_RUN_PLANS_EXPERIMENTAL_RULESET=%APP_RUN_PLANS_EXPERIMENTAL_RULESET%">> "%BOOT_SCRIPT%"
+if defined APP_RUN_PLANS_APPROVED_RULESET echo set "APP_RUN_PLANS_APPROVED_RULESET=%APP_RUN_PLANS_APPROVED_RULESET%">> "%BOOT_SCRIPT%"
 if defined APP_DB_URL               echo set "APP_DB_URL=%APP_DB_URL%">> "%BOOT_SCRIPT%"
 if defined APP_DB_DRIVER            echo set "APP_DB_DRIVER=%APP_DB_DRIVER%">> "%BOOT_SCRIPT%"
 if defined APP_DB_USERNAME          echo set "APP_DB_USERNAME=%APP_DB_USERNAME%">> "%BOOT_SCRIPT%"
@@ -286,10 +265,17 @@ echo cd /d "%ROOT%">> "%BOOT_SCRIPT%"
 echo call tools\run-backend.cmd>> "%BOOT_SCRIPT%"
 
 echo [2/4] Waking up Spring Boot (Java)...
+if exist "%ROOT%backend\reviewed-release.json" (
+    call "%ROOT%tools\run-backend.cmd"
+    if errorlevel 1 goto :startup_failed
+    goto :backend_launch_complete
+)
 if exist "%HERMES_BACKEND_LOG%" del "%HERMES_BACKEND_LOG%" >nul 2>nul
 start "Hermes - Spring Boot Server" cmd /c call "%BOOT_SCRIPT%" ^> "%HERMES_BACKEND_LOG%" 2^>^&1
 
+:backend_launch_complete
 :: 3. Start the Python auto-import watcher when a local virtualenv is available
+if defined HERMES_SKIP_SYNC_WATCHER goto :watcher_ready
 if defined PYTHON_EXE (
     if exist "%SYNC_CONFIG%" (
         echo [3/4] Waking up Hermes auto-import watcher...
@@ -305,6 +291,7 @@ if defined PYTHON_EXE (
 )
 
 :: 4. Wait until Spring Boot serves the site before opening the browser
+:watcher_ready
 goto :wait_for_backend
 
 :retry_backend
@@ -365,6 +352,7 @@ goto :startup_failed
 
 :open_app
 :: ---- Runtime origin marker ----------------------------------------------------
+if exist "%ROOT%backend\reviewed-release.json" goto :runtime_marker_ready
 :: Record which tree + PID is actually serving :8080 right now, so stop_hermes
 :: and the other tree's start guard always know the serving origin. The listener
 :: is re-verified to originate from THIS tree before writing, so a lost start
@@ -380,26 +368,27 @@ powershell -NoProfile -Command ^
     "if ($procId -notmatch '^\d+$') { Write-Host '[Hermes] WARN: nothing is LISTENING on :8080; runtime marker not written.' } else {" ^
     "  $origin = $null;" ^
     "  $proc = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $procId);" ^
-    "  if (Test-Path $markerPath) { try { $m = Get-Content $markerPath -Raw | ConvertFrom-Json; if ($m.projectRoot -and ([string]$m.pid) -eq ([string]$procId) -and $proc -and $proc.Name -eq 'java.exe' -and $proc.CommandLine -match 'BackendApplication') { $origin = ([string]$m.projectRoot).TrimEnd('\') } } catch { } };" ^
-    "  if (-not $origin -and $proc -and $proc.Name -eq 'java.exe' -and $proc.CommandLine -match 'BackendApplication') {" ^
+    "  if (Test-Path $markerPath) { try { $m = Get-Content $markerPath -Raw | ConvertFrom-Json; if ($m.projectRoot -and ([string]$m.pid) -eq ([string]$procId) -and $proc -and $proc.Name -eq 'java.exe' -and ($proc.CommandLine -match 'BackendApplication' -or ($m.jarPath -and $m.jarSha256 -and $proc.CommandLine.Contains([string]$m.jarPath) -and (Get-FileHash -LiteralPath $m.jarPath).Hash -eq $m.jarSha256))) { $origin = ([string]$m.projectRoot).TrimEnd('\') } } catch { } };" ^
+    "  if (-not $origin -and $proc -and $proc.Name -eq 'java.exe' -and ($proc.CommandLine -match 'BackendApplication' -or ($m.jarPath -and $m.jarSha256 -and $proc.CommandLine.Contains([string]$m.jarPath) -and (Get-FileHash -LiteralPath $m.jarPath).Hash -eq $m.jarSha256))) {" ^
     "    if ($proc.CommandLine -match '@(\S+\.argfile)') {" ^
     "      $argfile = $Matches[1];" ^
     "      if (Test-Path $argfile) {" ^
     "        $cp = (Get-Content $argfile -TotalCount 1).Trim().Trim([char]34).Replace('\\', '\');" ^
     "        $entry = $cp.Split(';')[0];" ^
-    "        if ($entry -match '^(.+?)\\backend\\target\\classes$') { $origin = $Matches[1] }" ^
+    "        if ($entry -match '^(.+?)\\backend\\(?:target|build\\local-runtime)\\classes$') { $origin = $Matches[1] }" ^
     "      }" ^
     "    };" ^
-    "    if (-not $origin) { foreach ($piece in ($proc.CommandLine -split '[ ;]')) { $t = $piece.Trim().Trim([char]34); if ($t -match '^([A-Za-z]:\\.*?)\\backend\\target\\classes') { $origin = $Matches[1]; break } } }" ^
+    "    if (-not $origin) { foreach ($piece in ($proc.CommandLine -split '[ ;]')) { $t = $piece.Trim().Trim([char]34); if ($t -match '^([A-Za-z]:\\.*?)\\backend\\(?:target|build\\local-runtime)\\classes') { $origin = $Matches[1]; break } } }" ^
     "  };" ^
     "  if ($origin -and $origin -eq $thisRoot) {" ^
-    "    $payload = @{ projectRoot = $thisRoot; pid = [int]$procId; port = 8080; startedAt = (Get-Date).ToString('o') };" ^
+    "    $payload = if ($m -and $m.jarPath -and ([string]$m.pid) -eq ([string]$procId)) { $m } else { @{ projectRoot = $thisRoot; pid = [int]$procId; port = 8080; startedAt = (Get-Date).ToString('o') } };" ^
     "    [IO.File]::WriteAllText($markerPath, (ConvertTo-Json $payload -Compress), (New-Object Text.UTF8Encoding $false));" ^
     "    Write-Host ('[Hermes] Runtime origin marker written: ' + $markerPath + ' (pid ' + $procId + ')')" ^
     "  } else { Write-Host '[Hermes] WARN: backend on :8080 did not originate from this tree - marker not written.' }" ^
     "}"
+:runtime_marker_ready
 echo Launching Hermes...
-start "" "%APP_URL%"
+if not defined HERMES_NO_BROWSER start "" "%APP_URL%"
 echo ==========================================
 echo Hermes is online!
 echo To stop everything ^(backend, auto-import watcher, leftover background processes^), run stop_hermes.cmd
@@ -412,3 +401,4 @@ echo ==========================================
 echo Hermes did not finish starting.
 echo ==========================================
 if not defined HERMES_NO_PAUSE pause
+exit /b 1

@@ -80,6 +80,29 @@ class SpaForwardingControllerTests {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"/", "/terms", "/privacy"})
+    void publicRoutesServeTheirOwnCanonicalDocuments(String route) throws Exception {
+        mockMvc.perform(get(route))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("X-Robots-Tag"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "rel=\"canonical\" href=\"https://hermesruns.com" + route + "\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("<div id=\"root\"></div>"))));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/profile/team", "/profile/team?view=messages&conversation=thread"})
+    void teamSubpageDeepLinksServeSpaShell(String path) throws Exception {
+        mockMvc.perform(get(path))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("<!DOCTYPE html>")))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow, noarchive"))
+                .andExpect(header().doesNotExist("Link"));
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"/admin", "/admin/"})
     void adminLoginRoutesAreConcealedWithoutAdminSession(String path) throws Exception {
         mockMvc.perform(get(path))

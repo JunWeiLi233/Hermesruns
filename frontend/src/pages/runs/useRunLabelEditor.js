@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '../../api';
+import { invalidateResourceCache } from '../../api/resourceCache';
 import { tagKey, withoutTag } from '../../utils/runLabels';
 
 /**
@@ -61,6 +62,8 @@ export default function useRunLabelEditor(runId, data) {
             }
             return;
           }
+          // The run lists the Analysis pages load carry a run's type (the races are read off it), so they are loaded again.
+          if ('runType' in body) invalidateResourceCache('/api/activities');
           if (generation.current !== mine) return;
           confirmed.current = {
             runType: 'runType' in body ? (answer?.runType ?? null) : before.runType,

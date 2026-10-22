@@ -58,6 +58,15 @@ class SecureByDefaultRouteSecurityTests {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"/training-log", "/analysis/trends", "/analysis/pace-curve", "/analysis/vo2max-estimates", "/analysis/quality-sessions"})
+    void legacyAnalysisAddressesLoadTheShellForTheirClientRedirect(String path) throws Exception {
+        mockMvc.perform(get(path).queryParam("metric", "distance"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+                .andExpect(header().string("X-Robots-Tag", "noindex, nofollow, noarchive"));
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"/support", "/nonsense", "/pricing/yearly", "/an/old/bookmark"})
     void anAddressTheAppDoesNotKnowGivesABrowserTheAppWithANotFoundStatus(String path) throws Exception {
         mockMvc.perform(get(path).accept(MediaType.TEXT_HTML))
@@ -122,6 +131,9 @@ class SecureByDefaultRouteSecurityTests {
                 .replace("{id}", "123")
                 .replace("{insightKey}", "cadence")
                 .replace("{distKey}", "10k")
+                .replace("{planId}", "sample-plan")
+                .replace("{versionId}", "sample-version")
+                .replace("{workoutId}", "sample-workout")
                 .replace("{raceId}", "42");
 
         mockMvc.perform(get(path))

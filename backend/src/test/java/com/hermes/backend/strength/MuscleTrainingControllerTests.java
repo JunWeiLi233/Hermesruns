@@ -597,6 +597,8 @@ class MuscleTrainingControllerTests {
         runner.setStatus("ACTIVE");
         runner.setRole("USER");
         runner.setEmailVerified(true);
+        // The fixtures below describe this account's calendar with LocalDate.now().
+        runner.setTimeZone(java.time.ZoneId.systemDefault().getId());
         runner.setCreatedAt(LocalDateTime.now());
         authService.storePassword(runner, "Password1!");
         return runnerRepository.save(runner);
@@ -618,7 +620,8 @@ class MuscleTrainingControllerTests {
             activity.setActivityType(ActivityType.RUN);
             activity.setDistanceKm(distanceKm);
             activity.setMovingTimeSeconds(minutes * 60);
-            activity.setStartTime(LocalDateTime.now().minusDays(i * 3L + 1L));
+            activity.setStartTime(LocalDateTime.now().minusDays(i * 3L + 1L)
+                    .atZone(java.time.ZoneId.systemDefault()).withZoneSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime());
             activity.setAverageHeartRate(148.0);
             activityRepository.save(activity);
         }
@@ -632,7 +635,8 @@ class MuscleTrainingControllerTests {
             activity.setActivityType(ActivityType.RUN);
             activity.setDistanceKm(distanceKm);
             activity.setMovingTimeSeconds(minutes * 60);
-            activity.setStartTime(firstMatchingDate.minusWeeks(i).atTime(7, 0));
+            activity.setStartTime(firstMatchingDate.minusWeeks(i).atTime(7, 0)
+                    .atZone(java.time.ZoneId.systemDefault()).withZoneSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime());
             activity.setAverageHeartRate(148.0);
             activityRepository.save(activity);
         }

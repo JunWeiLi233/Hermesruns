@@ -17,58 +17,54 @@ import { cachedApiJson } from '../../api/resourceCache';
 import { resolveAssignedCoach } from '../../utils/coachIdentity';
 import { getTodayRunRecommendation } from '../../utils/todayRun';
 import { normalizeCoachEvidence } from '../../utils/personalizedCoachPlan';
+import { activitySortTime, calendarDate, getAccountDate, getActivityDateKey } from '../../utils/timeZone';
+import { useAccountDate } from '../../hooks/useAccountDate';
+import useRecommendationRevision from '../../hooks/useRecommendationRevision';
 import { prettifyWorkoutType } from '../../utils/coach/presentation.js';
 import { getTodayRunAcwrInsight } from '../../utils/todayRunAcwrInsight';
 import { generateMorningBriefing } from '../../utils/coachVoice';
 import { formatDistance } from '../../utils/format';
 import { computeVdotTrend } from '../../utils/vdot';
 import { formatShoeDisplayName } from '../../utils/shoeNames';
-import { buildRecentShoeSignal, predictRetirement } from '../../utils/shoeRotation';
+import { buildRecentShoeSignal } from '../../utils/shoeRotation';
 import { resolveRunnerPersona } from '../../utils/resolveRunnerPersona';
+import VersionedPlanRoute, { useVersionedPlan } from '../training-plan/VersionedPlanRoute';
+import {useAuthoredCalendar,AuthoredWeekProvider,AuthoredDayEntries} from '../../features/training/integrated/PageTools';
+import { authoredOn, asAuthoredWorkout } from '../training-plan/authoredWorkout';
+import { TodayPlanDetails } from '../training-plan/TrainingPlan';
+import { asCoachWorkout } from '../training-plan/publishedWorkout';
 import { interpretWellness } from '../../utils/wellnessInterpretation';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 
 const MARATHON_BLOCK_WEEKS = 16;
 
 function getRaceDate(eventDate) {
-  return new Date(typeof eventDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(eventDate)
-    ? `${eventDate}T00:00:00`
-    : eventDate);
+  return calendarDate(typeof eventDate === 'string' ? eventDate.slice(0, 10) : '');
 }
 
-function formatRaceCountdown(eventDate, t) {
+function formatRaceCountdown(eventDate, t, todayKey) {
   if (!eventDate) return '--';
   const raceDate = getRaceDate(eventDate);
   if (Number.isNaN(raceDate.getTime())) return '--';
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  raceDate.setHours(0, 0, 0, 0);
+  const today = calendarDate(todayKey);
   const diffDays = Math.round((raceDate.getTime() - today.getTime()) / 86400000);
   if (diffDays >= 0) return t('today_run.marathon_countdown_days', { days: diffDays });
   return t('today_run.marathon_countdown_past', { days: Math.abs(diffDays) });
 }
 
 function getRunTimestamp(run) {
-  const candidates = [
-    run?.startDateLocal,
-    run?.startDate,
-    run?.activityDate,
-    run?.date,
-    run?.createdAt,
-  ];
-
-  for (const value of candidates) {
-    if (!value) continue;
-    const timestamp = Date.parse(value);
-    if (!Number.isNaN(timestamp)) return timestamp;
-  }
-
-  return 0;
+  // File imports have a real instant. Legacy Strava wall clocks can only be ordered
+  // as wall-clock coordinates; never manufacture an elapsed-time instant for them.
+  const timestamp = activitySortTime({ ...run, startTime: getRunStartTime(run) });
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function resolveMarathonBlockStart(upcomingMarathon) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function getRunStartTime(run) {
+  return run?.startTime || run?.startDateLocal || run?.startDate || run?.activityDate || run?.date || run?.createdAt;
+}
+
+function resolveMarathonBlockStart(upcomingMarathon, todayKey) {
+  const today = calendarDate(todayKey);
   const recentWindowStart = today.getTime() - (MARATHON_BLOCK_WEEKS * 7 * 24 * 60 * 60 * 1000);
 
   if (!upcomingMarathon?.eventDate) return recentWindowStart;
@@ -76,68 +72,39 @@ function resolveMarathonBlockStart(upcomingMarathon) {
   const raceDate = getRaceDate(upcomingMarathon.eventDate);
   if (Number.isNaN(raceDate.getTime())) return recentWindowStart;
 
-  raceDate.setHours(0, 0, 0, 0);
   const raceBlockStart = raceDate.getTime() - (MARATHON_BLOCK_WEEKS * 7 * 24 * 60 * 60 * 1000);
 
   if (raceBlockStart > today.getTime()) return recentWindowStart;
   return Math.max(recentWindowStart, raceBlockStart);
 }
 
-function buildMarathonPlan(runs, races, recommendation, coachPayload, t, lang, unit) {
+export function buildMarathonPlan(runs, races, recommendation, coachPayload, t, lang, unit, timeZone, todayKey = getAccountDate(timeZone)) {
   const upcomingMarathon = (Array.isArray(races) ? races : [])
     .filter((race) => Number(race?.distanceKm) >= 41.5 && race?.registrationStatus !== 'CANCELED')
-    .sort((a, b) => new Date(a?.eventDate || 0) - new Date(b?.eventDate || 0))
-    .find((race) => getRaceDate(race?.eventDate || 0).getTime() >= new Date().setHours(0, 0, 0, 0)) || null;
+    .sort((a, b) => getRaceDate(a?.eventDate) - getRaceDate(b?.eventDate))
+    .find((race) => getRaceDate(race?.eventDate).getTime() >= calendarDate(todayKey).getTime()) || null;
 
-  const marathonBlockStart = resolveMarathonBlockStart(upcomingMarathon);
+  const marathonBlockStart = resolveMarathonBlockStart(upcomingMarathon, todayKey);
   const completedRuns = (Array.isArray(runs) ? runs : []).filter((run) => {
     if (Number(run?.distanceKm || 0) <= 0) return false;
-    return getRunTimestamp(run) >= marathonBlockStart;
+    const key = getActivityDateKey({ ...run, startTime: getRunStartTime(run) }, timeZone);
+    return calendarDate(key).getTime() >= marathonBlockStart;
   });
   const longestRunKm = completedRuns.reduce((max, run) => Math.max(max, Number(run.distanceKm || 0)), 0);
-  const targetDistanceKm = upcomingMarathon ? Number(upcomingMarathon.distanceKm || 42.195) : 42.195;
-  const longRunTargetKm = upcomingMarathon
-    ? Math.max(18, Math.min(34, Math.round(targetDistanceKm * 0.72)))
-    : 28;
+  const longRun = (Array.isArray(coachPayload?.schedule) ? coachPayload.schedule : [])
+    .find(session => session.workoutType === 'LONG_RUN' && session.scheduledDate >= todayKey && Number.isFinite(session.plannedDistanceKm) && session.plannedDistanceKm > 0);
+  const longRunTargetKm = longRun?.plannedDistanceKm ?? null;
   const longRunProgress = longRunTargetKm > 0
-    ? Math.max(0, Math.min(100, Math.round((longestRunKm / longRunTargetKm) * 100)))
-    : 0;
-
-  let phaseWeek = null;
-  let phaseLabel = t('today_run.marathon_phase_default');
-  let focusTitle = t('today_run.marathon_focus_default_title');
-  let focusCopy = t('today_run.marathon_focus_default_copy', { workout: recommendation.type });
-
-  if (upcomingMarathon?.eventDate) {
-    const raceDate = getRaceDate(upcomingMarathon.eventDate);
-    const today = new Date();
-    raceDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    const daysToRace = Math.max(0, Math.round((raceDate.getTime() - today.getTime()) / 86400000));
-    const weeksToRace = Math.max(1, Math.ceil(daysToRace / 7));
-    phaseWeek = Math.max(1, 16 - weeksToRace);
-    phaseLabel = t('today_run.marathon_phase_label', { week: phaseWeek });
-
-    if (daysToRace <= 21) {
-      focusTitle = t('today_run.marathon_focus_taper_title');
-      focusCopy = t('today_run.marathon_focus_taper_copy', { race: upcomingMarathon.name });
-    } else if (daysToRace <= 56) {
-      focusTitle = t('today_run.marathon_focus_specific_title');
-      focusCopy = t('today_run.marathon_focus_specific_copy', { longRun: formatDistance(longRunTargetKm, 0, lang, unit) });
-    } else {
-      focusTitle = t('today_run.marathon_focus_build_title');
-      focusCopy = t('today_run.marathon_focus_build_copy', { longRun: formatDistance(longRunTargetKm, 0, lang, unit) });
-    }
-  }
-
-  const coachNote = coachPayload?.today?.notes
-    || (phaseWeek
-      ? t('today_run.marathon_coach_body_block', { week: phaseWeek, longRun: formatDistance(longRunTargetKm, 0, lang, unit) })
-      : t('today_run.marathon_coach_body_default'));
+    ? Math.max(0, Math.min(100, Math.round((longestRunKm / longRunTargetKm) * 100))) : 0;
+  const phaseWeek = coachPayload?.state?.activeBlock?.weekIndex ?? null;
+  const phaseLabel = phaseWeek ? t('today_run.marathon_phase_label', { week: phaseWeek }) : t('today_run.marathon_phase_default');
+  const focusTitle = recommendation.title;
+  const focusCopy = recommendation.purpose;
+  const coachNote = coachPayload?.today?.notes || recommendation.purpose;
 
   return {
     race: upcomingMarathon,
-    countdown: upcomingMarathon ? formatRaceCountdown(upcomingMarathon.eventDate, t) : t('today_run.marathon_no_race'),
+    countdown: upcomingMarathon ? formatRaceCountdown(upcomingMarathon.eventDate, t, todayKey) : t('today_run.marathon_no_race'),
     phaseLabel,
     longestRunKm,
     longRunTargetKm,
@@ -176,14 +143,14 @@ function buildWorkoutBlueprint(plan, plannedDurationMinutes, t) {
 
   const totalMinutes = Number.isFinite(plannedDurationMinutes) && plannedDurationMinutes > 0
     ? plannedDurationMinutes
-    : plan.length === 4 ? 40 : 32;
+    : null;
   const ratios = ratiosByLength[plan.length] || Array.from({ length: plan.length }, () => 1 / plan.length);
   const labels = labelsByLength[plan.length] || plan.map((_, index) => t('today_run.plan_step_generic', { index: index + 1 }));
 
   return plan.map((step, index) => ({
     ...step,
     phase: labels[index] || t('today_run.plan_step_generic', { index: index + 1 }),
-    durationMinutes: step.isRest ? 0 : totalMinutes * (ratios[index] || 1 / plan.length),
+    durationMinutes: step.isRest ? 0 : 1,
     duration: step.isRest ? t('today_run.stitch_duration_unknown')
       : formatSegmentDuration(totalMinutes * (ratios[index] || 1 / plan.length), t),
     isAccent: index === 1 || (plan.length === 4 && index === 2),
@@ -202,9 +169,9 @@ function isRecord(value) {
   return value && typeof value === 'object' && !Array.isArray(value);
 }
 
-function sortRunsByMostRecent(runs) {
+export function sortRunsByMostRecent(runs) {
   const list = Array.isArray(runs) ? [...runs] : [];
-  list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
+  list.sort((a, b) => getRunTimestamp(b) - getRunTimestamp(a));
   return list;
 }
 
@@ -223,11 +190,11 @@ function normalizeTodayDashboardPayload(payload) {
   };
 }
 
-async function loadTodayRunFallbackData() {
+async function loadTodayRunFallbackData(includePrescription = true) {
   const [profileData, activitiesData, coachData, weatherData, raceData, shoeData] = await Promise.all([
     cachedApiJson('/api/profile/me').catch(() => null),
-    cachedApiJson('/api/activities'),
-    apiJson('/api/coach/today').catch(() => null),
+    cachedApiJson('/api/activities').catch(error=>{if(!includePrescription)return [];throw error;}),
+    includePrescription?apiJson('/api/coach/today').catch(() => null):apiJson('/api/coach/state').then(state=>({state})).catch(()=>null),
     apiJson('/api/v1/weather/context').catch(() => null),
     apiJson('/api/races').catch(() => []),
     apiJson('/api/shoes').catch(() => []),
@@ -243,7 +210,8 @@ async function loadTodayRunFallbackData() {
   };
 }
 
-async function loadTodayRunData() {
+async function loadTodayRunData(includePrescription = true) {
+  if(!includePrescription)return loadTodayRunFallbackData(false);
   try {
     const batchPayload = await apiJson('/api/today/dashboard');
     const normalized = normalizeTodayDashboardPayload(batchPayload);
@@ -255,20 +223,38 @@ async function loadTodayRunData() {
   return loadTodayRunFallbackData();
 }
 
-export default function TodayRun() {
+export default function TodayRunRoute() {
+  return <VersionedPlanRoute variant="today-run"><TodayRun /></VersionedPlanRoute>;
+}
+
+function TodayRun() {
+  const recommendationRevision = useRecommendationRevision();
+  const selection=useVersionedPlan();
+  const activePlan=selection.data?.plan;
+  const publishedWorkout=selection.data?.workout;
+  const prescriptionUnavailable=Boolean(selection.error);
   const { isAuthenticated, email } = useAuth();
   const { t, lang } = useI18n();
   const { unit } = useUnit();
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState(null);
+  const todayKey = useAccountDate(activePlan?.inputs.timeZone||profile?.timeZone);
+  const authored=useAuthoredCalendar(todayKey);
+  const todayEvents=useMemo(()=>authoredOn(authored.events,todayKey),[authored.events,todayKey]);
+  const authoredWorkout=useMemo(()=>activePlan?null:asAuthoredWorkout(todayEvents),[activePlan,todayEvents]);
+  const hasAuthoredWorkout=Boolean(authoredWorkout);
   const [runs, setRuns] = useState([]);
   const [races, setRaces] = useState([]);
   const [shoes, setShoes] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const [retryAttempt, setRetryAttempt] = useState(0);
   const [coachPayload, setCoachPayload] = useState(null);
+  const [staleCoachDate, setStaleCoachDate] = useState(null);
   const [weatherContext, setWeatherContext] = useState(null);
   const [isDownshifted, setIsDownshifted] = useState(false);
+  const [savingAdjustment, setSavingAdjustment] = useState(false);
+  const [adjustmentError, setAdjustmentError] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [heatDismissed, setHeatDismissed] = useState(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -276,6 +262,7 @@ export default function TodayRun() {
   });
 
   useEffect(() => {
+    if(authored.loading)return;
     if (!isAuthenticated) {
       navigate('/login');
       return;
@@ -286,13 +273,19 @@ export default function TodayRun() {
     async function loadTodayRun() {
       setLoadState('loading');
       try {
-        const dashboardData = await loadTodayRunData();
+        const dashboardData = await loadTodayRunData(selection.allowLegacy&&!hasAuthoredWorkout);
 
         if (cancelled) return;
 
         setProfile(dashboardData.profile && typeof dashboardData.profile === 'object' ? dashboardData.profile : null);
         setRuns(dashboardData.runs);
-        setCoachPayload(normalizeCoachEvidence(dashboardData.coachPayload));
+        const normalizedCoach = normalizeCoachEvidence(activePlan?{...dashboardData.coachPayload,today:asCoachWorkout(publishedWorkout)}:dashboardData.coachPayload);
+        const scheduledDate = normalizedCoach?.today?.scheduledDate;
+        const currentDate = getAccountDate(activePlan?.inputs.timeZone||dashboardData.profile?.timeZone);
+        const isStale = typeof scheduledDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(scheduledDate) && scheduledDate !== currentDate;
+        setStaleCoachDate(isStale ? scheduledDate : null);
+        setCoachPayload(isStale ? null : normalizedCoach);
+        setIsDownshifted(!isStale && normalizedCoach?.today?.reasonCode === 'manual_ease');
         setWeatherContext(dashboardData.weatherContext && typeof dashboardData.weatherContext === 'object' ? dashboardData.weatherContext : null);
         setRaces(Array.isArray(dashboardData.races) ? dashboardData.races : []);
         setShoes(Array.isArray(dashboardData.shoes) ? dashboardData.shoes : []);
@@ -306,7 +299,7 @@ export default function TodayRun() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, retryAttempt, todayKey, selection.allowLegacy, activePlan, publishedWorkout,authored.loading,hasAuthoredWorkout, recommendationRevision]);
 
   const {
     recommendation,
@@ -314,13 +307,31 @@ export default function TodayRun() {
     reasons,
     metrics,
   } = useMemo(
-    () => getTodayRunRecommendation({ runs, races, t, lang, unit, weatherContext, forceRecovery: isDownshifted, coachPayload }),
-    [runs, races, t, lang, unit, weatherContext, isDownshifted, coachPayload],
+    () => getTodayRunRecommendation({ runs, races, t, lang, unit, weatherContext, coachPayload, timeZone: activePlan?.inputs.timeZone || profile?.timeZone, todayKey }),
+    [runs, races, t, lang, unit, weatherContext, coachPayload, activePlan?.inputs.timeZone, profile?.timeZone, todayKey],
   );
 
+  async function toggleEasierSession() {
+    setSavingAdjustment(true);
+    setAdjustmentError(false);
+    try {
+      const updated = await apiJson('/api/coach/today/ease', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !isDownshifted }),
+      });
+      if (updated?.today?.scheduledDate !== todayKey) throw new Error('Current prescription unavailable');
+      setCoachPayload(normalizeCoachEvidence(updated));
+      setIsDownshifted(updated.today.reasonCode === 'manual_ease');
+    } catch {
+      setAdjustmentError(true);
+    } finally {
+      setSavingAdjustment(false);
+    }
+  }
+
   const morningBriefing = useMemo(
-    () => generateMorningBriefing({ recommendation, metrics, lang }),
-    [recommendation, metrics, lang],
+    () => activePlan?`${activePlan.title} · ${publishedWorkout?.phase?t(`training_plan.${publishedWorkout.phase}`):t('training_plan.restHelp')}`:authoredWorkout?`${t('training_integration.authoredWorkout')} · ${authoredWorkout.title}`:generateMorningBriefing({ recommendation, metrics, lang }),
+    [activePlan,publishedWorkout,authoredWorkout,t,recommendation, metrics, lang],
   );
 
   const displayName = useMemo(() => getDisplayName(profile, t('profile.default_name')), [profile, t]);
@@ -328,29 +339,31 @@ export default function TodayRun() {
   const hasHeatPenalty = weatherContext?.available && (weatherContext?.pacePenaltySecPerKm ?? 0) > 0;
   const showWeatherStrip = weatherContext?.available && !heatDismissed;
 
-  const coachSessionTitle = coachPayload?.today
+  const coachSessionTitle = prescriptionUnavailable?t('training_plan.error'):activePlan ? t(`training_plan.${publishedWorkout?.workoutType==='RUN_WALK'?'RUN_WALK_KIND':publishedWorkout?.workoutType||selection.data.state}`) : authoredWorkout?authoredWorkout.title:recommendation.source==='unavailable'?recommendation.title:coachPayload?.today
     ? prettifyWorkoutType(coachPayload.today.workoutType, t)
     : recommendation.type;
 
-  const isRestDay = !isDownshifted && coachPayload?.today?.workoutType === 'REST';
-  const coachDistance = isRestDay
+  const isRestDay = recommendation.source !== 'unavailable' && coachPayload?.today?.workoutType === 'REST';
+  const coachDistance = prescriptionUnavailable||authoredWorkout?'—':activePlan ? (publishedWorkout?.targetDistanceM!=null?formatDistance(publishedWorkout.targetDistanceM/1000,1,lang,unit):publishedWorkout?.workoutType==='REST'?t('today_run.personalized_distance_rest'):'—') : isRestDay
     ? t('today_run.personalized_distance_rest')
-    : !isDownshifted && coachPayload?.today?.plannedDistanceKm != null
-      ? formatDistance(coachPayload.today.plannedDistanceKm, 1, lang, unit)
-      : recommendation.distance;
+    : recommendation.distance;
 
-  const coachDuration = !isDownshifted && coachPayload?.today?.plannedDurationMinutes != null
+  const coachDuration = prescriptionUnavailable?'—':activePlan ? (publishedWorkout?.targetDurationS!=null?formatSegmentDuration(publishedWorkout.targetDurationS/60,t):'—') : authoredWorkout?formatSegmentDuration(authoredWorkout.plannedDurationMinutes,t):coachPayload?.today?.plannedDurationMinutes != null
     ? formatSegmentDuration(coachPayload.today.plannedDurationMinutes, t)
     : '--';
+  const paceStep=publishedWorkout?.steps?.find(step=>step.paceMinSPerKm!=null&&step.paceMaxSPerKm!=null);
+  const publishedPace=seconds=>{const total=Math.round(seconds*(unit==='mile'?1.609344:1));return `${Math.floor(total/60)}:${String(total%60).padStart(2,'0')}`;};
+  const publishedPaceRange=paceStep?`${publishedPace(paceStep.paceMinSPerKm)}–${publishedPace(paceStep.paceMaxSPerKm)} / ${unit==='mile'?'mi':'km'}`:'—';
   const marathonPlan = useMemo(
-    () => buildMarathonPlan(runs, races, recommendation, coachPayload, t, lang, unit),
-    [runs, races, recommendation, coachPayload, t, lang, unit],
+    () => buildMarathonPlan(runs, races, recommendation, coachPayload, t, lang, unit, profile?.timeZone, todayKey),
+    [runs, races, recommendation, coachPayload, t, lang, unit, profile?.timeZone, todayKey],
   );
   const shoeSignal = useMemo(
     () => buildRecentShoeSignal(shoes, runs, { preferOwnedFallback: true }),
     [runs, shoes],
   );
-  const shoeRecommendation = shoeSignal.recommendation;
+  // Catalogue suggestions are not owned shoes with tracked mileage or wear.
+  const shoeRecommendation = shoeSignal.recommendation?.type === 'recommend' ? null : shoeSignal.recommendation;
   const recommendedShoeName = shoeRecommendation?.shoe
     ? formatShoeDisplayName({
       brand: shoeRecommendation.shoe.brand,
@@ -359,21 +372,14 @@ export default function TodayRun() {
       lang,
     })
     : '';
-  const recommendedShoeMileageLeftKm = shoeRecommendation?.shoe
-    ? Math.max(
-      0,
-      Number(shoeRecommendation.shoe.maxDistanceKm || 0) - Number(shoeRecommendation.shoe.currentDistanceKm || 0),
-    )
-    : 0;
   const recommendedShoe = shoeRecommendation?.shoe || null;
-  const recommendedShoeHealth = useMemo(() => {
-    if (!recommendedShoe) return null;
-    return predictRetirement(recommendedShoe, runs);
-  }, [recommendedShoe, runs]);
+  const recommendedShoeMileageLeftKm = Number(recommendedShoe?.maxDistanceKm) > 0
+    ? Math.max(0, Number(recommendedShoe.maxDistanceKm) - Number(recommendedShoe.currentDistanceKm || 0))
+    : null;
   const readinessBattery = coachPayload?.state?.currentReadinessScore ?? null;
   const blueprintSteps = useMemo(
-    () => buildWorkoutBlueprint(plan, isDownshifted ? null : coachPayload?.today?.plannedDurationMinutes, t),
-    [plan, coachPayload, isDownshifted, t],
+    () => activePlan?(publishedWorkout?.steps||[]).map((step,index)=>({phase:t(`training_plan.${step.stepType}`),label:String(index),value:step.distanceM!=null?formatDistance(step.distanceM/1000,2,lang,unit):step.durationS!=null?formatSegmentDuration(step.durationS/60,t):'—',duration:step.durationS!=null?formatSegmentDuration(step.durationS/60,t):'—',durationMinutes:step.durationS/60||1,isAccent:step.stepType==='RUN'||step.stepType==='MAIN'})):authoredWorkout?authoredWorkout.steps.map((step,index)=>({phase:step.name,label:String(index),value:step.target==null?'—':`${step.target}${step.unit}`,duration:formatSegmentDuration(step.minutes,t),durationMinutes:step.minutes,isAccent:false})):buildWorkoutBlueprint(plan, coachPayload?.today?.plannedDurationMinutes, t),
+    [activePlan,publishedWorkout,authoredWorkout,lang,unit,plan, coachPayload, t],
   );
   const assignedCoach = useMemo(() => resolveAssignedCoach(profile, email), [profile, email]);
 
@@ -386,7 +392,10 @@ export default function TodayRun() {
     () => (Array.isArray(runs) && runs.length > 0 ? computeVdotTrend(runs) : { direction: 'maintaining', delta: 0, hasData: false }),
     [runs],
   );
-  const acwrInsight = useMemo(() => getTodayRunAcwrInsight(metrics.acwr), [metrics.acwr]);
+  const acwrInsight = useMemo(
+    () => getTodayRunAcwrInsight(metrics.acwr, metrics.coachLoadEvidence),
+    [metrics.acwr, metrics.coachLoadEvidence],
+  );
 
   const runnerPersona = useMemo(() => {
     return resolveRunnerPersona({
@@ -445,7 +454,14 @@ export default function TodayRun() {
   if (loadState === 'error') {
     return (
       <div className="runner-shell-page runner-shell-page--loading">
-        <div className="runner-shell-loading">{t('runs.load_error')}</div>
+        <div className="runner-shell-loading">
+          <div>
+            <p role="alert">{t('today_run.load_error')}</p>
+            <button type="button" className="rewards-load-retry" onClick={() => setRetryAttempt(attempt => attempt + 1)}>
+              {t('today_run.retry')}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -559,7 +575,12 @@ export default function TodayRun() {
                   <InfoDisclosure className="tr-session-about"><p>{t('today_run.copy')}</p></InfoDisclosure>
                 </div>
                 <h1 id="tr-session-title">{isDownshifted ? recommendation.type : coachSessionTitle}</h1>
-                <p className="tr-v2-purpose">{recommendation.purpose}</p>
+                {activePlan&&<p role="note">{t('training_plan.experimentalNotice')}</p>}
+                <p className="tr-v2-purpose">
+                  <span className="tr-v2-reason-label">{t('today_run.reason_label')}</span>
+                  {activePlan?`${activePlan.title} · ${t(`training_plan.${publishedWorkout?.phase||'restHelp'}`)}`:authoredWorkout?t('training_integration.authoredWorkout'):recommendation.summaryReason || recommendation.purpose || t('today_run.reason_unavailable')}
+                  {staleCoachDate && !isDownshifted && <span className="tr-v2-reason-note">{t('today_run.reason_stale', { date: staleCoachDate })}</span>}
+                </p>
               </div>
 
               <dl className="tr-v2-targets">
@@ -569,8 +590,8 @@ export default function TodayRun() {
                 </div>
                 <div>
                   <dt>{t('today_run.stitch_target_pace')}</dt>
-                  <dd className="tr-v2-pace">{recommendation.pace}</dd>
-                  {hasHeatPenalty && <small>{t('today_run.acclimatization_normal_pace', { pace: recommendation.normalPace })}</small>}
+                  <dd className="tr-v2-pace">{prescriptionUnavailable||authoredWorkout?'—':activePlan?publishedPaceRange:recommendation.pace}</dd>
+                  {hasHeatPenalty && !activePlan && !authoredWorkout && <small>{t('today_run.acclimatization_normal_pace', { pace: recommendation.normalPace })}</small>}
                 </div>
                 <div>
                   <dt>{t('today_run.stitch_est_time')}</dt>
@@ -578,7 +599,7 @@ export default function TodayRun() {
                 </div>
               </dl>
 
-              <div className="tr-v2-structure" aria-label={t('today_run.plan_title')}>
+              <div className="tr-v2-structure" role="group" aria-label={t('today_run.plan_title')}>
                 <div className="tr-v2-structure-bar" aria-hidden="true">
                   {blueprintSteps.map((step) => (
                     <span
@@ -617,11 +638,12 @@ export default function TodayRun() {
                 <button type="button" className="tr-v2-primary" onClick={() => navigate('/schedule')}>
                   {t('today_run.stitch_sync_watch')}
                 </button>
-                <button type="button" className={`tr-v2-secondary${isDownshifted ? ' is-active' : ''}`}
-                  aria-pressed={isDownshifted} onClick={() => setIsDownshifted(!isDownshifted)}>
+                {!activePlan&&!authoredWorkout&&!prescriptionUnavailable&&<button type="button" className={`tr-v2-secondary${isDownshifted ? ' is-active' : ''}`}
+                  disabled={savingAdjustment || !recommendation.distanceKm}
+                  aria-pressed={isDownshifted} onClick={toggleEasierSession}>
                   <AppIcon name={isDownshifted ? 'refresh' : 'low_priority'} />
                   {t(isDownshifted ? 'today_run.v2_reset' : 'today_run.downshift_trigger')}
-                </button>
+                </button>}
                 <button type="button" className="tr-v2-link" onClick={() => navigate('/schedule')}>
                   {t('today_run.stitch_action_schedule')} ›
                 </button>
@@ -631,15 +653,22 @@ export default function TodayRun() {
                   </button>
                 )}
               </div>
+              {adjustmentError ? <p role="alert">{t('today_run.shared_adjustment_failed')}</p> : null}
             </div>
           </section>
 
           {runnerPersona !== 'active' && <section className="tr-session-notice tr-v2-notice" role="status">
-            <strong>{t(runnerPersona === 'new' ? 'today_run.new_runner_title' : 'today_run.comeback_title')}</strong>
-            <p>{t(runnerPersona === 'new' ? 'today_run.new_runner_body' : 'today_run.comeback_body')}</p>
-            {runnerPersona === 'new' && <button type="button" className="tr-session-text-link" onClick={() => navigate('/runs')}>{t('today_run.new_runner_cta')} →</button>}
+            <strong>{t(runnerPersona === 'new'
+              ? runs.length > 0 ? 'today_run.limited_history_title' : 'today_run.new_runner_title'
+              : 'today_run.comeback_title')}</strong>
+            <p>{t(runnerPersona === 'new'
+              ? runs.length > 0 ? 'today_run.limited_history_body' : 'today_run.new_runner_body'
+              : 'today_run.comeback_body')}</p>
+            {runnerPersona === 'new' && runs.length === 0 && <button type="button" className="tr-session-text-link" onClick={() => navigate('/runs')}>{t('today_run.new_runner_cta')} →</button>}
           </section>}
 
+          <TodayPlanDetails />
+          {todayEvents.length>0&&<section aria-label={t('training_integration.authoredWorkout')}>{activePlan&&<><p role="status">{t('training_integration.generatedPriority')}</p><h2>{t('training_integration.otherScheduled')}</h2></>}<AuthoredWeekProvider source={authored}><AuthoredDayEntries date={todayKey} source={authored}/></AuthoredWeekProvider></section>}
           <section className="tr-v2-support" aria-label={t('today_run.coaching_intelligence_title')}>
             <article className="tr-v2-card tr-v2-coach">
               <div className="tr-v2-card-head">
@@ -650,8 +679,8 @@ export default function TodayRun() {
               <details className="tr-v2-context">
                 <summary>{t('today_run.training_context')}<AppIcon name="expand_more" /></summary>
                 {wellnessInterpretations.length > 0 && <ul className="tr-v2-notes">{wellnessInterpretations.map((insight) => <li key={insight}>{insight}</li>)}</ul>}
-                <ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
-                <p><strong>{marathonPlan.phaseLabel}</strong> — {marathonPlan.coachNote}</p>
+                <ul>{(authoredWorkout?[t('training_integration.authoredWorkout')]:reasons).map((reason) => <li key={reason}>{reason}</li>)}</ul>
+                <p><strong>{activePlan?(publishedWorkout?.phase?t(`training_plan.${publishedWorkout.phase}`):t('training_plan.restHelp')):authoredWorkout?t('training_integration.authoredWorkout'):marathonPlan.phaseLabel}</strong> — {activePlan?activePlan.title:authoredWorkout?authoredWorkout.title:marathonPlan.coachNote}</p>
                 <dl>
                   <div><dt>{t('today_run.coach_polarization')}</dt><dd>{coachPayload?.state?.highIntensityRatioLast7d != null ? `${(coachPayload.state.highIntensityRatioLast7d * 100).toFixed(0)}%` : '—'}</dd></div>
                   <div><dt>{t('today_run.coach_grey_zone')}</dt><dd>{coachPayload?.state?.minutesGreyZ3Last7d ?? '—'}</dd></div>
@@ -666,10 +695,10 @@ export default function TodayRun() {
                   <strong>{recommendedShoeName || t('today_run.shoe_empty_title')}</strong>
                   <small>
                     {shoeRecommendation
-                      ? t('today_run.shoe_mileage_left', { distance: formatDistance(recommendedShoeMileageLeftKm, 0, lang, unit) })
+                      ? t('today_run.shoe_current_mileage', { distance: formatDistance(Number(recommendedShoe.currentDistanceKm || 0), 0, lang, unit) })
                       : t('today_run.shoe_empty_copy')}
-                    {recommendedShoeHealth?.healthPercent != null
-                      ? ` · ${t(recommendedShoeHealth.healthPercent > 50 ? 'today_run.shoe_health_healthy' : recommendedShoeHealth.healthPercent > 20 ? 'today_run.shoe_health_warning' : 'today_run.shoe_health_replace')}`
+                    {recommendedShoeMileageLeftKm != null
+                      ? ` · ${t('today_run.shoe_mileage_left', { distance: formatDistance(recommendedShoeMileageLeftKm, 0, lang, unit) })}`
                       : ''}
                   </small>
                 </span>

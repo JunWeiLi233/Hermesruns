@@ -8086,7 +8086,7 @@ body.theme-light .runner-shell-topnav--command {
   --runner-topnav-bg: rgba(255, 250, 244, 0.78);
   --runner-topnav-line: rgba(112, 61, 46, 0.13);
   --runner-topnav-ink: #201a17;
-  --runner-topnav-muted: rgba(32, 26, 23, 0.64);
+  --runner-topnav-muted: rgba(32, 26, 23, 0.7);
   --runner-topnav-active: #a0392a;
 }
 

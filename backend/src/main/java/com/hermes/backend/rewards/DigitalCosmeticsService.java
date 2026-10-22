@@ -22,6 +22,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.RequestEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -58,7 +59,11 @@ public class DigitalCosmeticsService {
         this.restTemplate = restTemplate;
     }
 
-    @Transactional
+    /**
+     * Runs in a transaction of its own, for the reason {@code AutomatedCoachService.handleActivityIngested} does: it is called from
+     * the after-commit callback of a run's import, where joining the transaction that just committed would leave every drop unsaved.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleActivityIngested(Long runnerId, Long activityId) {
         Optional<Runner> runnerOpt = runnerRepository.findById(runnerId);
         Optional<Activity> activityOpt = activityRepository.findById(activityId);

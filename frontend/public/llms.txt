@@ -1,15 +1,33 @@
 # HermesRuns
 
-> HermesRuns is running analytics you can check: a browser app that turns your runs into a daily run, workout or rest call, with its formulas published.
+> Adaptive running plans from your recent runs, with daily training guidance, race predictions and analytics you can check using published formulas.
 
 ## Public pages
 
-- [Home](https://hermesruns.com/): Running analytics with a daily training call, VO2max estimates, training pace zones, race predictions, route heatmaps, and shoe mileage tracking.
+- [Home](https://hermesruns.com/): Running analytics and adaptive training plans, with daily training guidance, race predictions and inspectable calculations.
+- [Methods summary](https://hermesruns.com/#methods): Data requirements, estimation methods, a worked VDOT example and limitations.
+- [Detailed methods](https://github.com/JunWeiLi233/Hermesruns/blob/master/docs/README-ANALYSIS.md): The project's documented calculation rules and limitations.
 - [Terms of Service](https://hermesruns.com/terms): Terms for using HermesRuns, connected activity imports, training insights, and account features.
 - [Privacy Policy](https://hermesruns.com/privacy): How HermesRuns handles account details, connected activity data, training metrics, retention, and privacy choices.
 
-## Product facts
+## Product answers
 
-- Runs come from Strava, synced automatically once connected, or from GPX, FIT, and TCX file imports.
-- Scores name the inputs they were worked out from, and the formulas are published.
+- [What is HermesRuns?](https://hermesruns.com/#faq-about): A running analytics and adaptive training app that uses recent runs for training guidance and performance estimates.
+- [Importing running history](https://hermesruns.com/#faq-history): Connect Strava or Garmin, or upload GPX, FIT or TCX files. COROS history uses file upload. Available fields depend on the source and file.
+- [How much history is needed?](https://hermesruns.com/#faq-data): The fitness calculation uses up to three of the highest eligible estimates from the last 90 days. A full 90 days of history is not required.
+- [Exporting or deleting data](https://hermesruns.com/#faq-export): Settings includes data export and account deletion. The privacy policy describes export coverage and its limits.
+
+## Verifiable facts and limits
+
+- HermesRuns estimates fitness using its heart-rate rule when usable heart rate is present, or Daniels' race equation for qualifying runs without it. The methods can give different results.
+- VDOT is a running-performance estimate; a laboratory VO2max measurement is different. A 5 km run in 25 minutes gives a race-equation VDOT of 38.3 in the visible worked example.
+- Heat, hills, easy effort and sensor errors can affect estimates. Predicted race times are not guaranteed results.
+- Exports include profile details, runs, shoes, saved races and supported training records, with optional GPS tracks. They do not include every data category.
 - HermesRuns is informational training support, not medical advice or emergency guidance.
+
+## Project and contact
+
+- [Project source](https://github.com/JunWeiLi233/Hermesruns): Source code and methods maintained with the HermesRuns project.
+- [Support](mailto:support@hermesruns.com): Questions about the product, methods or privacy.
+
+Methods summary updated: 2026-10-20.

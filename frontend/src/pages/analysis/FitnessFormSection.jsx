@@ -1,15 +1,20 @@
 import { useId, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
+import { MethodsLink } from '../../components/HowWorkedOut';
 import useElementWidth from '../../hooks/useElementWidth';
 import {
   DEFAULT_FITNESS_RANGE,
   FITNESS_RANGES,
+  TREND_ARROW,
   buildFitnessChart,
   describeForm,
   fitnessTooltipPosition,
   formatChange,
   formatShortDate,
+  movementOver,
   rangeStart,
+  restDaysToZeroForm,
+  trendDirection,
 } from '../../utils/fitnessChart';
 import useScrubber from './useScrubber';
 import useTrainingSeries from './useTrainingSeries';
@@ -18,6 +23,14 @@ const KNOWN_SOURCES = ['HR_ZONES', 'PERCEIVED', 'HR_AVERAGE', 'PACE_MODEL', 'PAC
 
 function oneDecimal(formatNumber, value) {
   return formatNumber(value, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+/** The lines of the chart: at least one of them stays showing. The bars of daily effort are not a line and can all go. */
+const LINE_KEYS = ['fitness', 'fatigue', 'form'];
+
+/** One line under a tile's number: how far it moved, with an arrow that points the way (the words stand beside it). */
+function Move({ direction, className, children }) {
+  return <em className={className}><span className="analysis-fit-v2-arrow" aria-hidden="true">{TREND_ARROW[direction]}</span> {children}</em>;
 }
 
 /**
@@ -32,9 +45,9 @@ function FitnessChart({ series, shown, label, selectedIndex, onSelect }) {
   const historyId = useId();
   const geometry = useMemo(
     () => buildFitnessChart(series, {
-      width: measured, height: measured < 520 ? 250 : 300, withForm: shown.form, showFitness: shown.fitness, showFatigue: shown.fatigue,
+      width: measured, height: measured < 520 ? 250 : 300, withForm: shown.form, showFitness: shown.fitness, showFatigue: shown.fatigue, withEffort: shown.effort,
     }),
-    [series, measured, shown.form, shown.fitness, shown.fatigue],
+    [series, measured, shown.form, shown.fitness, shown.fatigue, shown.effort],
   );
   const positions = useMemo(() => (geometry ? geometry.entries.map((entry) => entry.x) : []), [geometry]);
   const lastIndex = geometry ? geometry.entries.length - 1 : 0;
@@ -46,9 +59,9 @@ function FitnessChart({ series, shown, label, selectedIndex, onSelect }) {
 
   const selected = selectedIndex == null ? null : geometry.entries[Math.min(selectedIndex, lastIndex)];
   const shownEntry = selected ?? geometry.entries[lastRealIndex];
-  const valueText = (entry) => `${formatShortDate(entry.date, lang)}, ${t('training_series.line_fitness')} ${oneDecimal(formatNumber, entry.fitness)}, ${t('training_series.line_fatigue')} ${oneDecimal(formatNumber, entry.fatigue)}, ${t('training_series.line_form')} ${formatChange(entry.form)}${entry.race ? `, ${t('training_series.race_day')}` : ''}`;
+  const valueText = (entry) => `${formatShortDate(entry.date, lang)}, ${t('training_series.line_fitness')} ${oneDecimal(formatNumber, entry.fitness)}, ${t('training_series.line_fatigue')} ${oneDecimal(formatNumber, entry.fatigue)}, ${t('training_series.line_form')} ${formatChange(entry.form)}${entry.projected ? '' : `, ${t('training_series.tooltip_effort')} ${formatNumber(Math.round(entry.load))}`}${entry.race ? `, ${t('training_series.race_day')}` : ''}`;
 
-  const bottom = geometry.withForm ? geometry.formBottom : geometry.mainBottom;
+  const bottom = geometry.bottom;
   const aboveId = `${clipId}-above`;
   const belowId = `${clipId}-below`;
 
@@ -115,6 +128,22 @@ function FitnessChart({ series, shown, label, selectedIndex, onSelect }) {
             </g>
           ) : null}
 
+          {geometry.withEffort ? (
+            <g className="analysis-fit-v2-effort">
+              <text x={geometry.padL} y={geometry.effortTop - 9} className="analysis-fit-v2-effort-caption">{t('training_series.line_effort')}</text>
+              {geometry.effortTicks.map((tick) => (
+                <g key={tick.value}>
+                  <line x1={geometry.padL} x2={geometry.width - geometry.padR} y1={tick.y} y2={tick.y} className="analysis-fit-v2-grid" />
+                  <text x={geometry.padL - 8} y={tick.y + 4} textAnchor="end">{formatNumber(tick.value)}</text>
+                </g>
+              ))}
+              <path d={geometry.effortPath} className="analysis-fit-v2-effort-bars" />
+              {selected && selected.barH > 0 ? (
+                <rect x={selected.barX} y={selected.barY} width={geometry.barWidth} height={selected.barH} className="analysis-fit-v2-effort-selected" />
+              ) : null}
+            </g>
+          ) : null}
+
           {geometry.xTicks.map((entry, index) => (
             <text
               key={entry.date}
@@ -155,6 +184,7 @@ function FitnessChart({ series, shown, label, selectedIndex, onSelect }) {
             <span>{`${t('training_series.line_fitness')}: ${oneDecimal(formatNumber, entry.fitness)}`}</span>
             <span>{`${t('training_series.line_fatigue')}: ${oneDecimal(formatNumber, entry.fatigue)}`}</span>
             <span>{`${t('training_series.line_form')}: ${formatChange(entry.form)}`}</span>
+            {entry.projected ? null : <span>{`${t('training_series.tooltip_effort')}: ${formatNumber(Math.round(entry.load))}`}</span>}
             {entry.race ? <span>{t('training_series.race_day')}</span> : null}
           </li>
         ))}
@@ -186,7 +216,7 @@ export default function FitnessFormSection() {
   const { t, lang, formatNumber, formatList } = useI18n();
   const titleId = useId();
   const [rangeKey, setRangeKey] = useState(DEFAULT_FITNESS_RANGE);
-  const [shown, setShown] = useState({ fitness: true, fatigue: true, form: true });
+  const [shown, setShown] = useState({ fitness: true, fatigue: true, form: true, effort: true });
   const [selectedIndex, setSelectedIndex] = useState(null);
   const from = useMemo(() => rangeStart(rangeKey), [rangeKey]);
   const { status, data, stale, reload } = useTrainingSeries(from);
@@ -194,7 +224,7 @@ export default function FitnessFormSection() {
   const toggle = (key) => setShown((current) => {
     const next = { ...current, [key]: !current[key] };
     // At least one line stays: an empty chart would look like a failure.
-    return Object.values(next).some(Boolean) ? next : current;
+    return LINE_KEYS.some((line) => next[line]) ? next : current;
   });
   const changeRange = (key) => {
     setRangeKey(key);
@@ -209,10 +239,20 @@ export default function FitnessFormSection() {
   const fitnessWeekText = !current ? '' : fitnessWeekAgo > 0
     ? t('training_series.change_week_pct', { change: formatChange(current.fitnessChange7d), percent: `${formatChange((current.fitnessChange7d / fitnessWeekAgo) * 100, { digits: 0 })}%` })
     : t('training_series.change_week', { change: formatChange(current.fitnessChange7d) });
+  // The 14 days are the difference of the two numbers on the chart; the 7 days come from the server, which works them out unrounded.
+  const fortnight = {
+    fitness: ready ? movementOver(data.points, 'fitness', 14) : null,
+    fatigue: ready ? movementOver(data.points, 'fatigue', 14) : null,
+    form: ready ? movementOver(data.points, 'form', 14) : null,
+  };
+  const fortnightText = (move, { withPercent }) => (withPercent && move.ratio != null
+    ? t('training_series.change_fortnight_pct', { change: formatChange(move.change), percent: `${formatChange(move.ratio * 100, { digits: 0 })}%` })
+    : t('training_series.change_fortnight', { change: formatChange(move.change) }));
   const sentence = data ? sourcesSentence(t, formatNumber, formatList, data) : null;
+  const rest = ready ? restDaysToZeroForm(data) : { state: 'none' };
   // The day whose numbers the key shows: the one being looked at, else today.
   const day = !ready ? null
-    : selectedIndex == null ? { ...current, projected: false }
+    : selectedIndex == null ? { ...current, load: data.points[data.points.length - 1].load, projected: false }
       : (selectedIndex < data.points.length ? data.points[selectedIndex] : data.projection[selectedIndex - data.points.length]) ?? current;
 
   let body;
@@ -236,11 +276,11 @@ export default function FitnessFormSection() {
           <>
             <div className="analysis-load-v2-chart-meta">
               <div className="analysis-fit-v2-toggles" role="group" aria-label={t('training_series.lines_group')}>
-                {['fitness', 'fatigue', 'form'].map((key) => (
+                {[...LINE_KEYS, 'effort'].map((key) => (
                   <button key={key} type="button" className={`analysis-fit-v2-toggle is-${key}`} aria-pressed={shown[key]} onClick={() => toggle(key)}>
                     <i aria-hidden="true" />
                     {t(`training_series.line_${key}`)}
-                    <strong>{key === 'form' ? formatChange(day[key]) : oneDecimal(formatNumber, day[key])}</strong>
+                    <strong>{key === 'form' ? formatChange(day.form) : key === 'effort' ? (Number.isFinite(day.load) ? formatNumber(Math.round(day.load)) : '–') : oneDecimal(formatNumber, day[key])}</strong>
                   </button>
                 ))}
               </div>
@@ -261,6 +301,12 @@ export default function FitnessFormSection() {
             {data.projection.length > 0 ? (
               <p className="analysis-fit-v2-note">{t('training_series.projection_note', { days: data.projection.length })}</p>
             ) : null}
+            {rest.state === 'days' ? (
+              <p className="analysis-fit-v2-note">
+                {t(rest.days === 1 ? 'training_series.rest_zero_one' : 'training_series.rest_zero', { days: rest.days, date: formatShortDate(rest.date, lang) })}
+              </p>
+            ) : null}
+            {rest.state === 'later' ? <p className="analysis-fit-v2-note">{t('training_series.rest_zero_later', { days: rest.days })}</p> : null}
             <p className="analysis-fit-v2-note is-faint">
               {Array.isArray(data.raceDays) && data.raceDays.length > 0 ? t('training_series.race_key') : t('training_series.race_hint')}
             </p>
@@ -269,19 +315,31 @@ export default function FitnessFormSection() {
               <article className="analysis-load-v2-metric">
                 <span>{t('training_series.line_fitness')}</span>
                 <strong>{oneDecimal(formatNumber, current.fitness)}</strong>
-                <em className={current.fitnessChange7d < 0 ? 'is-neutral' : undefined}>{fitnessWeekText}</em>
+                <Move direction={trendDirection(current.fitnessChange7d, fitnessWeekAgo)} className={current.fitnessChange7d < 0 ? 'is-neutral' : undefined}>{fitnessWeekText}</Move>
+                {fortnight.fitness ? (
+                  <Move direction={fortnight.fitness.direction} className={fortnight.fitness.change < 0 ? 'is-neutral' : undefined}>{fortnightText(fortnight.fitness, { withPercent: true })}</Move>
+                ) : null}
                 <small>{t('training_series.card_fitness_note', { days: data.fitnessDays })}</small>
               </article>
               <article className="analysis-load-v2-metric">
                 <span>{t('training_series.line_fatigue')}</span>
                 <strong>{oneDecimal(formatNumber, current.fatigue)}</strong>
-                <em className="is-neutral">{t('training_series.change_week', { change: formatChange(current.fatigueChange7d) })}</em>
+                <Move direction={trendDirection(current.fatigueChange7d, current.fatigue - current.fatigueChange7d)} className="is-neutral">{t('training_series.change_week', { change: formatChange(current.fatigueChange7d) })}</Move>
+                {fortnight.fatigue ? (
+                  <Move direction={fortnight.fatigue.direction} className="is-neutral">{fortnightText(fortnight.fatigue, { withPercent: false })}</Move>
+                ) : null}
                 <small>{t('training_series.card_fatigue_note', { days: data.fatigueDays })}</small>
               </article>
               <article className={`analysis-load-v2-metric${formWord === 'tired' ? ' is-watch' : ''}`}>
                 <span>{t('training_series.line_form')}</span>
                 <strong>{formatChange(current.form)}</strong>
                 <em className={formWord === 'even' ? 'is-neutral' : undefined}>{t(`training_series.form_${formWord}`)}</em>
+                {Number.isFinite(current.formChange7d) ? (
+                  <Move direction={trendDirection(current.formChange7d, Math.max(Math.abs(current.form), Math.abs(current.form - current.formChange7d)))} className="is-neutral">{t('training_series.change_week', { change: formatChange(current.formChange7d) })}</Move>
+                ) : null}
+                {fortnight.form ? (
+                  <Move direction={fortnight.form.direction} className="is-neutral">{fortnightText(fortnight.form, { withPercent: false })}</Move>
+                ) : null}
                 <small>{t('training_series.card_form_note')}</small>
               </article>
             </section>
@@ -296,7 +354,7 @@ export default function FitnessFormSection() {
           </p>
         ) : null}
         {data.status !== 'none' ? (
-          <p className="analysis-fit-v2-note is-faint">{t('training_series.basis', { fitnessDays: data.fitnessDays, fatigueDays: data.fatigueDays })}</p>
+          <p className="analysis-fit-v2-note is-faint">{t('training_series.basis', { fitnessDays: data.fitnessDays, fatigueDays: data.fatigueDays })} <MethodsLink anchor="fitness-fatigue-and-form" /></p>
         ) : null}
       </>
     );
@@ -320,6 +378,7 @@ export default function FitnessFormSection() {
   return (
     <section
       id="load-fitness"
+      tabIndex={-1}
       className="analysis-load-v2-chart analysis-fit-v2"
       aria-labelledby={titleId}
       aria-busy={status === 'loading' || status === 'refreshing' ? 'true' : undefined}

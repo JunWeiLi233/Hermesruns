@@ -32,7 +32,7 @@ function blockForMatching(source, selector, matcher, label, message) {
 
 assert.match(
   runsSource,
-  /className="runs-ledger-v2__figure"[\s\S]*runs\.summary_runs[\s\S]*\{filteredRuns\.length\}/,
+  /className="runs-ledger-v2__figure"[\s\S]*runs\.summary_runs[\s\S]*\{historyPending && !allRuns\.length \? '--' : filteredCount\}/,
   'Runs should keep the summary wired to the filtered run count.',
 );
 

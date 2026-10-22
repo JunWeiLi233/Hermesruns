@@ -1,0 +1,18 @@
+import { useRef, useState } from 'react';
+import { useNavigate } from '../router.jsx';
+import { useAction, useExplorer } from '../context.jsx';
+import { validateFiles } from '../core/parser.js';
+import { Button, Checkbox, Dialog, Field, Notice } from './primitives.jsx';
+export default function ImportDialog({open,onClose}) {
+  const {api,t}=useExplorer();const navigate=useNavigate();const [files,setFiles]=useState([]);const [attested,setAttested]=useState(false);const key=useRef(crypto.randomUUID());const input=useRef(null);const action=useAction();
+  async function submit(event){event.preventDefault();try{validateFiles(files,{server:api.mode==='server'});if(!attested)throw new Error(t('Confirm your permission to use these files.','请确认你有权使用这些文件。'));}catch(e){action.setError(e.message);input.current?.focus();return;}
+    const result=await action.run(()=>api.importActivities({files,attested,idempotencyKey:key.current}));if(result?.ok){onClose();setFiles([]);setAttested(false);key.current=crypto.randomUUID();navigate(`/jobs/${result.result.id}`);}}
+  return <Dialog open={open} onClose={onClose} title={t('Add activity files','添加活动文件')} description={api.mode==='server'?t('Choose independently sourced files you have permission to store on your Hermes account.','请选择你有权保存到 Hermes 账户的独立来源文件。'):t('Choose files you have permission to use. They stay in this browser workspace.','请选择你有权使用的文件，它们会保存在此浏览器工作区。')}><form onSubmit={submit} className="sh-stack">
+    <Field label={api.mode==='server'?t('FIT, GPX or TCX activity files','FIT、GPX 或 TCX 活动文件'):t('GPX or TCX activity files','GPX 或 TCX 活动文件')} hint={api.mode==='server'?t('Up to 20 files · 50 MiB each · 100 MiB per batch. 200,000 points per activity; 2 million points and 1 GiB of source files per account.','最多 20 个文件，单个 50 MiB，每批 100 MiB。每项活动最多 20 万点，每账户最多 200 万点及 1 GiB 来源文件。'):t('Up to 20 files · 50 MiB each · 100 MiB per batch. Full tracks up to 200,000 points per activity; 500,000 per workspace.','最多 20 个文件，单个 50 MiB，每批 100 MiB。每项活动最多 20 万轨迹点，工作区最多 50 万点。')}>{p=><input {...p} ref={input} type="file" accept={api.mode==='server'?'.fit,.gpx,.tcx':'.gpx,.tcx'} multiple onChange={e=>{setFiles([...e.target.files]);action.setError('');key.current=crypto.randomUUID();}}/>}</Field>
+    {files.length>0&&<ul className="ex-file-list">{files.map((file,i)=><li key={`${file.name}-${i}`}><span>{file.name}</span><span className="sh-muted">{(file.size/1024).toFixed(1)} KiB</span></li>)}</ul>}
+    <Checkbox checked={attested} onChange={e=>setAttested(e.target.checked)}>{t('I have permission to store and analyze these independently sourced activity files.','我有权保存和分析这些独立来源的活动文件。')}</Checkbox>
+    <Notice>{api.mode==='server'?t('The server continues imports after this tab closes. Accepted source geometry is retained in full; map display may use a bounded derivative.','关闭此标签页后服务器仍会继续导入。已接受的来源轨迹完整保留，地图可使用有上限的显示派生数据。'):t('FIT imports need the backend importer. Imports keep all accepted points; files beyond the limits are rejected without sampling.','FIT 导入需要后端导入服务。已接受的轨迹点会完整保留，超过限制的文件会被拒绝，不会抽样。')}</Notice>
+    <p className="sh-small"><a href="/explorer/examples/independent-loop.gpx" download>{t('Download an invented GPX to try importing','下载虚构 GPX 以试用导入')}</a> · <a href="/explorer/examples/indoor-swim.tcx" download>{t('Invented indoor TCX','虚构室内 TCX')}</a></p>
+    {action.error&&<Notice tone="danger" live>{action.error}</Notice>}<div className="sh-form-actions"><Button onClick={onClose}>{t('Cancel','取消')}</Button><Button type="submit" variant="primary" busy={action.busy}>{t('Import files','导入文件')}</Button></div>
+  </form></Dialog>;
+}

@@ -1,0 +1,73 @@
+.sport-totals, .modal-card.sport-totals-modal {
+  --st-ink: #1c1917; --st-muted: #625c56; --st-faint: #716b65; --st-surface: #fff;
+  --st-soft: #f5f5f4; --st-rule: rgb(28 25 23 / 8%); --st-accent: #a0392a;
+  color: var(--st-ink); background: var(--st-surface);
+}
+.modal-shell.sport-totals-modal-shell { padding: 24px 16px; background: rgb(28 25 23 / 42%); }
+.modal-card.sport-totals-modal { width: min(520px, 100%); max-width: 520px; max-height: calc(100dvh - 48px); padding: 0; border: 0; border-radius: 24px; overflow-y: auto; box-shadow: 0 24px 64px rgb(28 25 23 / 28%); }
+.modal-card.sport-totals-modal .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin: 0; padding: 22px 24px 0; border: 0; position: relative; z-index: auto; background: transparent; }
+.modal-card.sport-totals-modal .modal-header h3, .sport-totals > h2 { margin: 0; padding: 0; color: inherit; font: italic 800 24px/1.1 var(--font-display, Manrope, sans-serif); letter-spacing: -.025em; }
+.modal-card.sport-totals-modal .modal-close { display: grid; place-items: center; flex: none; width: 36px; height: 36px; min-width: 36px; min-height: 36px; padding: 0; border: 0; border-radius: 50%; background: var(--st-soft); color: var(--st-muted); font: 22px/1 sans-serif; box-shadow: none; }
+.modal-card.sport-totals-modal .modal-close:hover { background: var(--st-rule); color: var(--st-ink); transform: none; }
+.sport-totals-modal .modal-form { display: block; margin: 0; padding: 0; gap: 0; overflow: visible; }
+.sport-totals-modal :is(.athlete-tools-content, .hermes-training-integrated) { min-width: 0; margin: 0; padding: 0; background: transparent; }
+.sport-totals { width: 100%; min-width: 0; border-radius: 24px; font: 400 13px/1.5 var(--font-body, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif); font-variant-numeric: tabular-nums; }
+.sport-totals, .sport-totals * { box-sizing: border-box; }
+.sport-totals > h2 { padding: 22px 24px 0; }
+.sport-totals .sport-totals-range { margin: 4px 0 0; padding: 0 24px; color: var(--st-muted); font-size: 13px; }
+.sport-totals-embedded .sport-totals-range { margin-top: -12px; padding-right: 70px; }
+.sport-totals-controls { display: grid; gap: 12px; padding: 18px 24px 0; }
+.sport-totals-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 3px; border-radius: 10px; background: var(--st-soft); }
+.sport-totals .sport-totals-presets button { min-width: 0; min-height: 32px; margin: 0; padding: 0 6px; border: 0; border-radius: 8px; background: transparent; color: var(--st-muted); box-shadow: none; font: inherit; font-size: 12.5px; font-weight: 700; line-height: 1.2; letter-spacing: 0; text-transform: none; white-space: nowrap; cursor: pointer; }
+.sport-totals-presets button:hover { color: var(--st-ink); }
+.sport-totals .sport-totals-presets button[aria-pressed=true] { background: var(--st-surface); color: var(--st-ink); box-shadow: 0 1px 2px rgb(28 25 23 / 12%); }
+.sport-totals :is(button,input):focus-visible, .modal-card.sport-totals-modal .modal-close:focus-visible { outline: 2px solid var(--st-accent); outline-offset: 3px; }
+.sport-totals-dates { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 8px; }
+.sport-totals-dates label { display: grid; gap: 6px; min-width: 0; color: var(--st-muted); font-size: 12px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+.sport-totals-dates > span { display: grid; place-items: center; height: 40px; color: var(--st-faint); }
+.sport-totals .sport-totals-dates input { width: 100%; min-width: 0; min-height: 40px; height: 40px; padding: 0 8px; border: 1px solid var(--st-rule); border-radius: 10px; background: var(--st-surface); color: var(--st-ink); font: inherit; font-size: 13px; }
+.sport-totals .sport-totals-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 22px 24px 6px; }
+.sport-totals-summary > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.sport-totals-summary dt { color: var(--st-muted); font-size: 12px; font-weight: 400; }
+.sport-totals-summary dd { margin: 0; color: var(--st-ink); font-size: 26px; font-weight: 700; letter-spacing: -.03em; line-height: 1.1; overflow-wrap: anywhere; }
+.sport-totals-bar { display: flex; gap: 3px; height: 8px; margin: 10px 24px 0; overflow: hidden; border-radius: 4px; }
+.sport-running { --sport-color: #a0392a; --sport-tint: rgb(160 57 42 / 9%); }
+.sport-cycling { --sport-color: #5f8f7e; --sport-tint: rgb(95 143 126 / 13%); }
+.sport-swimming { --sport-color: #3f6f9a; --sport-tint: rgb(63 111 154 / 12%); }
+.sport-other { --sport-color: #8a7f75; --sport-tint: rgb(28 25 23 / 6%); }
+.sport-totals-bar > span { flex-basis: 0; background: var(--sport-color); }
+.sport-totals .sport-totals-list { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 14px 24px 8px; list-style: none; }
+.sport-totals-list > li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 60px; margin: 0; padding: 10px 0; border: 0; }
+.sport-totals-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 11px; background: var(--sport-tint); color: var(--sport-color); }
+.sport-totals-icon > svg { width: 18px; height: 18px; }
+.sport-totals-name, .sport-totals-values { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sport-totals-name strong { font-size: 15px; line-height: 1.3; }
+.sport-totals-name > span { color: var(--st-muted); font-size: 12.5px; }
+.sport-totals-values { align-items: flex-end; text-align: right; }
+.sport-totals-values strong { font-size: 16px; line-height: 1.3; }
+.sport-totals-values > span { color: var(--st-muted); font-size: 12px; }
+.sport-totals-values .is-unknown { color: var(--st-faint); }
+.sport-totals .sport-totals-idle { margin: 0; padding: 0 24px 18px; color: var(--st-faint); font-size: 12.5px; }
+.sport-totals-note { padding: 14px 24px; border-top: 1px solid var(--st-rule); color: var(--st-faint); font-size: 12px; line-height: 1.5; }
+.sport-totals-empty { display: grid; justify-items: center; gap: 6px; padding: 40px 24px 32px; text-align: center; }
+.sport-totals-empty strong { font: italic 800 19px/1.4 var(--font-display, Manrope, sans-serif); }
+.sport-totals .sport-totals-empty p { max-width: 34ch; margin: 0; color: var(--st-muted); }
+.sport-totals .sport-totals-message { margin: 0; padding: 24px; color: var(--st-muted); overflow-wrap: anywhere; }
+.sport-totals-message[role=alert] { color: var(--st-accent); }
+.sport-totals-modal:has([data-theme=dark]), [data-theme=dark] .sport-totals {
+  --st-ink: #f3efeb; --st-muted: #c4bcb3; --st-faint: #b6aca1; --st-surface: #232321; --st-soft: #33322f; --st-rule: rgb(255 255 255 / 14%); --st-accent: #ed9b87;
+}
+[data-theme=dark] .sport-running { --sport-color: #ed9b87; --sport-tint: rgb(237 155 135 / 12%); }
+[data-theme=dark] .sport-cycling { --sport-color: #91b7a6; --sport-tint: rgb(145 183 166 / 12%); }
+[data-theme=dark] .sport-swimming { --sport-color: #8ab6dd; --sport-tint: rgb(138 182 221 / 12%); }
+[data-theme=dark] .sport-other { --sport-color: #b6aca1; --sport-tint: rgb(182 172 161 / 12%); }
+[data-theme=dark] .sport-totals-dates input { color-scheme: dark; }
+@media (max-width: 400px) {
+  .modal-card.sport-totals-modal .modal-header { padding-right: 18px; padding-left: 18px; }
+  .sport-totals :is(.sport-totals-range,.sport-totals-controls,.sport-totals-summary,.sport-totals-list,.sport-totals-idle,.sport-totals-note) { padding-right: 18px; padding-left: 18px; }
+  .sport-totals-bar { margin-right: 18px; margin-left: 18px; }
+  .sport-totals .sport-totals-summary { grid-template-columns: .65fr 1.35fr 1fr; }
+  .sport-totals-summary dd { font-size: clamp(16px, 5.3vw, 20px); white-space: nowrap; }
+  .sport-totals-list > li { grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1.2fr); gap: 8px; }
+  .sport-totals-icon { width: 32px; height: 34px; }
+}

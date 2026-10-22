@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -98,6 +99,28 @@ class RunLabelsMvcTests {
                 .andExpect(jsonPath("$.maxTagLength").value(24))
                 .andExpect(jsonPath("$.suggestions", hasSize(2)));
         assertThat(activities.findById(run.getId()).orElseThrow().getRunType()).isEqualTo("WORKOUT");
+    }
+
+    @Test
+    void theListTheAnalysisPagesLoadSaysWhichRunsWereRacesAndLeavesTheOthersUntyped() throws Exception {
+        Runner owner = runner();
+        Activity race = run(owner);
+        Activity easy = run(owner);
+        mockMvc.perform(edit(race, owner, "{\"runType\":\"RACE\"}")).andExpect(status().isOk());
+
+        // The whole list and the limited one are two queries; both carry the type.
+        for (String url : new String[] {"/api/activities/analysis", "/api/activities/analysis?limit=10"}) {
+            mockMvc.perform(get(url).header("Authorization", bearer(owner)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[?(@.id == " + race.getId() + ")].runType", contains("RACE")))
+                    .andExpect(jsonPath("$[?(@.id == " + easy.getId() + ")].runType", contains(nullValue())));
+        }
+
+        // Clearing the type takes the race out of the list again.
+        mockMvc.perform(edit(race, owner, "{\"runType\":null}")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/activities/analysis").header("Authorization", bearer(owner)))
+                .andExpect(jsonPath("$[?(@.id == " + race.getId() + ")].runType", contains(nullValue())));
     }
 
     @Test

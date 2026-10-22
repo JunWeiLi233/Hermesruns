@@ -12,13 +12,13 @@ const zhPages = readFileSync(path.join(here, "../../../i18n/locales/zh-CN/pages.
 assert.match(
   racesDetailSource,
   /previewImageUrl|payload\.imageUrl|payload\.sourceImageUrl/,
-  'RacesDetail should normalize the backend preview image aliases so the course-map overlay can render on the runner-facing detail page.',
+  'RacesDetail should normalize the backend preview image aliases for route trust validation.',
 );
 
 assert.match(
   racesDetailSource,
   /deriveRaceMapTrust\(\{\s*[\s\S]*imageUrl:\s*courseMapData\.(?:previewImageUrl|imageUrl)[\s\S]*overlayBounds:\s*courseMapData\.viewportBounds/,
-  'RacesDetail should pass the aligned course-map image and bounds into the trust gate instead of hard-disabling overlays.',
+  'RacesDetail should pass the aligned course-map image and bounds into the trust gate to validate route geometry.',
 );
 
 assert.match(
@@ -27,11 +27,7 @@ assert.match(
   'RacesDetail should only render the AI route line when the frontend trust gate considers the route geometry trustworthy enough for the runner-facing basemap.',
 );
 
-assert.match(
-  racesDetailSource,
-  /const hasTrustedCourseMapOverlay = hasAlignedRoute && mapTrust\.trustedOverlay;/,
-  'RacesDetail should require stricter overlay trust before painting the transparent course-map image above the real basemap.',
-);
+assert.doesNotMatch(racesDetailSource, /L\.imageOverlay\(/, 'Runner race maps use OSM and trusted route vectors without raster overlays.');
 
 assert.match(
   racesDetailSource,
@@ -81,17 +77,9 @@ assert.doesNotMatch(
   'RacesDetail should not paint the raw course-map image over the runner-facing Leaflet card when the goal is a clearly real draggable map.',
 );
 
-assert.match(
-  racesDetailSource,
-  /L\.imageOverlay\(courseMapData\.overlayImageUrl,[\s\S]*pane:\s*'race-detail-course-image'/,
-  'RacesDetail should paint only the generated transparent course-map overlay in its own pane beneath the extracted route.',
-);
+assert.match(racesDetailSource, /L\.polyline\(/, 'Trusted race geometry stays in the draggable Leaflet map.');
 
-assert.match(
-  racesDetailSource,
-  /courseMapImageOverlayLayer[\s\S]*refreshCourseMapOverlayOnViewChange[\s\S]*map\.on\('moveend zoomend resize viewreset', refreshCourseMapOverlayOnViewChange\)/,
-  'RacesDetail should keep the course-map raster inside Leaflet and re-run its native pixel reset after completed pan, zoom, resize, and view-reset events.',
-);
+assert.match(racesDetailSource, /map\.on\('moveend zoomend resize viewreset', refreshRouteOnViewChange\)/, 'The vector route refreshes after completed map movement.');
 
 assert.match(
   racesDetailSource,

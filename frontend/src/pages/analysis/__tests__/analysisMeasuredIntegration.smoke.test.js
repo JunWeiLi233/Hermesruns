@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const page = readFileSync(new URL('../AnalysisInsightDetail.jsx', import.meta.url), 'utf8');
+const measured = readFileSync(new URL('../MeasuredHrZoneBlock.jsx', import.meta.url), 'utf8');
+const summary = readFileSync(new URL('../IntensityZoneSummary.jsx', import.meta.url), 'utf8');
+assert.match(page, /import MeasuredHrZoneBlock from '\.\/MeasuredHrZoneBlock'/);
+assert.match(page, /<MeasuredHrZoneBlock presentation="summary" estimated=\{intensityDashboard\}/);
+assert.match(measured, /isBlockResponse\(block, days\)/);
+assert.match(summary, /mode === 'measured'/);
+assert.match(summary, /seconds \/ block.coveredSeconds/);
+assert.match(summary, /intensity_redesign_estimated_how/);
+assert.match(summary, /block.unknownSeconds/);
+assert.match(page, /t\('analysis\.load_model_basis'\)/);
+console.log('[PASS] Measured HR accounting stays independent of explicitly labelled estimates.');

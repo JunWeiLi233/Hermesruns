@@ -59,12 +59,22 @@ public class CoachController {
     }
 
     @GetMapping("/today")
-    public ResponseEntity<?> getToday(@RequestHeader(value = "Authorization", required = false) String auth) {
+    public ResponseEntity<?> getToday(
+            @RequestHeader(value = "Authorization", required = false) String auth,
+            @RequestParam(value = "includeRoute", defaultValue = "true") boolean includeRoute
+    ) {
         Optional<Runner> runner = authService.findByAuthorizationHeader(auth);
         if (runner.isEmpty()) {
             return unauthorized();
         }
-        return ResponseEntity.ok(automatedCoachService.getTodayWithReadiness(runner.get()));
+        return ResponseEntity.ok(automatedCoachService.getTodayWithReadiness(runner.get(), includeRoute));
+    }
+
+    @GetMapping("/workout-library")
+    public ResponseEntity<?> getWorkoutLibrary(@RequestHeader(value = "Authorization", required = false) String auth) {
+        Optional<Runner> runner = authService.findByAuthorizationHeader(auth);
+        if (runner.isEmpty()) return unauthorized();
+        return ResponseEntity.ok().header("Cache-Control", "private, no-store").body(automatedCoachService.getWorkoutLibrary(runner.get()));
     }
 
     @PostMapping("/recovery")
@@ -89,6 +99,22 @@ public class CoachController {
             return error(HttpStatus.BAD_REQUEST, e.getMessage());
         }
     }
+
+    @PostMapping("/today/ease")
+    public ResponseEntity<?> easeToday(
+            @RequestHeader(value = "Authorization", required = false) String auth,
+            @RequestBody(required = false) EaseTodayBody body) {
+        Optional<Runner> runner = authService.findByAuthorizationHeader(auth);
+        if (runner.isEmpty()) return unauthorized();
+        if (body == null || body.enabled() == null) return error(HttpStatus.BAD_REQUEST, "enabled is required.");
+        try {
+            return ResponseEntity.ok(automatedCoachService.setEasierToday(runner.get(), body.enabled()));
+        } catch (IllegalArgumentException refused) {
+            return error(HttpStatus.BAD_REQUEST, refused.getMessage());
+        }
+    }
+
+    public record EaseTodayBody(Boolean enabled) {}
 
     @PatchMapping("/profile")
     public ResponseEntity<?> patchProfile(

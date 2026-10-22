@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Api, eventually, freshClientAddress, stackState, strongPassword } from './fixtures/api.ts';
 import { seedRuns, SEED_RUNS } from './fixtures/seed.ts';
+import { assertReleaseStackIdentity } from './tools/stack-identity.mjs';
 
 const authDir = path.resolve(import.meta.dirname, '.auth');
 
@@ -55,6 +56,11 @@ async function signInWhenReady(api: Api, email: string, password: string): Promi
 
 export default async function globalSetup(): Promise<void> {
   const state = stackState();
+  if (process.env.E2E_BACKEND_JAR) {
+    const name = (process.env.E2E_STACK_NAME || '').replace(/[^A-Za-z0-9_-]/g, '');
+    const recorded = JSON.parse(fs.readFileSync(path.join(authDir, name ? `stack-${name}.json` : 'stack.json'), 'utf8'));
+    assertReleaseStackIdentity(recorded, process.env.E2E_BACKEND_JAR, state.baseUrl);
+  }
   fs.mkdirSync(authDir, { recursive: true });
 
   // --- Runner A: the local shared runner (Pro, 21 mock Strava runs) plus the seed runs.

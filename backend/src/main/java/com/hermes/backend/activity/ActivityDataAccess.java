@@ -60,6 +60,8 @@ public class ActivityDataAccess {
 
     // Optional collaborators, injected by Spring. They stay unset in tests that build this class by hand.
     private List<ActivityDeletionHook> deletionHooks = List.of();
+    private List<ActivityMutationHook> mutationHooks = List.of();
+    private org.springframework.transaction.support.TransactionTemplate writeTransactions;
     private DeletedActivityTombstoneRepository tombstones;
     private ApplicationEventPublisher events;
 
@@ -74,6 +76,16 @@ public class ActivityDataAccess {
     @Autowired(required = false)
     void setDeletionHooks(List<ActivityDeletionHook> deletionHooks) {
         this.deletionHooks = deletionHooks == null ? List.of() : List.copyOf(deletionHooks);
+    }
+
+    @Autowired(required = false)
+    void setMutationHooks(List<ActivityMutationHook> hooks) {
+        this.mutationHooks = hooks == null ? List.of() : List.copyOf(hooks);
+    }
+
+    @Autowired(required = false)
+    void setWriteTransactions(org.springframework.transaction.PlatformTransactionManager manager) {
+        this.writeTransactions = new org.springframework.transaction.support.TransactionTemplate(manager);
     }
 
     @Autowired(required = false)
@@ -99,6 +111,12 @@ public class ActivityDataAccess {
         return activityRepository.findByRunnerAndActivityTypeOrderByIdDesc(runner, ActivityType.RUN, Limit.of(limit));
     }
 
+    public List<Activity> findRunsBeforeIdForRunner(Runner runner, Long beforeId, int limit) {
+        return beforeId == null ? findRunsForRunner(runner, limit)
+                : activityRepository.findByRunnerAndActivityTypeAndIdLessThanOrderByIdDesc(
+                        runner, ActivityType.RUN, beforeId, Limit.of(limit));
+    }
+
     public List<Activity> findActivitiesByIdsForRunner(List<Long> ids, Runner runner) {
         return activityRepository.findByIdInAndRunner(ids, runner);
     }
@@ -113,9 +131,19 @@ public class ActivityDataAccess {
      * deletes row by row), then deletes the activity itself.
      * Returns true if an activity was owned by the runner and deleted, false otherwise.
      */
-    @org.springframework.transaction.annotation.Transactional
     public boolean deleteActivityForRunner(Long id, Runner runner) {
-        Optional<Activity> owned = activityRepository.findByIdAndRunner(id, runner);
+        if (writeTransactions == null || org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            return deleteActivityBody(id, runner);
+        }
+        for (int attempt = 0; ; attempt++) {
+            try { return Boolean.TRUE.equals(writeTransactions.execute(status -> deleteActivityBody(id, runner))); }
+            catch (org.springframework.dao.TransientDataAccessException conflict) { if (attempt == 2) throw conflict; }
+        }
+    }
+
+    private boolean deleteActivityBody(Long id, Runner runner) {
+        Optional<Activity> owned = writeTransactions == null ? activityRepository.findByIdAndRunner(id, runner)
+                : activityRepository.findByIdAndRunnerForUpdate(id, runner);
         if (owned.isEmpty()) {
             return false;
         }
@@ -220,12 +248,29 @@ public class ActivityDataAccess {
         );
     }
 
+    @Transactional
     public void save(Activity activity) {
+        beforeActivityChanged(activity.getId());
         activityRepository.save(activity);
     }
 
+    /** RPE and derived route-preview writes do not change workout-matching evidence.
+     * Distance, duration, date, type and source changes must use save/the mutation hook. */
+    @Transactional
+    public void saveMetadata(Activity activity) {
+        activityRepository.save(activity);
+    }
+
+    @Transactional
     public void saveAll(List<Activity> activities) {
+        activities.stream().filter(a -> a.getId() != null).forEach(a -> mutationHooks.forEach(h -> h.beforeActivityChanged(a.getId())));
         activityRepository.saveAll(activities);
+    }
+
+    /** Import providers call this before flushing changed actual metrics. Joins their transaction. */
+    @Transactional
+    public void beforeActivityChanged(Long activityId) {
+        if (activityId != null) mutationHooks.forEach(h -> h.beforeActivityChanged(activityId));
     }
 
     public List<Object[]> findRoutePreviewSamplesByActivityIds(List<Long> activityIds, int limit) {

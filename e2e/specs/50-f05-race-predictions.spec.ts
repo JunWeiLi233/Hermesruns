@@ -126,7 +126,10 @@ test.describe('F05 changing data', () => {
       fastId = await p.api.importRun('p5k-fast.gpx', gpxRun({ name: 'E2E P 5k fast', start: daysAgo(6), distanceM: 5000, pace: 264 }));
       const faster = await hubPredictions(page);
       for (const distance of DISTANCES) expect(faster[distance.key].seconds, `${distance.label} after a faster 5K`).toBeLessThan(before[distance.key].seconds);
-      expect(Math.abs(faster['5k'].seconds - 1320)).toBeLessThanOrEqual(25); // a 22:00 5K
+      // A 22:00 5K, 6 days old. The page leans on it by a weight that falls as the run ages (an hour is a fraction of a day), so how far the
+      // prediction sits from 22:00 depends a little on the hour the suite runs at: 23 to 26 seconds over a day. The point of the case is that it
+      // moves from the 23:20 of the older run towards 22:00, which a margin of 40 seconds still says.
+      expect(Math.abs(faster['5k'].seconds - 1320)).toBeLessThanOrEqual(40);
       expect((await p.api.delete(`/api/activities/${fastId}`)).status).toBeLessThan(300);
       fastId = null;
       const back = await hubPredictions(page);

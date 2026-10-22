@@ -7,6 +7,7 @@ import type { Locator, Page } from '@playwright/test';
 import { Api, newRunner } from '../fixtures/api.ts';
 import { importHistoryRun, waitForEffort, type HistoryRun } from '../fixtures/history.ts';
 import { pageOpener } from '../fixtures/pages.ts';
+import { expandRunLabels as expandLabels } from '../fixtures/run-labels.ts';
 import { a11yViolations, contrastProblems, expect, expectNoHorizontalOverflow, expectNoRawKeys, test } from '../fixtures/test.ts';
 
 let api: Api;
@@ -37,7 +38,7 @@ const [first, second, third] = [0, 1, 2];
 const labelsOf = async (run: HistoryRun): Promise<{ runType: string | null; tags: string[]; suggestions: Array<{ tag: string; runs: number }> }> =>
   (await api.get(`/api/activities/${run.id}/labels`)).json;
 
-const card = (page: Page): Locator => page.getByRole('region', { name: 'Type and tags', exact: true });
+const card = (page: Page): Locator => page.getByRole('region', { name: 'Labels', exact: true });
 const typeGroup = (page: Page): Locator => card(page).getByRole('group', { name: 'Run type' });
 const tagInput = (page: Page): Locator => card(page).getByRole('textbox', { name: 'Add a tag' });
 const addButton = (page: Page): Locator => card(page).getByRole('button', { name: 'Add tag', exact: true });
@@ -48,6 +49,7 @@ const settled = (page: Page): Promise<void> => expect(typeGroup(page)).not.toHav
 
 async function openRun(page: Page, run: HistoryRun): Promise<void> {
   await page.goto(`/runs/${run.id}`);
+  await expandLabels(page);
   await expect(typeGroup(page)).toBeVisible();
 }
 
@@ -80,6 +82,7 @@ test.describe('F01 the type of a run', () => {
     }
     // It is still there after a reload, and the other runs are untouched.
     await page.reload();
+    await expandLabels(page);
     await expect(typeGroup(page).getByRole('radio', { name: 'Workout' })).toBeChecked();
     expect((await labelsOf(runs[second])).runType).toBeNull();
 
@@ -87,6 +90,7 @@ test.describe('F01 the type of a run', () => {
     await expect(announced(page, 'Run type cleared.')).toBeAttached();
     expect((await labelsOf(runs[first])).runType).toBeNull();
     await page.reload();
+    await expandLabels(page);
     await expect(typeGroup(page).getByRole('radio', { name: 'Just a run' })).toBeChecked();
   });
 
@@ -135,6 +139,7 @@ test.describe('F01 the tags of a run', () => {
     expect((await labelsOf(runs[first])).tags).toEqual(['hills and stairs', 'with the dog']);
 
     await page.reload();
+    await expandLabels(page);
     await expect(typeGroup(page)).toBeVisible();
     await expect(chips(page)).toHaveCount(2);
     await expect(card(page).getByRole('button', { name: 'Remove tag with the dog' })).toBeVisible();
@@ -175,7 +180,7 @@ test.describe('F01 the tags of a run', () => {
     // The tags of the other runs are untouched.
     expect((await labelsOf(runs[second])).tags).toEqual(['tempo', 'hills']);
     // The card links to the log, where the tags can be used.
-    await expect(card(page).getByRole('link', { name: 'See your tagged runs in the training log' })).toHaveAttribute('href', '/training-log');
+    await expect(card(page).getByRole('link', { name: 'See your tagged runs in the training log' })).toHaveAttribute('href', '/runs#training-log');
   });
 
   test('F01-H26 what is put on a run is what the training log shows and filters by', async ({ browser, baseURL, guard }) => {
@@ -184,7 +189,7 @@ test.describe('F01 the tags of a run', () => {
     await typeTag(page, 'Sunday loop');
     await expect(chips(page)).toHaveCount(1);
     await card(page).getByRole('link', { name: 'See your tagged runs in the training log' }).click();
-    await expect(page).toHaveURL(/\/training-log$/);
+    await expect(page).toHaveURL(/\/runs#training-log$/);
     const row = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: runs[third].name, exact: true }) });
     await expect(row.getByText('Long run', { exact: true })).toBeVisible();
     await expect(row.getByRole('button', { name: 'Filter by the tag Sunday loop' })).toBeVisible();
@@ -265,6 +270,7 @@ test.describe('F01 what a tag may be', () => {
     await settled(page);
     expect((await labelsOf(runs[first])).tags).toEqual(['café ☕', '长距离', '<svg onload=alert(1)>', "o'clock", '100%']);
     await page.reload();
+    await expandLabels(page);
     await expect(typeGroup(page)).toBeVisible();
     await expect(chips(page)).toHaveCount(5);
     await page.goto('/training-log');
@@ -349,6 +355,7 @@ test.describe('F01 labels under bad conditions', () => {
     await expect(card(page).getByRole('alert')).toHaveText('The type and tags of this run could not be loaded.');
     await expect(page.getByRole('region', { name: 'Pace analysis' })).toBeVisible();
     await card(page).getByRole('button', { name: 'Try again' }).click();
+    await expandLabels(page);
     await expect(typeGroup(page)).toBeVisible();
     await expect(card(page).getByRole('alert')).toHaveCount(0);
   });
@@ -356,6 +363,7 @@ test.describe('F01 labels under bad conditions', () => {
   test('F01-E45 two tabs: the last save wins, and a reload shows it (the tags are replaced as a whole list, not merged)', async ({ browser, baseURL, guard }) => {
     const one = await open(browser, baseURL, guard, runs[first]);
     const two = await pages.tab(one, `/runs/${runs[first].id}`);
+    await expandLabels(two);
     await expect(typeGroup(two)).toBeVisible();
     await typeGroup(one).getByRole('radio', { name: 'Race', exact: true }).check();
     await typeTag(one, 'from one');
@@ -368,6 +376,7 @@ test.describe('F01 labels under bad conditions', () => {
     expect(stored.runType).toBe('WORKOUT');
     expect(stored.tags).toEqual(['from two']);
     await one.reload();
+    await expandLabels(one);
     await expect(typeGroup(one).getByRole('radio', { name: 'Workout' })).toBeChecked();
     await expect(chips(one)).toHaveText(['from two×']);
   });
@@ -376,11 +385,13 @@ test.describe('F01 labels under bad conditions', () => {
     guard.allow(/status of 40[34]/); // the run is not theirs: the API says so, and the browser logs it
     const other = await newRunner('labels-other');
     const page = await pages.open(browser, baseURL, guard, { token: other.api.token as string, email: other.email }, null);
-    // The run page looks for the run among the runner's own runs: the list comes back without it.
-    const listed = page.waitForResponse((response) => new URL(response.url()).pathname === '/api/activities');
+    const lookup = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/activities' && url.searchParams.get('id') === String(runs[first].id);
+    });
     await page.goto(`/runs/${runs[first].id}`);
-    await listed;
-    await page.waitForTimeout(1500);
+    expect((await lookup).status()).toBe(404);
+    await expect(page.getByRole('heading', { name: 'No run selected', exact: true })).toBeVisible();
     await expect(card(page)).toHaveCount(0);
     await expect(page.locator('body')).not.toContainText(runs[first].name);
     expect((await other.api.get(`/api/activities/${runs[first].id}/labels`)).status).toBe(404);
@@ -433,8 +444,9 @@ test.describe('F01 the labels card as a whole', () => {
     const page = await pages.open(browser, baseURL, guard, who, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(`/runs/${runs[first].id}`);
-    const zh = page.getByRole('region', { name: '类型与标签', exact: true });
+    const zh = page.getByRole('region', { name: '标签', exact: true });
     await expect(zh).toBeVisible({ timeout: 15_000 });
+    await expandLabels(page, zh);
     await expect(zh.getByRole('group', { name: '跑步类型' }).getByRole('radio', { name: '比赛' })).toBeVisible();
     await zh.getByRole('textbox', { name: '添加标签' }).fill('山路');
     await zh.getByRole('textbox', { name: '添加标签' }).press('Enter');

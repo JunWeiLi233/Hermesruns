@@ -39,6 +39,9 @@ public class AppleHealthImportService {
     private final CoachRunnerStateRepository coachRunnerStateRepository;
     private final ObjectMapper objectMapper;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationEventPublisher events;
+
     private final ConcurrentMap<Long, HealthSyncTracker> syncStates = new ConcurrentHashMap<>();
 
     private final ExecutorService executor = Executors.newFixedThreadPool(
@@ -185,6 +188,7 @@ public class AppleHealthImportService {
 
         tracker.addProcessed(savedCount);
         updateCoachRunnerState(runner, latestRestingHeartRate, latestSleepScore, latestHrvMs);
+        if (savedCount > 0 && events != null) events.publishEvent(new com.hermes.backend.coaching.RecoveryUpdatedEvent(runner.getId()));
     }
 
     private void updateCoachRunnerState(Runner runner, Integer restingHeartRate, Integer sleepScore, Integer hrvMs) {

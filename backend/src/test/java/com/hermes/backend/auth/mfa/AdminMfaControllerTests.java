@@ -21,6 +21,51 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AdminMfaControllerTests {
 
     @Test
+    void registrationOptionsKeepWebAuthnFieldsThroughTheHttpJsonConverter() throws Exception {
+        AdminMfaService service = mock(AdminMfaService.class);
+        when(service.isAllowedRequestOrigin("http://localhost:8080")).thenReturn(true);
+        when(service.registrationOptions("selector", "bootstrap-token")).thenReturn("""
+                {"publicKey":{"challenge":"AQID","rp":{"id":"localhost","name":"Hermes Admin"},
+                "user":{"id":"BAUG","name":"admin@example.test","displayName":"Admin"},
+                "pubKeyCredParams":[{"type":"public-key","alg":-7}]}}
+                """);
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(
+                new AdminMfaController(service, new ObjectMapper())).build();
+
+        mvc.perform(post("/api/auth/admin-mfa/registration/options")
+                        .header("Origin", "http://localhost:8080")
+                        .cookie(new Cookie(AdminMfaChallengeCookie.NAME, "selector"))
+                        .contentType("application/json")
+                        .content("{\"bootstrapToken\":\"bootstrap-token\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.publicKey.challenge").value("AQID"))
+                .andExpect(jsonPath("$.publicKey.user.id").value("BAUG"))
+                .andExpect(jsonPath("$.publicKey.pubKeyCredParams[0].alg").value(-7))
+                .andExpect(jsonPath("$.nodeType").doesNotExist());
+    }
+
+    @Test
+    void authenticationOptionsKeepWebAuthnFieldsThroughTheHttpJsonConverter() throws Exception {
+        AdminMfaService service = mock(AdminMfaService.class);
+        when(service.isAllowedRequestOrigin("http://localhost:8080")).thenReturn(true);
+        when(service.authenticationOptions("selector")).thenReturn("""
+                {"publicKey":{"challenge":"AQID","rpId":"localhost",
+                "allowCredentials":[{"type":"public-key","id":"BAUG"}]}}
+                """);
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(
+                new AdminMfaController(service, new ObjectMapper())).build();
+
+        mvc.perform(post("/api/auth/admin-mfa/authentication/options")
+                        .header("Origin", "http://localhost:8080")
+                        .cookie(new Cookie(AdminMfaChallengeCookie.NAME, "selector")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.publicKey.challenge").value("AQID"))
+                .andExpect(jsonPath("$.publicKey.rpId").value("localhost"))
+                .andExpect(jsonPath("$.publicKey.allowCredentials[0].id").value("BAUG"))
+                .andExpect(jsonPath("$.nodeType").doesNotExist());
+    }
+
+    @Test
     void reportsMissingBootstrapConfigurationSeparatelyFromChallengeFailure() {
         AdminMfaService service = mock(AdminMfaService.class);
         AdminMfaController controller = new AdminMfaController(service, new ObjectMapper());

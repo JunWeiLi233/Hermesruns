@@ -1,7 +1,6 @@
+import useSectionSearchParams from '../../hooks/useSectionSearchParams';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router';
-import AuthenticatedPageChrome from '../../components/AuthenticatedPageChrome';
-import GoalsCard from '../../components/goals/GoalsCard';
+import { Link } from 'react-router';
 import { useI18n } from '../../contexts/I18nContext';
 import { tagKey } from '../../utils/runLabels';
 import { formatWeekRange, isCurrentWeek, listWeeks, longestDay, readFilters, showsLatestWeek, writeFilters } from '../../utils/trainingLog';
@@ -9,6 +8,7 @@ import LogFilters from './LogFilters';
 import LogView from './LogView';
 import LogWeek from './LogWeek';
 import useTrainingLog from './useTrainingLog';
+import GoalsCard from '../../components/goals/GoalsCard';
 
 const NO_WEEKS = [];
 
@@ -33,16 +33,21 @@ function Skeleton() {
  * of the log can be bookmarked and the back button leaves it. Earlier weeks are added to the end on request, twelve at a
  * time, and so are later weeks to the start after a jump.
  */
-export default function TrainingLog() {
+export default function TrainingLog({ showHeader = true } = {}) {
   const { t, lang } = useI18n();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSectionSearchParams();
   const filters = useMemo(() => readFilters(searchParams), [searchParams]);
   const { status, log, jumped, more, newer, loadMore, loadNewer, reload } = useTrainingLog(filters);
   const weeksRef = useRef(null);
   const pendingFocus = useRef(null);
 
   const setFilters = useCallback((next) => {
-    setSearchParams(writeFilters(next), { replace: true });
+    setSearchParams(current => {
+      const params = new URLSearchParams(current);
+      for (const key of ['runType', 'tag', 'metric', 'to']) params.delete(key);
+      for (const [key, value] of writeFilters(next)) params.append(key, value);
+      return params;
+    }, { replace: true });
   }, [setSearchParams]);
   const chooseType = useCallback((runType) => setFilters({ ...filters, runType }), [filters, setFilters]);
   const toggleTag = useCallback((tag) => {
@@ -189,28 +194,27 @@ export default function TrainingLog() {
     );
   }
 
+  const relatedLinks = (
+    <nav className="training-log-v2__links" aria-label={t('training_log.links_label')}>
+      <Link to="/runs">{t('training_log.link_runs')}</Link>
+      <Link to="/analysis/load-balance#load-fitness">{t('training_log.link_fitness')}</Link>
+    </nav>
+  );
+
   return (
-    <AuthenticatedPageChrome
-      bodyClassName="training-log-page"
-      title={t('training_log.title')}
-      parentLabel={t('profile.dashboard_nav_activities')}
-      parentRoute="/runs"
-      activeKey="activities"
-    >
-      <div className="training-log-v2" aria-busy={status === 'loading' || busy ? 'true' : undefined}>
+    <section aria-label={t('training_log.title')} className="training-log-v2" aria-busy={status === 'loading' || busy ? 'true' : undefined}>
+        {showHeader ? (
         <header className="training-log-v2__head">
           <div>
-            <h1>{t('training_log.title')}</h1>
+            <h2>{t('training_log.title')}</h2>
             <p>{t('training_log.subtitle')}</p>
           </div>
-          <nav className="training-log-v2__links" aria-label={t('training_log.links_label')}>
-            <Link to="/runs">{t('training_log.link_runs')}</Link>
-            <Link to="/analysis/load-balance#load-fitness">{t('training_log.link_fitness')}</Link>
-          </nav>
+          {relatedLinks}
         </header>
+        ) : null}
+        {!showHeader ? relatedLinks : null}
         <GoalsCard />
         {body}
-      </div>
-    </AuthenticatedPageChrome>
+    </section>
   );
 }

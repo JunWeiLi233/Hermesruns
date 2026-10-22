@@ -101,13 +101,13 @@ it('shows the highest-progress locked badge and navigates to a workout', async (
   expect(screen.getByRole('heading', { name: 'Workout destination' })).toBeInTheDocument();
 });
 
-it('matches the loading layout to the ring and tracks without mounting 131 placeholder cards', () => {
+it('shows one loading announcement without manufacturing earned rewards', () => {
   apiJson.mockImplementation(() => new Promise(() => {}));
   const { container } = renderPage();
-  expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
-  expect(container.querySelector('.page-skeleton__rewards-v2-ring')).toBeInTheDocument();
-  expect(container.querySelectorAll('.page-skeleton__rewards-v2-track')).toHaveLength(5);
-  expect(container.querySelectorAll('.page-skeleton__rewards-badge-card')).toHaveLength(0);
+  expect(screen.getAllByRole('status')).toHaveLength(1);
+  expect(container.querySelector('[data-loading-state="rewards"] [aria-busy="true"]')).toBeInTheDocument();
+  expect(container.querySelector('[role="progressbar"]')).toBeNull();
+  expect(container.querySelectorAll('.rewards-v2-step.is-earned')).toHaveLength(0);
 });
 
 it('keeps zero-activity progress honest and readable', async () => {

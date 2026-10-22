@@ -3,6 +3,7 @@ import { apiFetch } from '../api';
 import { invalidateResourceCache } from '../api/resourceCache';
 import AppIcon from './AppIcon';
 import Modal from './Modal';
+import LoadingOperationStatus from './loading/LoadingOperationStatus';
 
 /*
  * Shared "Import training data" modal (design 13a).
@@ -35,6 +36,18 @@ function fileExt(name) {
   return ext ? ext.toUpperCase().slice(0, 4) : 'FILE';
 }
 
+function readBatchOutcome(payload) {
+  if (!payload || !['importedActivities', 'skippedDuplicates', 'skippedNonRuns'].every(
+    (key) => Number.isSafeInteger(payload[key]) && payload[key] >= 0,
+  ) || !Array.isArray(payload.rejectedFiles) || !payload.rejectedFiles.every((detail) => typeof detail === 'string')) return null;
+  return {
+    importedActivities: payload.importedActivities,
+    skippedDuplicates: payload.skippedDuplicates,
+    skippedNonRuns: payload.skippedNonRuns,
+    rejectedFiles: payload.rejectedFiles,
+  };
+}
+
 export default function ImportActivityModal({ isOpen, onClose, onImported, t }) {
   return isOpen ? <ImportActivityDialog onClose={onClose} onImported={onImported} t={t} /> : null;
 }
@@ -55,34 +68,20 @@ function ImportActivityDialog({ onClose, onImported, t }) {
         t={t}
         onCancel={onClose}
         onBusyChange={(busy) => { busyRef.current = busy; }}
-        onImportedSome={() => onImported?.()}
-        onSuccess={() => { onClose?.(); onImported?.(); }}
+        onSuccess={() => { onImported?.(); }}
       />
     </Modal>
   );
 }
 
-/** What the server said about a batch, reduced to what the runner needs to know; null when it said nothing readable. */
-function readReport(body) {
-  if (!body || typeof body !== 'object') return null;
-  return {
-    imported: Number(body.importedActivities) || 0,
-    duplicates: Number(body.skippedDuplicates) || 0,
-    nonRuns: Number(body.skippedNonRuns) || 0,
-    rejected: Array.isArray(body.rejectedFiles) ? body.rejectedFiles.map(String) : [],
-  };
-}
-
-const needsReview = (report) => report.rejected.length > 0 || report.duplicates > 0 || report.nonRuns > 0 || report.imported === 0;
-
-export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onBusyChange, onSourceChange, className = '' }) {
+export function ImportActivityForm({ t, onCancel, onSuccess, onBusyChange, onSourceChange, onViewRuns, className = '' }) {
   const [source, setSource] = useState('fit');
   const [queue, setQueue] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState('');
-  // Set when the server's answer has something the runner should know: files refused, duplicates, activities that are not runs.
-  const [report, setReport] = useState(null);
+  const [outcome, setOutcome] = useState(null);
+  const [outcomeUncertain, setOutcomeUncertain] = useState(false);
   const tabsRef = useRef([]);
   const uploadingRef = useRef(false);
   const panelId = useId();
@@ -100,6 +99,8 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onB
     const files = Array.from(fileList || []);
     if (!files.length) return;
     setStatus('');
+    setOutcome(null);
+    setOutcomeUncertain(false);
     const added = files.map((file) => {
       idRef.current += 1;
       return { id: idRef.current, source, file };
@@ -139,42 +140,47 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onB
     });
     setUploading(true);
     setStatus('');
-    let answer;
+    setOutcome(null);
+    setOutcomeUncertain(false);
+    const showUnconfirmedOutcome = () => {
+      // A lost/unknown response does not prove the server rolled back the import.
+      invalidateResourceCache('/api/activities');
+      setOutcomeUncertain(true);
+      setStatus(t('components.import_v2.outcome_unknown'));
+    };
     try {
       const response = await apiFetch('/api/import/batch', { method: 'POST', body: formData });
-      if (!response.ok) {
-        // The server says why (a corrupt file, a type it does not read); show that instead of a bare "failed".
-        const body = typeof response.json === 'function' ? await response.json().catch(() => null) : null;
-        const reason = body && typeof body.error === 'string' ? body.error : '';
-        setStatus(reason ? `${t('profile.import_failed')}: ${reason}` : t('profile.import_failed'));
+      const payload = await response.json().catch(() => null);
+      const result = readBatchOutcome(payload);
+      if (!result) {
+        if (!response.ok && typeof payload?.error === 'string') setStatus(payload.error);
+        else showUnconfirmedOutcome();
         return;
       }
-      answer = typeof response.json === 'function' ? readReport(await response.json().catch(() => null)) : null;
+      setOutcome(result);
+      if (result.importedActivities > 0) {
+        invalidateResourceCache('/api/activities');
+        const importedCount = result.importedActivities;
+        onSuccess?.(importedCount);
+      }
+      // Aggregate counts cannot identify which upload supplied each activity.
+      // Keep the selection on partial/failing batches so the user can correct it.
+      if (response.ok && result.rejectedFiles.length === 0) setQueue([]);
     } catch {
-      setStatus(t('profile.import_failed'));
+      showUnconfirmedOutcome();
       return;
     } finally {
       uploadingRef.current = false;
       setUploading(false);
       onBusyChange?.(false);
     }
-    invalidateResourceCache('/api/activities');
-    const submitted = queue.length;
-    setQueue([]);
-    if (answer && needsReview(answer)) {
-      // Not a clean import: say what happened to each file and let the runner close it when they have read it.
-      setReport(answer);
-      if (answer.imported > 0) onImportedSome?.();
-      return;
-    }
-    const importedCount = answer ? answer.imported : submitted;
-    onSuccess?.(importedCount);
   }
 
   const countLabel = queue.length ? t('profile.upload_file_count', { count: queue.length }) : t('components.import_v2.import_empty');
   const dropTitle = t('components.import_v2.drop_title', { source: activeSource.tag });
 
   return (
+      <div className="import-v2-loading-layout">
       <form className={`import-v2${className ? ` ${className}` : ''}`} onSubmit={handleSubmit} aria-busy={uploading}>
         <div className="import-v2-body">
           <p className="import-v2-lede">{t('profile.import_batch_hint')}</p>
@@ -201,9 +207,7 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onB
             ))}
           </div>
 
-          {report ? <ImportReport report={report} t={t} /> : null}
-
-          <div role="tabpanel" id={panelId} aria-labelledby={`${panelId}-${source}`} hidden={Boolean(report)}>
+          <div role="tabpanel" id={panelId} aria-labelledby={`${panelId}-${source}`}>
             <label
               className={`import-v2-drop${isDragging ? ' is-dragging' : ''}${uploading ? ' is-busy' : ''}`}
               onDragOver={(event) => { event.preventDefault(); if (!uploadingRef.current) setIsDragging(true); }}
@@ -226,8 +230,8 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onB
             </label>
           </div>
 
-          <div className="import-v2-queue-head" hidden={Boolean(report)}>
-            <span role="status" aria-live="polite">{t('components.import_v2.queue_title', { count: queue.length })}</span>
+          <div className="import-v2-queue-head">
+            <span role={uploading ? undefined : "status"} aria-live={uploading ? undefined : "polite"}>{t('components.import_v2.queue_title', { count: queue.length })}</span>
             {queue.length > 0 && (
               <button type="button" className="import-v2-text-btn" onClick={() => setQueue([])} disabled={uploading}>
                 {t('components.import_v2.clear_all')}
@@ -235,7 +239,7 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onB
             )}
           </div>
 
-          {report ? null : queue.length === 0 ? (
+          {queue.length === 0 ? (
             <div className="import-v2-empty">{t('components.import_v2.queue_empty')}</div>
           ) : (
             <ul className="import-v2-queue">
@@ -247,6 +251,7 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onB
                     <span className="import-v2-file-copy">
                       <strong>{item.file.name}</strong>
                       <span>{formatSize(item.file.size)}</span>
+                      {uploading && <span className="loading-design" aria-hidden="true"><span className="loading-design__progress"><span className="hr-indet" /></span></span>}
                     </span>
                     <span className={`import-v2-file-tag is-${item.source}`}>{meta.tag}</span>
                     <button
@@ -264,54 +269,45 @@ export function ImportActivityForm({ t, onCancel, onSuccess, onImportedSome, onB
             </ul>
           )}
 
-          {status ? <div className="import-v2-error" role="alert">{status}</div> : null}
+          {status ? <div className="import-v2-error" role="alert">
+            {status}
+            {outcomeUncertain && onViewRuns && <button type="button" className="import-v2-text-btn" onClick={onViewRuns}>{t('profile.garmin_v2_view_runs')} →</button>}
+          </div> : null}
+
+          {outcome ? (
+            <section className="import-v2-result" aria-label={t('components.import_v2.result_label')} role="status" aria-live="polite">
+              <strong>{t(outcome.importedActivities > 0
+                ? outcome.rejectedFiles.length ? 'components.import_v2.result_partial' : 'components.import_v2.result_imported'
+                : 'components.import_v2.result_no_new')}</strong>
+              <ul className="import-v2-result-counts">
+                <li>{t('components.import_v2.activities_imported', { count: outcome.importedActivities })}</li>
+                <li>{t('components.import_v2.duplicates_skipped', { count: outcome.skippedDuplicates })}</li>
+                <li>{t('components.import_v2.files_rejected', { count: outcome.rejectedFiles.length })}</li>
+                {outcome.skippedNonRuns > 0 && <li>{t('components.import_v2.non_runs_skipped', { count: outcome.skippedNonRuns })}</li>}
+              </ul>
+              {outcome.rejectedFiles.length > 0 && <>
+                <p>{t('components.import_v2.rejection_recovery')}</p>
+                <ul className="import-v2-rejections">{outcome.rejectedFiles.map((detail, index) => <li key={`${index}-${detail}`}>{detail}</li>)}</ul>
+              </>}
+              {onViewRuns && (outcome.importedActivities > 0 || outcome.skippedDuplicates > 0) && (
+                <button type="button" className="import-v2-text-btn" onClick={onViewRuns}>{t('profile.garmin_v2_view_runs')} →</button>
+              )}
+            </section>
+          ) : null}
 
         </div>
 
         <div className="import-v2-actions">
-          {report ? (
-            <>
-              <span className="import-v2-selection-status" />
-              <button type="button" className="import-v2-cancel" onClick={() => setReport(null)}>
-                {t('components.import_v2.result_more')}
-              </button>
-              <button type="button" className="import-v2-submit" onClick={() => onSuccess?.(report.imported)}>
-                {t('components.import_v2.result_done')}
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="import-v2-selection-status">{queue.length ? t('profile.selected_files_count', { count: queue.length }) : t('profile.no_file_selected')}</span>
-              <button type="button" className="import-v2-cancel" onClick={onCancel} disabled={uploading}>
-                {t('profile.cancel')}
-              </button>
-              <button type="submit" className="import-v2-submit" disabled={!queue.length || uploading}>
-                {uploading ? t('components.import_v2.uploading') : countLabel}
-              </button>
-            </>
-          )}
+          <span className="import-v2-selection-status">{queue.length ? t('profile.selected_files_count', { count: queue.length }) : t('profile.no_file_selected')}</span>
+          <button type="button" className="import-v2-cancel" onClick={onCancel} disabled={uploading}>
+            {t(outcome && !queue.length ? 'components.import_v2.done' : 'profile.cancel')}
+          </button>
+          <button type="submit" className="import-v2-submit" disabled={!queue.length || uploading}>
+            {uploading ? t('components.import_v2.uploading') : outcome?.rejectedFiles.length || status ? t('components.import_v2.retry') : countLabel}
+          </button>
         </div>
       </form>
-  );
-}
-
-function ImportReport({ report, t }) {
-  const plural = (count, key) => t(`components.import_v2.${key}_${count === 1 ? 'one' : 'other'}`, { count });
-  return (
-    <div className="import-v2-report" role="status" aria-live="polite">
-      <strong>{report.imported > 0 ? plural(report.imported, 'result_imported') : t('components.import_v2.result_none')}</strong>
-      <ul>
-        {report.duplicates > 0 ? <li>{plural(report.duplicates, 'result_duplicates')}</li> : null}
-        {report.nonRuns > 0 ? <li>{plural(report.nonRuns, 'result_non_runs')}</li> : null}
-        {report.rejected.length > 0 ? (
-          <li>
-            {plural(report.rejected.length, 'result_rejected')}
-            <ul className="import-v2-report-files">
-              {report.rejected.map((entry) => <li key={entry}>{entry}</li>)}
-            </ul>
-          </li>
-        ) : null}
-      </ul>
-    </div>
+      {uploading && <div className="import-v2-loading-status"><LoadingOperationStatus t={t} what="import options" initial={t('components.import_v2.uploading')} slow={t('loading.copy.still_uploading')} /></div>}
+      </div>
   );
 }

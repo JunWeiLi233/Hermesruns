@@ -138,6 +138,15 @@
 	</dependencies>
 	
 
+	<profiles>
+		<profile>
+			<id>explorer</id>
+			<build><resources>
+				<resource><directory>src/main/resources</directory></resource>
+				<resource><directory>${project.build.directory}/explorer-public</directory><targetPath>static</targetPath></resource>
+			</resources></build>
+		</profile>
+	</profiles>
 	<build>
 		<directory>${hermes.build.directory}</directory>
 		<plugins>

@@ -1,6 +1,7 @@
 export const RUNS_CACHE_TTL_MS = 86_400_000;
 export const RUNS_CACHE_MAX_RAW_JSON_CHARS = 750_000;
-export const RUNS_CACHE_KEY_PREFIX = 'hermes_runs_v2_';
+export const RUNS_CACHE_KEY_PREFIX = 'hermes_runs_v3_';
+export const RUNS_CACHE_PREVIOUS_KEY_PREFIX = 'hermes_runs_v2_';
 export const RUNS_CACHE_LEGACY_KEY_PREFIX = 'hermes_runs_v1_';
 
 export interface RunsCacheStorage {
@@ -18,6 +19,11 @@ export interface SlimRunForRunsCache {
   distanceMeters: unknown;
   movingTimeSeconds: unknown;
   provider: unknown;
+  activityInstant?: unknown;
+  accountLocalDate?: unknown;
+  accountLocalTime?: unknown;
+  accountTimeZone?: unknown;
+  timeRepresentation?: unknown;
 }
 
 export interface RunsCacheSnapshot {
@@ -86,6 +92,8 @@ export function slimRunForRunsCache(run: Record<string, unknown> | null | undefi
     distanceMeters: run?.distanceMeters,
     movingTimeSeconds: run?.movingTimeSeconds,
     provider: run?.provider,
+    ...Object.fromEntries(['activityInstant', 'accountLocalDate', 'accountLocalTime', 'accountTimeZone', 'timeRepresentation']
+      .filter(field => run?.[field] !== undefined).map(field => [field, run?.[field]])),
   };
 }
 
@@ -93,7 +101,7 @@ export function invalidateRunsCache(storage: RunsCacheStorage, email: unknown) {
   const canonicalEmail = canonicalizeRunsCacheEmail(email);
   if (!canonicalEmail) return false;
 
-  for (const prefix of [RUNS_CACHE_KEY_PREFIX, RUNS_CACHE_LEGACY_KEY_PREFIX]) {
+  for (const prefix of [RUNS_CACHE_KEY_PREFIX, RUNS_CACHE_PREVIOUS_KEY_PREFIX, RUNS_CACHE_LEGACY_KEY_PREFIX]) {
     try {
       storage.removeItem(cacheKey(prefix, canonicalEmail));
     } catch {
@@ -110,11 +118,15 @@ export function writeRunsCache(
   profile: unknown,
   stravaStatus: unknown,
   now: number,
+  evidence?: { complete: boolean; sourceCount: number },
 ) {
   const canonicalEmail = canonicalizeRunsCacheEmail(email);
   if (!canonicalEmail) return false;
-  invalidateRunsCache(storage, canonicalEmail);
   if (!Array.isArray(runs)) return false;
+  // A page is never evidence of complete history, even when its size is below
+  // the request limit. Keep a previous complete snapshot during pagination.
+  if (evidence && (!evidence.complete || evidence.sourceCount !== runs.length)) return false;
+  invalidateRunsCache(storage, canonicalEmail);
 
   try {
     const raw = JSON.stringify({

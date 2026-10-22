@@ -12,13 +12,14 @@ body #root .analysis-insight-detail-page.is-load-balance .analysis-load-profile.
   --lb-card: #fff;
   --lb-ink: #171717;
   --lb-muted: #515563;
-  --lb-faint: #766d64;
+  --lb-faint: #716a63;
   --lb-line: rgba(28, 25, 23, 0.08);
   --lb-fill: rgba(28, 25, 23, 0.05);
   --lb-accent: #a0392a;
-  --lb-good: #1e7a35;
+  --lb-good: #237a38;
   --lb-good-soft: rgba(52, 199, 89, 0.12);
   --lb-band: rgba(52, 199, 89, 0.09);
+  --lb-pop: #fff;
   width: 100%;
   max-width: none;
   margin: 0;
@@ -41,6 +42,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-insight-detail-pa
   --lb-good: #9cd2aa;
   --lb-good-soft: rgba(156, 210, 170, 0.14);
   --lb-band: rgba(156, 210, 170, 0.12);
+  --lb-pop: #2a2c33;
 }
 
 #root .analysis-load-v2 :is(h1, h2, p) { margin: 0; }
@@ -187,7 +189,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2-zone.is-l
 #root .analysis-load-v2-head p { margin-top: 4px; color: var(--lb-muted) !important; font-size: 0.8rem; }
 #root .analysis-load-v2-chart .analysis-load-command-chart-wrap { position: relative; min-height: 280px; margin-top: 0; }
 #root .analysis-load-v2-chart .analysis-load-command-chart-svg text { fill: var(--lb-muted); }
-#root .analysis-load-v2-ranges { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--lb-fill); }
+#root .analysis-load-v2-ranges { display: flex; flex-wrap: wrap; max-width: 100%; gap: 2px; padding: 3px; border-radius: 11px; background: var(--lb-fill); }
 #root .analysis-load-v2-ranges button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--lb-muted); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
 #root .analysis-load-v2-ranges button[aria-pressed="true"] { background: var(--lb-card); color: var(--lb-ink); box-shadow: 0 1px 4px var(--lb-line); }
 #root .analysis-load-v2-ranges button:focus-visible { outline: 2px solid var(--lb-accent); outline-offset: 2px; }
@@ -211,8 +213,11 @@ body #root .analysis-load-v2 :is(.analysis-load-v2-head, .analysis-load-v2-chart
 #root .analysis-load-v2-metric > strong { font-size: 1.85rem; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 #root .analysis-load-v2-metric > em { color: var(--lb-good); font-size: 0.75rem; font-style: normal; font-weight: 700; }
 #root .analysis-load-v2-metric:is(.is-warn, .is-risk, .is-watch) > em { color: #d70015; }
+#root .analysis-load-v2-metric.is-neutral > em { color: var(--lb-muted); }
+#root .analysis-load-v2-metrics.is-load-row { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2-metric:is(.is-warn, .is-risk, .is-watch) > em { color: #ffb4a7; }
 #root .analysis-load-v2-metric > small { color: var(--lb-faint); font-size: 0.75rem; line-height: 1.45; }
+#root .analysis-load-v2-metric > small .how-worked-out__link { display: block; width: fit-content; margin-top: 4px; }
 
 /* Drivers */
 #root .analysis-load-v2-drivers { display: flex; flex-direction: column; gap: 6px; padding: 24px 28px; }
@@ -248,22 +253,31 @@ body:is(.theme-midnight, .theme-high-contrast) #root .analysis-load-v2-metric:is
 #root .analysis-load-v2-driver-dist { color: var(--lb-muted); font-size: 0.8rem; text-align: right; font-variant-numeric: tabular-nums; }
 #root .analysis-load-v2-driver-load { font-size: 0.94rem; text-align: right; font-variant-numeric: tabular-nums; }
 
+/* Five cards do not fit four-wide: three and two (the two wider) between 1101 and 1320, two across below that. */
+@media (min-width: 1101px) and (max-width: 1320px) {
+  #root .analysis-load-v2-metrics.is-load-row { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  #root .analysis-load-v2-metrics.is-load-row > .analysis-load-v2-metric { grid-column: span 2; }
+  #root .analysis-load-v2-metrics.is-load-row > .analysis-load-v2-metric:nth-child(n + 4) { grid-column: span 3; }
+}
+
 @media (max-width: 1100px) {
   #root .analysis-load-v2-top { grid-template-columns: minmax(0, 1fr); }
-  #root .analysis-load-v2-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #root .analysis-load-v2-metrics, #root .analysis-load-v2-metrics.is-load-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #root .analysis-load-v2-metrics.is-load-row > .analysis-load-v2-metric:last-child:nth-child(odd) { grid-column: 1 / -1; }
   body #root .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas { padding: 20px 24px 40px !important; }
   #root .analysis-load-v2-athlete { margin-top: 12px; }
 }
 
 @media (max-width: 640px) {
   body #root .analysis-insight-detail-page.is-load-balance .runner-shell-canvas.analysis-insight-detail-canvas { padding: 20px 16px 32px !important; }
-  #root .analysis-load-v2-metrics { grid-template-columns: minmax(0, 1fr); }
+  #root .analysis-load-v2-metrics, #root .analysis-load-v2-metrics.is-load-row { grid-template-columns: minmax(0, 1fr); }
   #root .analysis-load-v2 :is(.analysis-load-v2-verdict, .analysis-load-v2-window, .analysis-load-v2-chart, .analysis-load-v2-drivers) { padding: 20px; border-radius: 20px; }
   #root .analysis-load-v2-driver { grid-template-columns: minmax(0, 1fr) auto; }
   #root .analysis-load-v2-driver-bar { grid-column: 1 / -1; grid-row: 2; }
   #root .analysis-load-v2-driver-dist { grid-column: 1; grid-row: 3; text-align: left; }
   #root .analysis-load-v2-scale-labels { font-size: 0.68rem; }
 }
+body #root .analysis-insight-detail-page.is-load-balance .analysis-load-v2 .analysis-insight-empty-state { color: var(--lb-muted); }
 
 /* Fitness, fatigue and form, and the weekly effort (M4). They sit on this page, inside .analysis-load-v2, so they take the
    same card, heading, range switch, key and metric styles and the same --lb-* tokens, light and midnight. Only what is new
@@ -321,6 +335,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-load-v2 .analy
 #root .analysis-load-v2 .analysis-fit-v2-toggle i { width: 14px; height: 0; border-top: 3px solid var(--fit-fitness); border-radius: 2px; }
 #root .analysis-load-v2 .analysis-fit-v2-toggle.is-fatigue i { border-top-color: var(--fit-fatigue); }
 #root .analysis-load-v2 .analysis-fit-v2-toggle.is-form i { height: 8px; border-top: 0; border-radius: 2px; background: linear-gradient(180deg, var(--fit-fresh) 50%, var(--fit-tired) 50%); }
+#root .analysis-load-v2 .analysis-fit-v2-toggle.is-effort i { width: 10px; height: 10px; border-top: 0; border-radius: 2px; background: var(--lb-muted); opacity: 0.7; }
 #root .analysis-load-v2 .analysis-fit-v2-toggle[aria-pressed="false"] { opacity: 0.55; }
 #root .analysis-load-v2 .analysis-fit-v2-toggle[aria-pressed="false"] strong { color: var(--lb-muted); }
 #root .analysis-load-v2 .analysis-fit-v2-toggle[aria-pressed="true"] { background: var(--lb-fill); color: var(--lb-ink); }
@@ -348,6 +363,10 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-load-v2 .analy
 #root .analysis-load-v2 .analysis-fit-v2-line.is-projected { stroke-dasharray: 1 6; stroke-width: 2.5; }
 #root .analysis-load-v2 .analysis-fit-v2-form-area.is-fresh { fill: var(--fit-fresh); }
 #root .analysis-load-v2 .analysis-fit-v2-form-area.is-tired { fill: var(--fit-tired); }
+/* The day's effort: bars in a strip of their own, and the one being looked at in the ink colour. */
+#root .analysis-load-v2 .analysis-fit-v2-effort-bars { fill: var(--lb-muted); fill-opacity: 0.7; }
+#root .analysis-load-v2 .analysis-fit-v2-effort-selected { fill: var(--lb-ink); }
+#root .analysis-load-v2 .analysis-fit-v2-svg text.analysis-fit-v2-effort-caption { fill: var(--lb-muted); font-weight: 700; }
 #root .analysis-load-v2 .analysis-fit-v2-dot { stroke: var(--lb-card); stroke-width: 2.5; }
 #root .analysis-load-v2 .analysis-fit-v2-dot.is-fitness { fill: var(--fit-fitness); }
 #root .analysis-load-v2 .analysis-fit-v2-dot.is-fatigue { fill: var(--fit-fatigue); }
@@ -361,7 +380,7 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-load-v2 .analy
   gap: 6px;
   padding: 10px 12px;
   border-radius: 14px;
-  background: var(--lb-card);
+  background: var(--lb-pop);
   color: var(--lb-ink);
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16), 0 0 0 1px var(--lb-line);
   font-size: 0.75rem;
@@ -384,6 +403,9 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-load-v2 .analy
 #root .analysis-load-v2 .analysis-fit-v2-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 #root .analysis-load-v2 .analysis-fit-v2-metrics .analysis-load-v2-metric { background: var(--lb-fill); border-radius: 18px; }
 #root .analysis-load-v2-metric > em.is-neutral { color: var(--lb-muted); }
+/* Under a tile's number, where it moved over 7 and 14 days: close together, each with an arrow. */
+#root .analysis-load-v2 .analysis-fit-v2-metrics .analysis-load-v2-metric > em + em { margin-top: -3px; }
+#root .analysis-load-v2 .analysis-fit-v2-arrow { display: inline-block; min-width: 1em; text-align: center; }
 
 /* Weekly bars and the range each is compared with */
 #root .analysis-load-v2 .analysis-fit-v2-range { fill: var(--lb-band); }
@@ -413,5 +435,44 @@ body:is(.theme-light, .theme-high-contrast-light) #root .analysis-load-v2 .analy
 
 @media (max-width: 640px) {
   #root .analysis-load-v2 .analysis-fit-v2 .analysis-load-v2-chart-meta { flex-wrap: wrap; }
+  /* The status of the week ("Building towards your usual range") is a line of text on a small screen with the text enlarged, not a strip wider than the screen. */
+  #root .analysis-load-v2 .analysis-load-v2-chart-meta > span { max-width: 100%; white-space: normal; }
   #root .analysis-load-v2 .analysis-fit-v2-skeleton-chart { height: 210px; }
+}
+
+/* The list of the parts of the page, and where a jump to one of them lands (below the header where it stays on the screen, which is from 861 px, with a ring for a keyboard). */
+#root .analysis-load-v2-jump { display: flex; flex-wrap: wrap; align-items: center; gap: 0 16px; padding: 0 4px; color: var(--lb-muted); font-size: 0.82rem; }
+#root .analysis-load-v2-jump > span { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+#root .analysis-load-v2-jump a { display: inline-flex; align-items: center; min-height: 28px; color: var(--lb-accent); font-weight: 700; text-decoration: none; }
+#root .analysis-load-v2-jump a:hover { text-decoration: underline; }
+#root .analysis-load-v2-jump a:focus-visible { outline: 2px solid var(--lb-accent); outline-offset: 2px; border-radius: 6px; }
+#root .analysis-load-v2 :is(#load-chart, #load-fitness, #load-weekly-effort, #load-distance, #load-intensity, #load-drivers) { scroll-margin-top: 104px; }
+@media (max-width: 860px) {
+  #root .analysis-load-v2 :is(#load-chart, #load-fitness, #load-weekly-effort, #load-distance, #load-intensity, #load-drivers) { scroll-margin-top: 16px; }
+}
+#root .analysis-load-v2 :is(#load-chart, #load-fitness, #load-weekly-effort, #load-distance, #load-intensity, #load-drivers):focus { outline: none; }
+#root .analysis-load-v2 :is(#load-chart, #load-fitness, #load-weekly-effort, #load-distance, #load-intensity, #load-drivers):focus-visible { outline: 2px solid var(--lb-accent); outline-offset: 4px; }
+
+/* Weekly distance: neutral bars (a week is not good or bad), the week going lighter and dashed, a line through the four-week averages. */
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-distance { fill: var(--lb-muted); fill-opacity: 0.72; }
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-distance.is-open { fill-opacity: 0.35; stroke: var(--lb-muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+#root .analysis-load-v2 .analysis-fit-v2-bar.is-distance.is-selected { fill-opacity: 0.9; stroke: var(--lb-ink); stroke-width: 2; stroke-dasharray: none; }
+#root .analysis-load-v2 .analysis-wd-average { fill: none; stroke: var(--lb-accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+#root .analysis-load-v2 .analysis-wd-average-dot { fill: var(--lb-accent); stroke: var(--lb-card); stroke-width: 1.5; }
+#root .analysis-load-v2-chart-meta .analysis-fit-v2-legend i.is-distance { background: var(--lb-muted); opacity: 0.72; }
+#root .analysis-load-v2-chart-meta .analysis-fit-v2-legend i.is-average { height: 3px; border-radius: 2px; background: var(--lb-accent); }
+#root .analysis-load-v2 .analysis-wd-tooltip { width: max-content; max-width: min(11.75rem, calc(100% - 16px)); }
+
+/* Weekly distance: the three readings are three across on a tablet (they are short), and on a phone the rows of one card, a name on the left and its number on the right of a line, and when the
+   two do not fit on a line (the text made larger) the number goes under the name and not over it. */
+@media (min-width: 641px) and (max-width: 900px) {
+  #root .analysis-load-v2 #load-distance .analysis-fit-v2-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  #root .analysis-load-v2 #load-distance .analysis-fit-v2-metrics { gap: 0; overflow: hidden; border-radius: 18px; background: var(--lb-fill); }
+  #root .analysis-load-v2 #load-distance .analysis-fit-v2-metrics .analysis-load-v2-metric { display: flex; flex-flow: row wrap; align-items: baseline; justify-content: space-between; gap: 2px 14px; padding: 12px 16px; border-radius: 0; background: transparent; }
+  #root .analysis-load-v2 #load-distance .analysis-fit-v2-metrics .analysis-load-v2-metric + .analysis-load-v2-metric { border-top: 1px solid var(--lb-line); }
+  #root .analysis-load-v2 #load-distance .analysis-load-v2-metric > span { flex: 0 1 auto; }
+  #root .analysis-load-v2 #load-distance .analysis-load-v2-metric > strong { flex: 0 0 auto; margin-left: auto; font-size: 1.4rem; text-align: right; }
+  #root .analysis-load-v2 #load-distance .analysis-load-v2-metric > small { flex: 1 1 100%; }
 }

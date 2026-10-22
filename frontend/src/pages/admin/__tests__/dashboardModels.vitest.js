@@ -2,6 +2,24 @@ import { describe, expect, it } from 'vitest';
 import { getDashboardSectionFromPathname, normalizeDashboardPathname } from '../navigation.js';
 import { getShoeCatalogIdentityKey, getShoeLivePhotoUrl, getShoePendingPhotoUrl, getShoeReviewState, getShoeUsageRatio, getShoeHeroBadgeKey } from '../catalogModels.js';
 import { buildCourseMapRecommendation, getCourseMapRenderableLive, getCourseMapStatus, getCourseMapActionFromJob, areCourseMapActionsEqual, getCourseMapActionSummary, buildCourseMapAdminPayload, findCourseMapUploadFile } from '../courseMapModels.js';
+
+describe('course map numeric action metadata', () => {
+  it.each([null, '', '   ', false, [], {}, 'invalid', Number.NaN, Number.POSITIVE_INFINITY].map(value => ({ value })))(
+    'omits absent or invalid numeric metadata ($value)',
+    ({ value }) => {
+      expect(buildCourseMapAdminPayload({ name: 'Race', lat: value, lng: value, distanceKm: value,
+        race: { latitude: value, longitude: value, distanceKm: value } }))
+        .toEqual({ raceName: 'Race' });
+    },
+  );
+
+  it('preserves zero coordinates while omitting a nonpositive race distance', () => {
+    expect(buildCourseMapAdminPayload({ name: 'Race', lat: 0, lng: '0', distanceKm: 0 }))
+      .toEqual({ raceName: 'Race', lat: 0, lng: 0 });
+    expect(buildCourseMapAdminPayload({ name: 'Race', distanceKm: -1 }))
+      .toEqual({ raceName: 'Race' });
+  });
+});
 import { normalizePage, getDashboardJobProgress, getDashboardJobParsedDetails, getDashboardJobTimelineSteps, getDashboardJobPayloadHighlights, getAuditTerminalStatus, getAuditTerminalTraceId, buildDailyCountSeries, buildCumulativeDailySeries, formatDashboardJobDuration } from '../operationsModels.js';
 
 const t = key => key;

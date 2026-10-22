@@ -5,7 +5,7 @@
   --ip-card: #fff;
   --ip-ink: #1c1917;
   --ip-muted: #625c56;
-  --ip-faint: #766d64;
+  --ip-faint: #716a63;
   --ip-line: rgba(28, 25, 23, 0.08);
   --ip-fill: rgba(28, 25, 23, 0.035);
   --ip-accent: #a0392a;
@@ -20,7 +20,7 @@
   display: flex !important;
   flex-direction: column;
   gap: 20px;
-  width: min(100%, 1280px) !important;
+  width: 100% !important;
   max-width: none !important;
   padding: 0 !important;
   border: 0 !important;
@@ -46,6 +46,14 @@ body:is(.theme-midnight, .theme-high-contrast) #root .import-page-v2 {
 
 #root .import-page-v2-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 24px; }
 #root .import-page-v2-title { display: flex; flex-direction: column; gap: 8px; }
+
+@media (min-width: 1101px) {
+  #root .import-page-v2-shell .runner-shell-canvas {
+    width: calc(100% - 48px) !important;
+    max-width: none !important;
+    margin-inline: auto !important;
+  }
+}
 
 #root .import-page-v2-back {
   display: inline-flex;
@@ -77,7 +85,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .import-page-v2 {
 #root .import-page-v2-sync { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: var(--ip-card); }
 #root .import-page-v2-sync > span { color: var(--ip-muted); font-size: 0.78rem; }
 #root .import-page-v2-sync button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 999px; color: #fff; font: inherit; font-size: 0.75rem; font-weight: 800; cursor: pointer; }
-#root .import-page-v2-sync .is-strava { background: #fc4c02; }
+#root .import-page-v2-sync .is-strava { background: #c83b00; }
 #root .import-page-v2-sync .is-garmin { background: #1c1917; }
 body:is(.theme-midnight, .theme-high-contrast) #root .import-page-v2-sync .is-garmin { background: #3a3f48; }
 

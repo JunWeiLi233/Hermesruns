@@ -1,6 +1,7 @@
 package com.hermes.backend.shoes;
 
 import com.hermes.backend.auth.AuthService;
+import com.hermes.backend.billing.AiBudgetExceededException;
 import com.hermes.backend.infrastructure.web.RequestBodyValidator;
 import com.hermes.backend.runner.Runner;
 import java.util.Map;
@@ -47,6 +48,9 @@ public class ShoeQueryNormalizationController {
             return ResponseEntity.ok(shoeQueryNormalizationService.normalize(rawInput));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
+        } catch (AiBudgetExceededException ex) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).header("Retry-After", "3600")
+                    .body(Map.of("error", "AI_BUDGET_EXCEEDED", "code", "AI_BUDGET_EXCEEDED"));
         } catch (IllegalStateException ex) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of("error", ex.getMessage()));
         }

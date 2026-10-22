@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiJson } from '../../../api';
 import en from '../../../i18n/locales/en';
 import zh from '../../../i18n/locales/zh-CN';
+import { methodsDocUrl } from '../../../utils/methodsDoc';
 import WeeklyEffortSection from '../WeeklyEffortSection';
 import { noWeeks, weekly } from './trainingSeriesFixtures';
 
@@ -167,6 +168,7 @@ describe('how this week stands', () => {
     await screen.findByRole('slider');
     expect(screen.getByText(/plus or minus 25%/)).toBeInTheDocument();
     expect(screen.getByText(/A week still going is never called below/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: t('methods.link') })).toHaveAttribute('href', methodsDocUrl('weekly-effort'));
   });
 });
 
@@ -221,6 +223,15 @@ describe('looking at one week', () => {
     expect(container.querySelector('.analysis-fit-v2-tooltip')).toBeInTheDocument();
     fireEvent.pointerDown(document.body, { pointerType: 'touch' });
     expect(container.querySelector('.analysis-fit-v2-tooltip')).not.toBeInTheDocument();
+  });
+
+  it('says the one week there is in the label of the chart, not "the last 1 weeks" (BUG-051)', async () => {
+    served = weekly({ totals: [250] });
+    render(<WeeklyEffortSection />);
+    const slider = await screen.findByRole('slider');
+
+    expect(slider.getAttribute('aria-label')).toBe(t('training_series.weekly_chart_label_one'));
+    expect(slider.getAttribute('aria-label')).not.toMatch(/last 1 weeks/);
   });
 
   it('says one run, not 1 runs', async () => {

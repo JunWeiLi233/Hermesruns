@@ -43,7 +43,7 @@ class ApiExceptionMappingTests {
 
     @Test
     void anUploadOverTheLimitIsA413ThatSaysWhatTheLimitIs() {
-        ResponseEntity<?> answer = advice.handleUploadTooLarge(new MaxUploadSizeExceededException(20L * 1024 * 1024), request());
+        ResponseEntity<?> answer = advice.handleOversizedUpload(new MaxUploadSizeExceededException(20L * 1024 * 1024), request());
 
         assertThat(answer.getStatusCode().value()).isEqualTo(413);
         assertThat(answer.getBody().toString()).contains("too large").contains("20MB").contains("FILE_TOO_LARGE");

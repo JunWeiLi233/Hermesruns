@@ -1,0 +1,50 @@
+export default {
+  "training_workspace": {
+    "nav": "Training & coaching",
+    "intro": "Plan your training, review activities and manage coaching access.",
+    "athlete": "Selected athlete",
+    "access": "Manage access",
+    "navigation": "Training workspace navigation",
+    "readOnly": "You have read-only access to this athlete. Editing requires accepted coaching permission.",
+    "notFound": "Training view not found",
+    "back": "Open training calendar",
+    "unavailable": "The training workspace could not be opened. Retry or return to your dashboard.",
+    "retry": "Try again",
+    "home": "Back to dashboard",
+    "groups": {
+      "training": "Training",
+      "analysis": "Analysis",
+      "planning": "Planning",
+      "coaching": "Coaching & teams",
+      "settings": "Workspace settings"
+    },
+    "screens": {
+      "S04": "Athlete settings",
+      "S05": "Connected services",
+      "S06": "Training calendar",
+      "S07": "Activity list",
+      "S08": "Import activities",
+      "S09": "Session timeline",
+      "S10": "Interval table",
+      "S11": "Session analysis",
+      "S12": "Compare sessions",
+      "S13": "Training load",
+      "S14": "Training totals",
+      "S15": "Compare periods",
+      "S16": "Daily wellness",
+      "S17": "Workout library",
+      "S18": "Workout editor",
+      "S19": "Training plans",
+      "S20": "Season structure",
+      "S21": "Athlete roster",
+      "S22": "Follow and coach requests",
+      "S23": "Conversations",
+      "S24": "Team management",
+      "S25": "Membership and consent",
+      "S26": "Bulk configuration",
+      "S27": "Find a coach",
+      "S28": "Privacy and grants",
+      "S30": "Power history"
+    }
+  }
+};

@@ -1,0 +1,170 @@
+/* Analysis Redesign v3: the supplied reference, within the existing Hermes shell. */
+body #root .runner-shell-page.analysis-page-shell.analysis-reference-overview .runner-shell-canvas.analysis-v2-content {
+  gap: 20px !important;
+}
+#root .analysis-reference-overview .analysis-v2-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 20px;
+}
+#root .analysis-v3-intro-copy { display: contents; }
+#root .analysis-v3-intro-copy h1 { grid-column: 1 / -1; }
+#root .analysis-v3-intro-copy p { min-width: 0; line-height: 1.6; }
+#root .analysis-v2-intro .athlete-tools-actions { margin: 0; gap: 8px; justify-content: flex-end; }
+body #root .analysis-reference-overview .analysis-v2-intro .athlete-tools-actions > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px !important;
+  padding: 0 16px;
+  background: var(--a2-card);
+  color: var(--a2-ink);
+  font-size: .8125rem;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+#root .analysis-v2-intro .athlete-tools-actions > button svg { width: 14px; height: 14px; }
+#root .analysis-reference-overview .analysis-overview-vdot-title a { color: inherit; text-decoration: none; }
+#root .analysis-v3-predictions-basis { color: var(--a2-faint); font-size: .75rem; text-decoration: none; }
+#root .analysis-v3-predictions-basis:hover { color: var(--a2-accent); }
+#root .analysis-reference-overview .analysis-v2-vo2-title > p:not(.sr-only) { color: var(--a2-muted); font-size: .8125rem; line-height: 1.5; }
+#root .analysis-reference-overview .analysis-v2-vo2 .analysis-overview-vo2-bars { margin-top: auto !important; }
+#root .analysis-reference-overview .analysis-v2-vo2 .analysis-overview-vo2-legend { margin-top: 8px; font-size: .75rem; }
+#root .analysis-reference-overview .analysis-v2-checks { align-items: stretch; }
+#root .analysis-reference-overview .analysis-v2-check { gap: 10px; }
+#root .analysis-reference-overview .analysis-v2-check p { margin: 0; }
+#root .analysis-deeper { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+#root .analysis-deeper__head { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 20px; }
+#root .analysis-deeper__head h2 {
+  margin: 0;
+  color: var(--a2-ink);
+  font: italic 800 1.375rem/1.3 var(--font-display);
+  letter-spacing: -.02em;
+}
+#root .analysis-deeper__head p { margin: 0; color: var(--a2-faint); font-size: .8125rem; }
+#root .analysis-reference-overview .analysis-inline-features { border-radius: 20px; background: var(--a2-card); }
+#root .analysis-reference-overview .inline-feature {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+#root .analysis-reference-overview .inline-feature:first-child { border-radius: 20px 20px 0 0; }
+#root .analysis-reference-overview .inline-feature:last-child { border-radius: 0 0 20px 20px; }
+#root .analysis-reference-overview .inline-feature + .inline-feature { border-top: 1px solid var(--a2-line); }
+#root .analysis-reference-overview .inline-feature__summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 20px;
+  padding: 18px 64px 18px 28px;
+}
+#root .analysis-reference-overview .inline-feature__title { grid-column: 1; font-size: .9375rem; line-height: 1.5; }
+#root .analysis-reference-overview .inline-feature__description { grid-column: 1; font-size: .8125rem; line-height: 1.5; }
+#root .analysis-reference-overview .inline-feature__value {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  color: var(--a2-ink);
+  font-size: .9375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+#root .analysis-reference-overview .inline-feature[open] > summary .inline-feature__value { color: var(--a2-faint); }
+#root .analysis-reference-overview .inline-feature__summary::after { top: 50%; right: 30px; transform: translateY(-50%); color: var(--a2-faint); font-size: .875rem; }
+#root .analysis-reference-overview .inline-feature__summary:focus-visible { outline-offset: -3px; border-radius: 12px; }
+#root .analysis-reference-overview .inline-feature__content { padding: 0 28px 24px; }
+
+/* Evidence is one continuous surface; the chart and six rows carry the first read. */
+#root .analysis-reference-overview .vo2max-estimates-v2--compact {
+  --ve-card: var(--a2-card);
+  --ve-ink: var(--a2-ink);
+  --ve-muted: var(--a2-muted);
+  --ve-faint: var(--a2-faint);
+  --ve-line: var(--a2-line);
+  --ve-fill: var(--a2-fill);
+  --ve-accent: var(--a2-accent);
+  --ve-mean: var(--a2-ink);
+  gap: 20px;
+  padding: 0;
+}
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__tiles { gap: 24px; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__tiles article { padding: 0; gap: 6px; border-radius: 0; background: transparent; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__tiles span { font-weight: 400; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__tiles strong { font-size: 1.625rem; line-height: 1.2; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__card { padding: 0; border-radius: 0; gap: 18px; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__dot { r: 4px; stroke-width: 1; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__dot.is-counted { r: 5px; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__dot.is-short { stroke-dasharray: 2 2; stroke: var(--a2-muted); }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__mean { stroke-width: 1; stroke-dasharray: 3 3; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table-wrap { max-width: 100%; border-radius: 0; }
+#root .vo2max-estimates-v2__runs { min-width: 0; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table { font-size: .8125rem; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table :is(th, td) { padding: 12px 6px; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table thead th { text-transform: none; letter-spacing: 0; font-weight: 400; color: var(--ve-faint); font-size: .75rem; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table tbody th { font-weight: 400; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table tr.is-counted :is(th, td) { background: transparent; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table a { color: var(--ve-ink); font-weight: 600; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table a:hover { color: var(--ve-accent); }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__table td:nth-child(7) { text-align: right; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__tag { margin: 0 6px 0 0; font-weight: 600; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__tag.is-counted { color: var(--ve-accent); background: var(--a2-accent-soft); }
+#root .vo2max-estimates-v2__show-runs {
+  min-height: 40px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ve-accent);
+  font: inherit;
+  font-size: .8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+#root .vo2max-estimates-v2__race-evidence { padding: 14px 16px; border-radius: 16px; background: var(--a2-fill); }
+#root .vo2max-estimates-v2__race-evidence > summary { display: flex; align-items: baseline; gap: 8px 20px; cursor: pointer; list-style: none; font-size: .8125rem; line-height: 1.5; }
+#root .vo2max-estimates-v2__race-evidence > summary::-webkit-details-marker { display: none; }
+#root .vo2max-estimates-v2__race-evidence > summary strong { flex: none; color: var(--ve-ink); }
+#root .vo2max-estimates-v2__race-evidence > summary span { color: var(--ve-muted); }
+#root .vo2max-estimates-v2__race-evidence > summary::after { content: '+'; margin-left: auto; color: var(--ve-faint); }
+#root .vo2max-estimates-v2__race-evidence[open] > summary::after { content: '−'; }
+#root .vo2max-estimates-v2__race-evidence[open] > summary { margin-bottom: 16px; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__working { display: block; color: var(--ve-muted); font-size: .75rem; line-height: 1.6; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__working > p { display: inline; font-size: .75rem; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__working > p::after { content: ' '; }
+#root .vo2max-estimates-v2--compact .vo2max-estimates-v2__working > a { font-size: .75rem; color: var(--ve-accent); }
+#root .vo2max-estimates-v2__calculation-details { margin-top: 12px; }
+#root .vo2max-estimates-v2__history-disclosure > summary,
+#root .vo2max-estimates-v2__calculation-details > summary { min-height: 32px; cursor: pointer; color: var(--ve-muted); font-size: .75rem; line-height: 1.6; }
+#root .vo2max-estimates-v2__history-disclosure > .vo2max-estimates-v2__card { margin-top: 16px; }
+#root .analysis-reference-overview :is(.vo2max-estimates-v2 summary, .vo2max-estimates-v2__table-wrap):focus-visible { outline: 2px solid var(--a2-accent); outline-offset: 3px; border-radius: 4px; }
+#root .analysis-reference-overview .analysis-v2-zones .analysis-v2-card-head h2 { font: italic 800 1.375rem/1.3 var(--font-display) !important; text-transform: none; letter-spacing: -.02em; }
+#root .analysis-v3-quality-link { display: inline-flex; align-items: center; gap: 4px; padding: 0 10px; color: var(--a2-muted); font-size: .8125rem; }
+#root .analysis-v3-quality-link svg { width: 14px; height: 14px; }
+body #root .analysis-reference-overview .analysis-v2-prediction-actions :is(button, a) { text-transform: none; letter-spacing: 0; }
+@media (min-width: 1001px) {
+  #root .analysis-reference-overview .analysis-v2-hero > :is(.analysis-v2-vo2, .analysis-v2-predictions) { min-height: 392px !important; }
+}
+@media (max-width: 760px) {
+  body #root .runner-shell-page.analysis-page-shell.analysis-reference-overview .runner-shell-canvas.analysis-v2-content {
+    gap: 16px !important;
+  }
+  #root .analysis-reference-overview .analysis-v2-intro { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  #root .analysis-v2-intro .athlete-tools-actions { justify-content: flex-start; flex-wrap: wrap; }
+  #root .analysis-reference-overview .inline-feature__summary { padding: 18px 44px 18px 20px; gap: 4px 12px; }
+  #root .analysis-reference-overview .inline-feature__summary::after { right: 20px; }
+  #root .analysis-reference-overview .inline-feature__value { font-size: .8125rem; max-width: 8ch; overflow-wrap: anywhere; }
+  #root .analysis-reference-overview .inline-feature__content { padding: 0 20px 20px; }
+  #root .vo2max-estimates-v2--compact .vo2max-estimates-v2__tiles { gap: 0; }
+  #root .vo2max-estimates-v2--compact .vo2max-estimates-v2__tiles article { padding: 12px 0; }
+  #root .vo2max-estimates-v2__race-evidence > summary { position: relative; flex-wrap: wrap; gap: 6px; padding-right: 16px; }
+  #root .vo2max-estimates-v2__race-evidence > summary strong { flex: 1 1 100%; }
+  #root .vo2max-estimates-v2__race-evidence > summary::after { position: absolute; right: 0; top: 0; }
+}
+@media (pointer: coarse) {
+  #root .analysis-v2-intro .athlete-tools-actions > button,
+  #root .vo2max-estimates-v2__show-runs { min-height: 44px; }
+}

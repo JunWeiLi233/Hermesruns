@@ -11,7 +11,7 @@ export const VDOT_MIN_KM_LOOSE = 1.5;
 export const VDOT_TOP_N = 3;
 
 /** Without HR: only use race formula if pace is not slower than ~15% beyond median (filters easy jogs). */
-const NO_HR_MAX_PACE_SLOP_FACTOR = 1.18;
+export const NO_HR_MAX_PACE_SLOP_FACTOR = 1.18;
 
 export function danielsRunningVo2CostMlKgMin(velocityMPerMin) {
   const v = velocityMPerMin;
@@ -258,7 +258,7 @@ export function buildVdotEntry(run, options = {}) {
 }
 
 export function representativeVdotFromEntries(entries) {
-  if (!entries.length) return { value: 0, adjustedValue: 0, bestRun: null, usedCount: 0 };
+  if (!entries.length) return { value: 0, adjustedValue: 0, bestRun: null, usedCount: 0, used: [], pool: null, poolCount: 0 };
   const strict = entries.filter((e) => e.distKm >= VDOT_MIN_KM_STRICT);
   const pool = strict.length > 0 ? strict : entries;
 
@@ -277,6 +277,10 @@ export function representativeVdotFromEntries(entries) {
     adjustedValue,
     bestRun: top[0].run,
     usedCount: n,
+    // The entries the value is the mean of, and which pool they were taken from ('strict': runs of 3 km or more).
+    used: top,
+    pool: strict.length > 0 ? 'strict' : 'all',
+    poolCount: pool.length,
   };
 }
 
@@ -287,12 +291,15 @@ export function estimateCurrentVdot(runs, now = Date.now()) {
     const e = buildVdotEntry(run, { maxAgeMs: VDOT_LOOKBACK_MS, now, stats });
     if (e) windowEntries.push(e);
   }
-  const { value, adjustedValue, bestRun, usedCount } = representativeVdotFromEntries(windowEntries);
+  const { value, adjustedValue, bestRun, usedCount, used, pool, poolCount } = representativeVdotFromEntries(windowEntries);
   return {
     representativeVdot: value,
     adjustedVdot: adjustedValue,
     bestRun,
     usedTopN: usedCount,
+    usedEntries: used,
+    pool,
+    poolCount,
     windowEntries,
     runStats: stats,
   };

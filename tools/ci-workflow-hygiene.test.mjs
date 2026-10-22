@@ -45,6 +45,13 @@ for (const workflow of workflowExpectations) {
   for (const snippet of workflow.banned) {
     assert.doesNotMatch(content, new RegExp(snippet.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `${workflow.file} should not keep ${snippet}`);
   }
+  // jsdom and Vitest in the frontend lockfile require Node 22 or newer.
+  // Tooling tests also import jsdom, even though the frontend build works on 20.
+  const nodeVersions = [...content.matchAll(/node-version:\s*["'](\d+)["']/g)];
+  assert.ok(nodeVersions.length > 0, `${workflow.file} must select its Node runtime`);
+  for (const [, major] of nodeVersions) {
+    assert.ok(Number(major) >= 22, `${workflow.file} must use Node 22 or newer for frontend test dependencies`);
+  }
 }
 
 const trackedWorktreesEnv = process.env.HERMES_GIT_LS_FILES_STAGE;

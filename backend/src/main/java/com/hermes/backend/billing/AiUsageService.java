@@ -2,12 +2,16 @@ package com.hermes.backend.billing;
 
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AiUsageService {
@@ -16,6 +20,8 @@ public class AiUsageService {
     private final int perRunnerDailyLimit;
     private final int projectDailyLimit;
     private final int projectDailyReserve;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public AiUsageService(
             RunnerRepository runnerRepository,
@@ -47,9 +53,7 @@ public class AiUsageService {
     /**
      * Returns null when a scan is allowed, or a stable error code if blocked.
      * <p>
-     * This method performs an atomic check-and-reserve: if the runner has quota remaining,
-     * it immediately increments the counter and persists before returning, preventing
-     * concurrent over-quota scans from the TOCTOU race between checkQuota and recordUsage.
+     * This is an advisory status check. Use tryConsumeQuota to reserve before a provider call.
      * </p>
      */
     public String checkQuota(Runner runner) {
@@ -75,16 +79,25 @@ public class AiUsageService {
      * Pro and admin users skip the quota check entirely.
      * </p>
      */
+    @Transactional
     public synchronized String tryConsumeQuota(Runner runner) {
+        Runner requestedRunner = runner;
+        runner = runnerRepository.findByIdForUpdate(runner.getId()).orElseThrow();
+        // OSIV may have loaded this managed account before a concurrent reservation committed.
+        if (entityManager != null) entityManager.refresh(runner, LockModeType.PESSIMISTIC_WRITE);
         // Pro and admin runners are unlimited
         if (isProOrAdmin(runner)) {
+            requestedRunner.setSubscriptionTier(runner.getSubscriptionTier());
+            requestedRunner.setProExpiresAt(runner.getProExpiresAt());
+            requestedRunner.setRole(runner.getRole());
             return null;
         }
 
         normalizeDailyWindow(runner);
 
         if (runner.getAiDailyScansUsed() >= perRunnerDailyLimit) {
-            return perRunnerDailyLimit > 0 ? "AI_FREE_TIER_USER_LIMIT" : "AI_FREE_TIER_USER_LIMIT";
+            copyDailyUsage(runner, requestedRunner);
+            return "AI_FREE_TIER_USER_LIMIT";
         }
 
         if (getProjectDailyUsage() >= getEffectiveProjectDailyLimit()) {
@@ -94,6 +107,7 @@ public class AiUsageService {
         runner.setAiDailyScansUsed(runner.getAiDailyScansUsed() + 1);
         runner.setAiDailyLastUsedDate(LocalDate.now());
         runnerRepository.save(runner);
+        copyDailyUsage(runner, requestedRunner);
         return null;
     }
 
@@ -156,12 +170,19 @@ public class AiUsageService {
      * Decrements the runner's daily counter by 1 (floor at 0) and persists.
      * No-op for Pro and admin runners (they were never charged).
      */
+    @Transactional
     public synchronized void rollbackConsumedQuota(Runner runner) {
         if (isProOrAdmin(runner)) return;
-        int current = runner.getAiDailyScansUsed();
+        LocalDate reservationDate = runner.getAiDailyResetDate();
+        Runner fresh = runnerRepository.findByIdForUpdate(runner.getId()).orElseThrow();
+        if (entityManager != null) entityManager.refresh(fresh, LockModeType.PESSIMISTIC_WRITE);
+        // A slow failed request must never refund a reservation from a newer UTC/local daily window.
+        if (!java.util.Objects.equals(fresh.getAiDailyResetDate(), reservationDate)) return;
+        int current = fresh.getAiDailyScansUsed();
         if (current > 0) {
-            runner.setAiDailyScansUsed(current - 1);
-            runnerRepository.save(runner);
+            fresh.setAiDailyScansUsed(current - 1);
+            runnerRepository.save(fresh);
+            copyDailyUsage(fresh, runner);
         }
     }
 
@@ -194,8 +215,13 @@ public class AiUsageService {
         if (!today.equals(runner.getAiDailyResetDate())) {
             runner.setAiDailyResetDate(today);
             runner.setAiDailyScansUsed(0);
-            runnerRepository.save(runner);
         }
+    }
+
+    private static void copyDailyUsage(Runner source, Runner target) {
+        target.setAiDailyScansUsed(source.getAiDailyScansUsed());
+        target.setAiDailyResetDate(source.getAiDailyResetDate());
+        target.setAiDailyLastUsedDate(source.getAiDailyLastUsedDate());
     }
 
     private long getProjectDailyUsage() {

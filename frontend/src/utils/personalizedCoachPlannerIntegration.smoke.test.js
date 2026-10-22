@@ -15,11 +15,12 @@ const en = read('../i18n/locales/en/pages.js');
 const zh = read('../i18n/locales/zh-CN/pages.js');
 
 assert.match(todayRun, /resolvePersonalizedCoachRecommendation/);
-assert.match(todayRun, /personalized\?\.reasons \|\| buildReasons/);
+assert.match(todayRun, /personalized\?\.reasons \|\| \[recommendation\.purpose\]/);
+assert.doesNotMatch(todayRun, /hasGapInLast3|distance: '6-8 km'/);
 assert.match(todayPage, /coachPayload[\s\S]*unit/);
 assert.match(schedulePage, /coachPayload: coachToday/);
 assert.match(profilePage, /coachPayload: coachToday/);
-assert.match(coachInsightPage, /apiJson\('\/api\/coach\/today'\)/);
+assert.match(coachInsightPage, /apiJson\('\/api\/coach\/today(?:\?includeRoute=false)?'\)/);
 assert.match(coachInsightPage, /buildMergedCoachSystemModel\([\s\S]*coachToday/);
 assert.match(en, /"personalized_reason_goal_specific"/);
 assert.match(zh, /"personalized_reason_goal_specific"/);

@@ -1,0 +1,51 @@
+import { Component, lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from './router.jsx';
+import { Compass, Menu } from 'lucide-react';
+import { ExplorerProvider, useExplorer } from './context.jsx';
+import { SCREENS, screenForPath } from './core/routes.js';
+import { Button, Checkbox, Dialog, Notice, Segmented, StatePanel } from './ui/primitives.jsx';
+import { Loading, PageHeading, Scheduled } from './ui/shared.jsx';
+import ImportDialog from './ui/ImportDialog.jsx';
+import Filters from './ui/Filters.jsx';
+import Welcome from './ui/Welcome.jsx';
+import Access from './ui/Access.jsx';
+import { DeletionReceipt, EmailLink, PasswordReset } from './ui/AccountLinks.jsx';
+const MapPage=lazy(()=>import('./ui/MapPage.jsx'));
+const History=lazy(()=>import('./ui/History.jsx'));
+const Detail=lazy(()=>import('./ui/Detail.jsx'));
+const Statistics=lazy(()=>import('./ui/Statistics.jsx'));
+const Settings=lazy(()=>import('./ui/Settings.jsx'));
+const Jobs=lazy(()=>import('./ui/Jobs.jsx'));
+const Help=lazy(()=>import('./ui/Help.jsx'));
+const Policy=lazy(()=>import('./ui/Help.jsx').then(module=>({default:module.Policy})));
+const primary=[['map','Map','地图'],['activities','Activities','活动'],['statistics','Statistics','统计'],['settings','Settings','设置'],['help','Help','帮助']];
+class Boundary extends Component {
+  state={error:false};
+  static getDerivedStateFromError(){return {error:true};}
+  render(){return this.state.error?<div className="sh-design"><main className="sh-main"><StatePanel state="error" heading="The workspace could not open" description="Reload to try again. Your saved browser data has not been cleared." onAction={()=>window.location.reload()}/></main></div>:this.props.children;}
+}
+export default function App({service,embedded=false,presentation,children}){return <Boundary><ExplorerProvider service={service} presentation={presentation}>{children}<Workspace embedded={embedded}/></ExplorerProvider></Boundary>;}
+function Workspace({embedded}){
+  const Main=embedded?'section':'main';
+  const {bootstrap,view,loading,error,refresh,theme,api,t}=useExplorer();const [importOpen,setImportOpen]=useState(false);const location=useLocation();const navigate=useNavigate();const menu=useRef(null);const [display,setDisplay]=useState({mode:'lines',showCells:true,basemap:false});
+  useEffect(()=>{if(menu.current)menu.current.open=false;requestAnimationFrame(()=>{if(!document.querySelector('dialog[open]'))document.querySelector('main h1')?.focus();});document.title=`${({"/about":"About","/privacy":"Privacy"})[location.pathname]||screenForPath(location.pathname).title} · ${embedded?'HermesRuns':'Hermes Explorer'}`;},[location.pathname,embedded]);
+  if(loading)return <div className="sh-design"><Main className="sh-main"><Loading/></Main></div>;
+  const opened=Boolean(bootstrap?.opened&&view);
+  return <div className="sh-design ex-app" data-theme={theme}><a href="#workspace-main" className="sh-skip" onClick={event=>{event.preventDefault();document.getElementById("workspace-main")?.focus();}}>{t('Skip to content','跳转到内容')}</a>{embedded?(opened?<nav className="sh-app-header ex-native-nav" aria-label={t('Heatmap workspace','热力图工作区')}>{[...primary,['jobs','Import requests','导入请求']].map(([path,en,zh])=><NavLink end key={path} to={`/${path}`}>{t(en,zh)}</NavLink>)}</nav>:null):<header className="sh-app-header"><Link className="sh-wordmark" to={opened?'/map':'/welcome'}><span className="sh-mark"><Compass aria-hidden="true"/></span><span>HERMES<small>EXPLORER</small></span></Link>{opened&&<nav aria-label={t('Workspace','工作区')}>{primary.map(([path,en,zh])=><NavLink key={path} to={`/${path}`}>{t(en,zh)}</NavLink>)}</nav>}<div className="sh-row"><span className="ex-local-label">{api.mode==='local'?t('Local workspace','本地工作区'):t('Hermes account','Hermes 账户')}</span>{opened&&<details className="ex-menu" ref={menu}><summary aria-label={t('More product screens','更多产品页面')}><Menu aria-hidden="true"/><span>{t('More','更多')}</span></summary><div className="ex-menu-panel"><span className="sh-eyebrow">{t('EXPLORE YOUR WORKSPACE','浏览工作区')}</span>{SCREENS.filter(s=>!primary.some(([path])=>s.path===`/${path}`)).map(screen=><Link key={screen.id} to={screen.path}><span>{screen.title}</span><small>{screen.release}</small></Link>)}<Button onClick={async()=>{await api.closeWorkspace();navigate('/welcome');}}>{api.mode==='local'?t('Close local workspace','关闭本地工作区'):t('Sign out everywhere','退出所有设备')}</Button></div></details>}</div></header>}<Main id="workspace-main" className="sh-main" tabIndex={-1}>
+    {error&&<Notice tone="danger" live><p>{error.message}</p>{view&&<p>{t('Showing the last loaded selection.','当前显示最后加载的范围。')}</p>}<Button onClick={refresh}>{t('Try loading again','重新加载')}</Button></Notice>}
+    {!opened&&embedded&&!['/unsubscribe','/verify-report-email','/reset-password','/deletion','/help','/privacy','/about'].includes(location.pathname)?<StatePanel state="error" heading={t('Your session is unavailable','当前会话不可用')} description={t('Return to Hermes sign-in to continue.','请返回 Hermes 登录后继续。')}/>:!opened?<Routes><Route path="/about" element={<Suspense fallback={<Loading/>}><Policy kind="about"/></Suspense>}/><Route path="/privacy" element={<Suspense fallback={<Loading/>}><Policy kind="privacy"/></Suspense>}/><Route path="/help" element={<Suspense fallback={<Loading/>}><Help/></Suspense>}/><Route path="/unsubscribe" element={<EmailLink kind="unsubscribe"/>}/><Route path="/verify-report-email" element={<EmailLink kind="verify"/>}/><Route path="/reset-password" element={<PasswordReset/>}/><Route path="/deletion" element={<DeletionReceipt/>}/><Route path="/access" element={<Access/>}/><Route path="*" element={<Welcome/>}/></Routes>:<Suspense fallback={<Loading/>}><Routes>
+      <Route path="/about" element={<Policy kind="about"/>}/><Route path="/privacy" element={<Policy kind="privacy"/>}/><Route path="/" element={embedded?<MapPage onImport={()=>setImportOpen(true)} display={display}/>:<Navigate to="/map" replace/>}/><Route path="/welcome" element={<Welcome/>}/><Route path="/verify-report-email" element={<EmailLink kind="verify"/>}/><Route path="/reset-password" element={<PasswordReset/>}/><Route path="/deletion" element={<DeletionReceipt/>}/><Route path="/access" element={<Access/>}/>
+      <Route path="/map" element={<MapPage onImport={()=>setImportOpen(true)} display={display}/>}/>
+      <Route path="/filters" element={<MapTask title={t('Activity filters','活动筛选')}><Filters onDone={()=>navigate(location.state?.returnTo||'/map')}/></MapTask>}/>
+      <Route path="/display" element={<MapTask title={t('Map display','地图显示')}><div className="sh-stack"><Segmented label={t('Map presentation','地图展示')} value={display.mode} onChange={mode=>setDisplay(d=>({...d,mode}))} options={[{value:'lines',label:t('Track lines','轨迹线')},{value:'density',label:t('Visit density','到访密度')}]}/><Checkbox checked={display.showCells} onChange={e=>setDisplay(d=>({...d,showCells:e.target.checked}))}>{t('Show visited grid cells','显示到访网格')}</Checkbox><Checkbox checked={display.basemap} onChange={e=>setDisplay(d=>({...d,basemap:e.target.checked}))}>{t('Load the OpenStreetMap street map','加载 OpenStreetMap 街道底图')}</Checkbox><Notice>{t('The street map sends your viewed area and IP address to OpenStreetMap. Activity files stay in your workspace. Visit density counts selected activities per cell.','街道底图会向 OpenStreetMap 发送可视区域与 IP 地址，活动文件保留在本地。到访密度表示每个网格内的所选活动数。')}</Notice><Button variant="primary" onClick={()=>navigate('/map')}>{t('Done','完成')}</Button></div></MapTask>}/>
+      <Route path="/center" element={<MapTask title={t('Center your map','地图居中')}><div className="sh-stack"><p>{t('Fit includes every track in the current selection. Zoom and pan remain available on the map.','显示当前范围内的全部轨迹，仍可在地图上缩放和平移。')}</p><Button variant="primary" onClick={()=>navigate('/map')}>{t('Fit matching tracks','显示匹配轨迹')}</Button><Notice>{t('Location access and coordinate centering arrive in later releases.','位置访问与坐标居中将在后续版本中提供。')}</Notice></div></MapTask>}/>
+      <Route path="/activities" element={<History onImport={()=>setImportOpen(true)}/>}/><Route path="/activity/:id" element={<Detail/>}/><Route path="/activity" element={<StatePanel state="empty" heading={t('Choose an activity','选择一项活动')} description={t('Open a title from your map or history.','从地图或历史记录中打开活动名称。')} onAction={()=>navigate('/activities')} actionLabel={t('Open history','打开历史')}/>}/>
+      <Route path="/statistics" element={<Statistics onImport={()=>setImportOpen(true)}/>}/><Route path="/settings" element={<Settings/>}/><Route path="/help" element={<Help/>}/><Route path="/jobs/:id?" element={<Jobs onImport={()=>setImportOpen(true)}/>}/><Route path="/unsubscribe" element={<EmailLink kind="unsubscribe"/>}/>
+      {SCREENS.filter(s=>!embedded&&!['S01','S02','S03','S04','S05','S06','S07','S13','S14','S15','S16','S31'].includes(s.id)).map(screen=><Route key={screen.id} path={`${screen.path}/*`} element={<><PageHeading eyebrow={`${screen.id} · ${screen.release}`} title={screen.title}/><Scheduled screen={screen}/>{['S22','S23'].includes(screen.id)&&<Link className="sh-button" to="/settings">{t('Privacy & report preferences','隐私与报告偏好')}</Link>}</>}/>) }
+      <Route path="*" element={<StatePanel state="error" heading={t('This page is unavailable','此页面不可用')} onAction={()=>navigate('/map')} actionLabel={t('Open your map','打开地图')}/>}/>
+    </Routes></Suspense>}
+    <footer className="ex-footer"><span>{api.mode==='local'?t('Stored in this browser · no cloud backup','保存在此浏览器 · 无云端备份'):t('Stored on your Hermes account','保存在你的 Hermes 账户中')}</span><Link to="/help">{t('Help','帮助')}</Link><Link to="/about">{t('About','关于')}</Link><Link to="/privacy">{t('Privacy','隐私')}</Link>{opened&&<Link to="/jobs">{t('Import requests','导入请求')}</Link>}</footer>
+    {opened&&<ImportDialog open={importOpen} onClose={()=>setImportOpen(false)}/>}
+  </Main></div>;
+}
+function MapTask({title,children}){const navigate=useNavigate();const location=useLocation();return <><MapPage display={{mode:'lines',showCells:true,basemap:false}} onImport={()=>navigate('/jobs')}/><Dialog open drawer title={title} onClose={()=>navigate(location.state?.returnTo||'/map')}>{children}</Dialog></>;}

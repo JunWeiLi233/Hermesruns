@@ -1,0 +1,5 @@
+import {test,expect,open,scan,api,identity,grant} from './helpers.mjs';
+test('F14-H1 settings reuse model anchors and recheck bulk access at commit',async({page,request},info)=>{
+ const target=await identity(request,'member');await grant(request,'coach','member');const preview=await api(request,'coach','POST','/configuration-previews',{athleteIds:[target.id],units:'metric'});await api(request,'member','POST','/me/access/revoke-all',{});const result=await api(request,'coach','POST',`/bulk-operations/${preview.id}/commit`,{hash:preview.hash});expect(result.outcomes[0].state).toBe('denied');
+ await open(page,'/settings?section=training');await expect(page.getByRole('heading',{name:'Training model settings',exact:true})).toBeVisible();await page.getByLabel('Functional threshold power (W)').fill('245');await page.getByRole('button',{name:'Save',exact:true}).last().click();await expect(page.getByText('Training model settings saved.',{exact:true})).toBeVisible();await scan(page,'training-settings',info);
+});

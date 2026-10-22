@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { useI18n } from '../../contexts/I18nContext';
+import { useI18n } from '../../contexts/i18nContextState';
 import HermesMarkSvg from '../../components/HermesMarkSvg';
 import HermesWordmarkSvg from '../../components/HermesWordmarkSvg';
 import { SUPPORT_MAILTO } from '../../utils/supportContact';
+import { METHODS_DOC_URL } from '../../utils/methodsDoc';
+import LandingMethods from './LandingMethods';
+import { GOAL_IMAGE_PROPS, FEATURE_IMAGE_PROPS, CTA_IMAGE_PROPS, CTA_MOBILE_SRCSET } from './landingResponsiveImages';
 import '../../styles/landing-v3.css';
 import {
   DEFAULT_GOAL_ID, FAQS, FEATURES, GOALS, NAV_LINKS, PHOTOS, PLANS, PROMISES, SYNC_SOURCES,
@@ -37,7 +40,7 @@ function PhoneMockup() {
               <span className="lv3-battery"><i /></span>
             </span>
           </div>
-          <img className="lv3-phone-shot" src={PHOTOS.phone} alt="" loading="lazy" decoding="async" />
+          <img className="lv3-phone-shot" src={PHOTOS.phone} width="390" height="772" alt="" loading="lazy" decoding="async" />
           <span className="lv3-phone-home" />
         </div>
       </div>
@@ -56,19 +59,22 @@ function PlanCard({ plan, featured = false }) {
       </div>
       <div className="lv3-plan-price"><strong>{t(plan.priceKey)}</strong><span>{t(plan.unitKey)}</span></div>
       <ul className="lv3-plan-list">{plan.itemKeys.map((key) => <li key={key}>{t(key)}</li>)}</ul>
-      <Link to="/signup" className={`lv3-btn ${featured ? 'lv3-btn--primary' : 'lv3-btn--outline'} lv3-plan-cta`}>{t(plan.ctaKey)}</Link>
+      <Link to="/signup" reloadDocument className={`lv3-btn ${featured ? 'lv3-btn--primary' : 'lv3-btn--outline'} lv3-plan-cta`}>{t(plan.ctaKey)}</Link>
       {status ? <p className="lv3-plan-note">{status}</p> : null}
     </div>
   );
 }
 
-export default function Landing() {
+export default function Landing({ initialYear }) {
   const { isAuthenticated, isAdmin, authHydrated } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [goalId, setGoalId] = useState(DEFAULT_GOAL_ID);
+  const [year, setYear] = useState(() => initialYear ?? new Date().getFullYear());
   const goalsRef = useRef(null);
   const goal = GOALS.find((item) => item.id === goalId) || GOALS[0];
+
+  useEffect(() => { setYear(new Date().getFullYear()); }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !authHydrated) return;
@@ -84,13 +90,14 @@ export default function Landing() {
   }, []);
 
   const footerLinks = [
+    { label: t('landing.home_footer_methods'), href: METHODS_DOC_URL },
     { label: t('landing.home_footer_privacy'), to: '/privacy' },
     { label: t('landing.home_footer_terms'), to: '/terms' },
     { label: t('landing.home_footer_support'), href: SUPPORT_MAILTO },
   ];
 
   return (
-    <div className="landing-v3" data-hermes-landing="true">
+    <div className="landing-v3" data-hermes-landing="true" data-render-year={year}>
       <a className="lv3-skip" href="#landing-main">{t('landing.home_skip')}</a>
 
       <header className="lv3-nav">
@@ -100,8 +107,8 @@ export default function Landing() {
             {NAV_LINKS.map((link) => <a key={link.href} href={link.href}>{t(link.labelKey)}</a>)}
           </nav>
           <div className="lv3-nav-actions">
-            <Link to="/login" className="lv3-btn lv3-btn--ghost-dark">{t('landing.home_nav_signin')}</Link>
-            <Link to="/signup" className="lv3-btn lv3-btn--light">{t('landing.home_nav_start')}</Link>
+            <Link to="/login" reloadDocument className="lv3-btn lv3-btn--ghost-dark">{t('landing.home_nav_signin')}</Link>
+            <Link to="/signup" reloadDocument className="lv3-btn lv3-btn--light">{t('landing.home_nav_start')}</Link>
           </div>
         </div>
       </header>
@@ -114,7 +121,7 @@ export default function Landing() {
             <h1 id="lv3-hero-title">{t('landing.home_hero_title')}</h1>
             <p>{t('landing.home_hero_copy')}</p>
             <div className="lv3-row">
-              <Link to="/signup" className="lv3-btn lv3-btn--primary lv3-btn--xl">{t('landing.home_hero_cta')}</Link>
+              <Link to="/signup" reloadDocument className="lv3-btn lv3-btn--primary lv3-btn--xl">{t('landing.home_hero_cta')}</Link>
               <a href="#coaching" className="lv3-btn lv3-btn--outline-dark lv3-btn--xl">{t('landing.home_hero_alt')}</a>
             </div>
             <span className="lv3-hero-proof">{t('landing.home_hero_proof')}</span>
@@ -124,6 +131,7 @@ export default function Landing() {
         <div className="lv3-sync lv3-width">
           <span className="lv3-sync-label">{t('landing.home_sync_label')}</span>
           {SYNC_SOURCES.map((source) => <b key={source}>{source}</b>)}
+          <span className="lv3-sync-note">{t('landing.home_sync_note')}</span>
         </div>
 
         <section id="plans" className="lv3-section lv3-width" aria-labelledby="lv3-goals-title">
@@ -140,7 +148,7 @@ export default function Landing() {
                 onClick={() => setGoalId(item.id)}
                 aria-pressed={item.id === goal.id}
               >
-                <img className="lv3-cover" src={item.photo} alt="" loading="lazy" decoding="async" />
+                <img className="lv3-cover" src={item.photo} {...GOAL_IMAGE_PROPS[item.id]} alt="" loading="lazy" decoding="async" />
                 <span className="lv3-goal-label"><strong>{t(item.labelKey)}</strong><span>{t(item.subKey)}</span></span>
               </button>
             ))}
@@ -150,7 +158,7 @@ export default function Landing() {
               <strong>{t(goal.titleKey)}</strong>
               <span>{t('landing.home_goal_line')}</span>
             </div>
-            <Link to="/signup" className="lv3-btn lv3-btn--dark">{t('landing.home_goal_cta')}</Link>
+            <Link to="/signup" reloadDocument className="lv3-btn lv3-btn--dark">{t('landing.home_goal_cta')}</Link>
           </div>
         </section>
 
@@ -165,7 +173,7 @@ export default function Landing() {
                   <p>{t(feature.copyKey)}</p>
                 </div>
                 <div className="lv3-feature-media">
-                  <div className="lv3-feature-photo"><img className="lv3-cover" src={feature.photo} alt="" loading="lazy" decoding="async" /></div>
+                  <div className="lv3-feature-photo"><img className="lv3-cover" src={feature.photo} {...FEATURE_IMAGE_PROPS[feature.id]} alt="" loading="lazy" decoding="async" /></div>
                   <div className="lv3-feature-card">
                     <span className="lv3-feature-card-top">
                       <span>{t(feature.card.labelKey)}</span>
@@ -203,11 +211,15 @@ export default function Landing() {
                 <div className="lv3-promise-copy">
                   <h3>{t(promise.titleKey)}</h3>
                   <p>{t(promise.copyKey)}</p>
+                  {promise.id === 'formula' && <a className="lv3-methods-link" href={METHODS_DOC_URL}>{t('landing.home_promise_formula_link')}</a>}
+                  {promise.id === 'data' && <Link className="lv3-methods-link" to="/privacy">{t('landing.home_promise_data_link')}</Link>}
                 </div>
               </article>
             ))}
           </div>
         </section>
+
+        <LandingMethods />
 
         <section id="pricing" className="lv3-band lv3-band--white" aria-labelledby="lv3-pricing-title">
           <div className="lv3-width lv3-pricing">
@@ -222,11 +234,11 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="lv3-section lv3-faq" aria-labelledby="lv3-faq-title">
+        <section id="questions" className="lv3-section lv3-faq" aria-labelledby="lv3-faq-title">
           <h2 id="lv3-faq-title" className="lv3-title-center">{t('landing.home_faq_title')}</h2>
           <div className="lv3-faq-list">
             {FAQS.map((faq, index) => (
-              <details key={faq.id} className="lv3-faq-item" name="lv3-faq" open={index === 0 ? true : undefined}>
+              <details key={faq.id} id={`faq-${faq.id}`} className="lv3-faq-item" name="lv3-faq" open={index === 0 ? true : undefined}>
                 <summary className="lv3-faq-q"><span>{t(faq.questionKey)}</span><span className="lv3-faq-icon" aria-hidden="true" /></summary>
                 <p className="lv3-faq-a">{t(faq.answerKey)}</p>
               </details>
@@ -235,11 +247,14 @@ export default function Landing() {
         </section>
 
         <section className="lv3-cta" aria-labelledby="lv3-cta-title">
-          <img className="lv3-cover" src={PHOTOS.cta} alt="" loading="lazy" decoding="async" />
+          <picture>
+            <source media="(max-width: 760px)" srcSet={CTA_MOBILE_SRCSET} sizes="100vw" width="768" height="1075" />
+            <img className="lv3-cover" src={PHOTOS.cta} {...CTA_IMAGE_PROPS} alt="" loading="lazy" decoding="async" />
+          </picture>
           <div className="lv3-cta-scrim" />
           <div className="lv3-cta-body lv3-width">
             <h2 id="lv3-cta-title">{t('landing.home_cta_title')}</h2>
-            <Link to="/signup" className="lv3-btn lv3-btn--primary lv3-btn--xl">{t('landing.home_hero_cta')}</Link>
+            <Link to="/signup" reloadDocument className="lv3-btn lv3-btn--primary lv3-btn--xl">{t('landing.home_hero_cta')}</Link>
           </div>
         </section>
       </main>
@@ -254,7 +269,7 @@ export default function Landing() {
               ? <Link key={link.label} to={link.to}>{link.label}</Link>
               : <a key={link.label} href={link.href}>{link.label}</a>
           ))}
-          <span>{t('landing.home_footer_copy', { year: new Date().getFullYear() })}</span>
+          <span>{t('landing.home_footer_copy', { year })}</span>
         </nav>
       </footer>
     </div>

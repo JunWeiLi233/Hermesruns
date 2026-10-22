@@ -15,7 +15,7 @@ assert.match(
 );
 assert.match(
   analysisSource,
-  /\{localizedCoachAdvice\}/,
+  /localizedCoachAdvice/,
   'Analysis should render the localized coach advice instead of the raw backend sentence.',
 );
 assert.match(

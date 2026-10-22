@@ -4,8 +4,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -40,8 +38,8 @@ public class SpaForwardingController {
     }
 
     /**
-     * Serve index.html for all frontend routes so React Router
-     * can handle client-side routing.
+     * Serve prerendered documents for public routes and the private SPA shell
+     * for account routes. Both use assets from the same running release.
      */
     @GetMapping(value = {
         "/",
@@ -56,9 +54,13 @@ public class SpaForwardingController {
         "/dashboard/{section:[^.]+}",
         "/dashboard/{section:[^.]+}/{detail:[^.]+}",
         "/profile",
+        "/profile/team",
         "/runs",
         "/runs/{id:[^.]+}",
+        "/training-log",
         "/heatmap",
+        "/heatmap/{section:[^.]+}",
+        "/heatmap/{section:[^.]+}/{detail:[^.]+}",
         "/run",
         "/run/{id}",
         "/analysis",
@@ -67,8 +69,15 @@ public class SpaForwardingController {
         "/analysis/{insightKey}",
         "/prediction/{distKey}",
         "/today-run",
+        "/training-plan",
+        "/training",
+        "/training/",
+        "/training/{section:[^.]+}",
+        "/training-plan/setup",
+        "/training-plan/setup/{planId}",
+        "/training-plan/{planId}/preview/{versionId}",
+        "/training-plan/{planId}/workouts/{workoutId}",
         "/rewards",
-        "/training-log",
         "/settings",
         "/settings/{section:[^.]+}",
         "/shoes",
@@ -83,19 +92,22 @@ public class SpaForwardingController {
     }, produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> forward(HttpServletRequest request) throws IOException {
         boolean indexable = isIndexableRoute(request.getRequestURI());
-        String html = readShell();
-        if (html == null) {
-            return ResponseEntity.notFound().build();
+        // The shell and hashed assets must come from the same running release.
+        // In development this classpath resource is the live target/classes file.
+        String resource = indexable
+                ? "/static/public-pages/" + ("/".equals(request.getRequestURI()) ? "home" : request.getRequestURI().substring(1)) + ".html"
+                : "/static/index.html";
+        try (InputStream in = getClass().getResourceAsStream(resource)) {
+            if (in == null) {
+                return ResponseEntity.notFound().build();
+            }
+            String html = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            return htmlResponse(html, indexable, request.getRequestURI());
         }
-        return htmlResponse(html, indexable, request.getRequestURI());
     }
 
-    /** The built index.html, or null when the frontend has not been built into this server. */
+    /** The running release's shell, or null when the frontend has not been packaged into this server. */
     public static String readShell() throws IOException {
-        Path localStaticIndex = Path.of("target", "classes", "static", "index.html");
-        if (Files.isRegularFile(localStaticIndex)) {
-            return Files.readString(localStaticIndex, StandardCharsets.UTF_8);
-        }
         try (InputStream in = SpaForwardingController.class.getResourceAsStream("/static/index.html")) {
             return in == null ? null : new String(in.readAllBytes(), StandardCharsets.UTF_8);
         }

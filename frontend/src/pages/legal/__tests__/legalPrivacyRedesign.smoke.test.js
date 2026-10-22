@@ -1,58 +1,27 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import assert from 'node:assert/strict';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const pageSource = readFileSync(join(here, "../LegalPage.jsx"), 'utf8');
-const splitCss = readFileSync(join(here, "../../../styles/_split/misc.css"), 'utf8');
-const bundledCss = readFileSync(join(here, "../../../styles/style.generated.css"), 'utf8');
+const pageSource = readFileSync(join(here, '../LegalPage.jsx'), 'utf8');
+const css = readFileSync(join(here, '../legal-document.css'), 'utf8');
 
-const requiredPageSnippets = [
-  "import { Database, FileCheck2, LockKeyhole, ShieldCheck } from 'lucide-react';",
-  'legal-page--${variant}',
-  'privacy-hero-panel',
-  'privacy-signal-strip',
-  'privacySignals.map',
-];
-
-const requiredCssSnippets = [
-  '.legal-page--privacy',
-  '.privacy-hero-panel',
-  '.privacy-signal-strip',
-  '#f6f3ec',
-  '#27221e',
-  'rgba(255, 255, 255, 0.72)',
-  '@keyframes legal-privacy-breathe',
-  '@media (max-width: 640px)',
-  'min-height: 100dvh',
-];
-
-for (const snippet of requiredPageSnippets) {
-  if (!pageSource.includes(snippet)) {
-    throw new Error(`LegalPage.jsx is missing privacy redesign snippet: ${snippet}`);
-  }
+// Terms and Privacy share a reading layout and theme-aware wordmark.
+assert.ok(pageSource.includes('dictionary[variant] || dictionary.terms'));
+assert.ok(pageSource.includes('<HermesLogo showIcon={false} />'));
+assert.ok(pageSource.includes("isAuthenticated ? '/profile' : '/'"));
+assert.ok(pageSource.includes("lang === 'zh-CN'"));
+assert.ok(pageSource.includes('renderLegalBody(section.body)'));
+assert.ok(pageSource.includes('<a href={SUPPORT_MAILTO}>'));
+for (const name of ['main', 'section', 'footer']) {
+  assert.ok(pageSource.includes(`legal-document-${name}`));
 }
-
-for (const snippet of requiredCssSnippets) {
-  if (!splitCss.includes(snippet)) {
-    throw new Error(`_split/misc.css is missing privacy redesign snippet: ${snippet}`);
-  }
-
-  if (!bundledCss.includes(snippet)) {
-    throw new Error(`style.css is missing privacy redesign snippet: ${snippet}`);
-  }
-}
-
-if (/\.legal-page-hero h1\s*\{[^}]*letter-spacing:\s*-/s.test(splitCss)) {
-  throw new Error('Legal privacy heading styles must not use negative letter spacing.');
-}
-
-if (/\.legal-page--privacy\s*\{[^}]*#121110/s.test(splitCss)) {
-  throw new Error('Privacy page must use the HermesRuns light-mode palette, not the dark editorial background.');
-}
-
-if (!pageSource.includes('<HermesLogo />')) {
-  throw new Error('Legal header must render the logo with its default tone, which follows the theme (ink on light, paper on midnight).');
-}
-
-console.log('[PASS] Legal privacy redesign guard passed.');
+assert.equal((pageSource.match(/<main /g) || []).length, 1);
+assert.ok(!/AuthDotField|privacy-hero-panel|privacy-signal-strip|auth-page--liquid-glass/.test(pageSource));
+assert.ok(css.includes('max-width: 680px'));
+assert.ok(css.includes('min-height: 100dvh'));
+assert.ok(css.includes('body.theme-midnight .legal-document'));
+assert.ok(css.includes('a:focus-visible'));
+assert.ok(css.includes("a[aria-current='page']"));
+console.log('[PASS] Shared legal document layout guard passed.');

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router';
-import { useI18n } from '../contexts/I18nContext';
+import { useI18n } from '../contexts/i18nContextState';
 import { getSeoMetadata, SOCIAL_IMAGE_URL, SITE_URL } from '../utils/seoMetadata.js';
 
 function upsertMeta(attribute, key, content) {

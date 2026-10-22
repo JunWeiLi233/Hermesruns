@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'.',testMatch:'*.spec.mjs',workers:1,retries:0,timeout:30000,expect:{timeout:7000},reporter:[['list'],['json',{outputFile:'../../../validation/heat-layer-priorities-browser.json'}]],outputDir:'../../../validation/heat-layer-priorities-artifacts',use:{channel:'chrome',headless:true,screenshot:'only-on-failure'},projects:[{name:'desktop',use:{viewport:{width:1440,height:900}}},{name:'mobile-touch',use:{viewport:{width:390,height:844},isMobile:true,hasTouch:true}}]});

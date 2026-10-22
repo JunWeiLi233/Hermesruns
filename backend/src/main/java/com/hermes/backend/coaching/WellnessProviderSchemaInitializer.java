@@ -3,6 +3,7 @@ package com.hermes.backend.coaching;
 import java.sql.Connection;
 import java.util.List;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -11,6 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 /** Hibernate schema update does not expand existing string-enum constraints. */
 @Configuration
+@ConditionalOnProperty(name = "app.schema-compatibility.enabled", havingValue = "true", matchIfMissing = true)
 public class WellnessProviderSchemaInitializer {
     private static final List<String> TABLES = List.of(
             "daily_sleep_data", "daily_hrv_data", "daily_wellness_summary", "daily_stress_data");

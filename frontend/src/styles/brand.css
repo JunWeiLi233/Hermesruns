@@ -1,0 +1,64 @@
+/* HermesRuns logo, the hermes:runs kit (2026): ink #1a1714, coral #ff5a3c, paper #f5f1ea.
+   The colon is always coral and is drawn that way by HermesWordmarkSvg and HermesMarkSvg. Letters take the text
+   colour: ink on light surfaces, paper on dark ones. */
+:root {
+    --hermes-logo-ink: #1a1714;
+    --hermes-logo-paper: #f5f1ea;
+}
+
+/* Lockup (HermesLogo): symbol, logotype and gap keep the proportions of the kit's lockup.svg (96 : 42.7 : 22).
+   --hermes-logo-tile, the symbol's size, is the one value to change. */
+.hermes-logo {
+    --hermes-logo-tile: 1.75em;
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--hermes-logo-tile) * 0.2292);
+    font-family: var(--font-display);
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.hermes-logo__icon {
+    width: var(--hermes-logo-tile);
+    height: var(--hermes-logo-tile);
+    flex-shrink: 0;
+    display: block;
+}
+
+.hermes-wordmark {
+    display: block;
+    flex-shrink: 0;
+    width: auto;
+    height: 1em;
+    overflow: visible;
+}
+
+.hermes-logo__word {
+    height: calc(var(--hermes-logo-tile) * 0.4448);
+    color: var(--hermes-logo-ink);
+}
+
+.hermes-logo__mark {
+    margin-left: 0.14em;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: var(--brand-accent);
+}
+
+/* Dark surfaces: paper letters and a paper tile with an ink h. tone="auto" follows the midnight theme. */
+.hermes-logo--dark .hermes-logo__word,
+body.theme-midnight .hermes-logo--auto .hermes-logo__word {
+    color: var(--hermes-logo-paper);
+}
+
+body.theme-midnight .hermes-mark--auto .hermes-mark__tile {
+    fill: var(--hermes-logo-paper);
+}
+
+body.theme-midnight .hermes-mark--auto .hermes-mark__letter {
+    stroke: var(--hermes-logo-ink);
+}
+
+.hermes-logo--dark .hermes-logo__mark {
+    color: var(--brand-accent);
+}

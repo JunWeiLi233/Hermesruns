@@ -74,6 +74,11 @@ public class StravaSyncService {
     // in which case the sync behaves as it did before they existed.
     private StravaAccountService stravaAccountService;
     private DeletedActivityTombstoneRepository deletedActivityTombstones;
+    private org.springframework.transaction.support.TransactionTemplate actualWriteTransaction;
+    @Autowired(required = false)
+    void setActualWriteTransactions(org.springframework.transaction.PlatformTransactionManager manager) {
+        actualWriteTransaction = new org.springframework.transaction.support.TransactionTemplate(manager);
+    }
 
     private final ConcurrentMap<Long, StravaSyncTracker> stravaSyncStates = new ConcurrentHashMap<>();
 
@@ -637,7 +642,7 @@ public class StravaSyncService {
         boolean changedExistingActivity = existingActivity
                 && !Objects.equals(beforeSync, ActivitySyncSnapshot.capture(activity));
 
-        Activity saved = activityRepository.save(activity);
+        Activity saved = persistSyncedActual(activity, changedExistingActivity);
 
         if (!existingActivity || previousType != ActivityType.RUN) {
             publishActivityIngested(saved);
@@ -668,6 +673,21 @@ public class StravaSyncService {
                 && activity.getRunner().getId() != null
                 && activity.getId() != null) {
             applicationEventPublisher.publishEvent(new ActivityIngestedEvent(activity.getRunner().getId(), activity.getId()));
+        }
+    }
+
+    private Activity persistSyncedActual(Activity activity, boolean changedExisting) {
+        if (actualWriteTransaction == null) return activityRepository.save(activity);
+        for (int attempt = 0; ; attempt++) {
+            try {
+                return actualWriteTransaction.execute(status -> {
+                    if (activity.getId() != null) activityRepository.findByIdAndRunnerForUpdate(activity.getId(),activity.getRunner()).orElseThrow();
+                    if (changedExisting) activityDataAccess.beforeActivityChanged(activity.getId());
+                    return activityRepository.saveAndFlush(activity);
+                });
+            } catch (org.springframework.dao.TransientDataAccessException conflict) {
+                if (attempt == 2) throw conflict;
+            }
         }
     }
 

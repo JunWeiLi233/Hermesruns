@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -18,6 +19,29 @@ import org.springframework.transaction.annotation.Transactional;
  * code that has already established whose run it is (the compute service checks it against the event).
  */
 public interface ActivityTrainingMetricsRepository extends JpaRepository<ActivityTrainingMetrics, Long> {
+
+    /** Bounded calendar candidate range, including absent metrics; owner-scoped scalar projection only. */
+    @Query("""
+            SELECT a.id AS activityId, a.startTime AS startTime,
+              COALESCE(a.startTime, a.createdAt) AS effectiveStartTime,
+              a.stravaApiSourced AS stravaApiSourced,
+              a.movingTimeSeconds AS movingTimeSeconds, a.durationSeconds AS durationSeconds,
+              a.distanceKm AS distanceKm, a.distanceMeters AS distanceMeters,
+              m.id AS metricsId, m.localDate AS metricsDate, m.hrCoveredSeconds AS coveredSeconds,
+              m.hrZone1Seconds AS z1, m.hrZone2Seconds AS z2, m.hrZone3Seconds AS z3,
+              m.hrZone4Seconds AS z4, m.hrZone5Seconds AS z5,
+              m.maxHrUsed AS maxHrUsed, m.hrBoundary1Bpm AS b1, m.hrBoundary2Bpm AS b2,
+              m.hrBoundary3Bpm AS b3, m.hrBoundary4Bpm AS b4,
+              m.stale AS stale, m.modelVersion AS modelVersion,
+              m.effortSource AS effortSource, m.computedAt AS computedAt
+            FROM Activity a LEFT JOIN ActivityTrainingMetrics m ON m.activity = a AND m.runner.id = :runnerId
+            WHERE a.runner.id = :runnerId AND a.activityType = :type
+              AND COALESCE(a.startTime, a.createdAt) >= :from
+              AND COALESCE(a.startTime, a.createdAt) < :to
+            ORDER BY COALESCE(a.startTime, a.createdAt), a.id
+            """)
+    List<HrBlockProjection> findHrBlockCandidates(@Param("runnerId") Long runnerId,
+            @Param("type") ActivityType type, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     Optional<ActivityTrainingMetrics> findByActivityIdAndRunnerId(Long activityId, Long runnerId);
 
@@ -94,6 +118,22 @@ public interface ActivityTrainingMetricsRepository extends JpaRepository<Activit
             ORDER BY m.localDate ASC
             """)
     List<Object[]> dailyEffort(@Param("runnerId") Long runnerId, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    /**
+     * What each day of a window holds of heart-rate time: {@code [localDate, runs, runs with a heart-rate stream, seconds in
+     * zone 1, zone 2, zone 3, zone 4, zone 5]}, oldest day first, only days that had a run. The intensity distribution is made
+     * from these rows, summed per week in the service.
+     */
+    @Query("""
+            SELECT m.localDate, COUNT(m), SUM(CASE WHEN m.hrCoveredSeconds > 0 THEN 1 ELSE 0 END),
+                   COALESCE(SUM(m.hrZone1Seconds), 0), COALESCE(SUM(m.hrZone2Seconds), 0), COALESCE(SUM(m.hrZone3Seconds), 0),
+                   COALESCE(SUM(m.hrZone4Seconds), 0), COALESCE(SUM(m.hrZone5Seconds), 0)
+            FROM ActivityTrainingMetrics m
+            WHERE m.runner.id = :runnerId AND m.localDate >= :from AND m.localDate <= :to
+            GROUP BY m.localDate
+            ORDER BY m.localDate ASC
+            """)
+    List<Object[]> dailyZoneSeconds(@Param("runnerId") Long runnerId, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
     /** The days of a window on which the runner raced: the days their runs typed as a race were filed under. */
     @Query("SELECT DISTINCT m.localDate FROM ActivityTrainingMetrics m WHERE m.runner.id = :runnerId AND m.localDate >= :from "

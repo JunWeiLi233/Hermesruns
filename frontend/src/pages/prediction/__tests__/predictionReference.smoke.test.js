@@ -19,7 +19,7 @@ assert.match(predictionStyles, /#root \.prediction-v2-top \{[^}]*gap: 20px;/,
   'Reducing outer margins must not change the gap between the two forecast cards.');
 
 assert.ok(appStyles.includes("@import './prediction-v2.css';"), 'The handoff stylesheet must be included in the app bundle.');
-assert.match(page, /fetchActivitySummaries\(\)/, 'Forecasts must keep using the activity summary API.');
+assert.match(page, /fetchAnalysisActivitySummaries\(\)/, 'Forecasts must keep using the activity summary API.');
 assert.match(page, /predictRaceTimeCalibrated\(adjustedVdot, distance\.meters, runs, \{ weatherAdjustedAnchors: true \}\)/,
   'The weather-adjusted forecast must preserve correction of calibration anchors.');
 assert.match(selection, /adjustedVdot - input\.representativeVdot > 0\.05/,

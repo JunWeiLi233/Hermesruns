@@ -47,7 +47,7 @@ for (const metric of ['distance', 'average_pace', 'moving_time']) {
   );
 }
 assert.match(row, /formatDistance\(distanceKm, 1, lang\)[\s\S]*formatPace\(distanceKm, movingTimeSeconds, lang\)[\s\S]*formatDuration\(movingTimeSeconds\)/, 'Run rows should retain formatted distance, pace, and moving-time values.');
-assert.match(row, /<time className="runs-ledger-row__full-date" dateTime=\{started\.toISOString\(\)\}/, 'Grid and mobile rows should retain a machine-readable full date.');
+assert.match(row, /<time className="runs-ledger-row__full-date" dateTime=\{run\.activityInstant \|\| getActivityDateKey\(run\)\}/, 'Grid and mobile rows should retain the actual machine-readable instant, or the account date when no trustworthy instant exists.');
 assert.match(row, /onDelete && \([\s\S]*aria-label=\{t\('runs\.delete'\)\}[\s\S]*e\.stopPropagation\(\); onDelete\(run\)/, 'Deletion should remain a separate labeled action that does not open the run.');
 
 assert.match(rule(history + ' .recent-runs-month-group'), /overflow:\s*hidden;[\s\S]*border-radius:\s*16px !important;[\s\S]*background:\s*var\(--v2-card\) !important;[\s\S]*box-shadow:\s*none !important;/, 'Each month should clip its header and rows inside one independent card.');
@@ -84,13 +84,13 @@ assert.match(
   /function openRun\(run\) \{\s*sessionStorage\.setItem\('hermes_selected_run', JSON\.stringify\(run\)\);\s*navigate\(buildRunDetailPath\(run\.id \|\| ''\)\);/,
   'Opening a ledger row should preserve the selected activity cache and ID-based detail route.',
 );
-assert.match(runsSource, /cachedApiJson\('\/api\/activities'\)[\s\S]*?setAllRuns\(list\);[\s\S]*?setLoadState\('ready'\)/, 'The ledger should retain cached full-history loading and its ready state.');
+assert.match(runsSource, /withRequestDeadline\(\(signal\) => fetchActivityHistoryPage\(historyQuery, null, \{ signal \}\), controller\.signal\)[\s\S]*?setAllRuns\(list\);[\s\S]*?setLoadState\('ready'\)/, 'The ledger should retain cancellable bounded history loading and its ready state.');
 assert.match(runsSource, /invalidateResourceCache\('\/api\/activities'\)/, 'Activity mutations should still invalidate the history cache.');
 
 assert.match(runsSource, /if \(loadState === 'loading'\) return <PageSkeleton variant="runs" \/>;/, 'Initial loading should retain the dedicated Runs skeleton.');
 assert.match(runsSource, /loadState === 'error'[\s\S]*t\('runs\.load_error'\)/, 'History load failures should retain localized status.');
-assert.match(runsSource, /loadState === 'ready' && filteredRuns\.length === 0[\s\S]*t\('runs\.empty'\)/, 'An empty filtered history should retain localized feedback.');
-assert.match(runsSource, /hasMoreRuns \? \([\s\S]*aria-live="polite"[\s\S]*typeof IntersectionObserver === 'undefined'[\s\S]*setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RUNS_RENDER_BATCH_SIZE, filteredRuns\.length\)\)[\s\S]*t\('runs\.load_more'\)[\s\S]*t\('runs\.loading'\)/, 'Full history should remain reachable through batched loading and its manual fallback.');
+assert.match(runsSource, /loadState === 'ready' && !historyPending && filteredRuns\.length === 0[\s\S]*t\('runs\.empty'\)/, 'An empty filtered history should retain localized feedback after its request finishes.');
+assert.match(runsSource, /hasMoreRuns \|\| historyPage \? \([\s\S]*aria-live="polite"[\s\S]*className="recent-runs-load-more"[\s\S]*disabled=\{historyPending \|\| moreState === 'loading'\}[\s\S]*setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RUNS_RENDER_BATCH_SIZE, filteredRuns\.length\)\)[\s\S]*loadNextHistoryPage\(\)/, 'Full history should remain reachable through an explicit accessible continuation button.');
 assert.match(runsSource, /runs-ledger-v2__view[\s\S]*setRunsView\('list'\)[\s\S]*aria-pressed=\{runsView === 'list'\}[\s\S]*setRunsView\('grid'\)[\s\S]*aria-pressed=\{runsView === 'grid'\}/, 'The ledger should retain accessible list and grid switches.');
 
 assert.match(rule(history + ' .runs-ledger-v2__list.is-grid .recent-runs-month-grid:not([hidden])'), /display:\s*grid !important;[\s\S]*grid-template-columns:\s*repeat\(auto-fill, minmax\(min\(100%, 250px\), 1fr\)\) !important;/, 'Grid view should adapt its cards to the available width without reopening collapsed groups.');

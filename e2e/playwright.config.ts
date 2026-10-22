@@ -1,9 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
+import { assertSafeBaseUrl } from './fixtures/safety.mjs';
 
 // The suite drives a throwaway stack (see tools/stack.mjs) unless E2E_BASE_URL points at one you started yourself.
 const port = Number(process.env.E2E_PORT || 18080);
 const external = Boolean(process.env.E2E_BASE_URL);
-const baseURL = (process.env.E2E_BASE_URL || `http://127.0.0.1:${port}`).replace(/\/$/, '');
+const baseURL = assertSafeBaseUrl(process.env.E2E_BASE_URL || `http://127.0.0.1:${port}`);
 // Playwright wants the Chromium revision it ships with. Without that download, point at any recent Chrome / Chromium.
 const executablePath = process.env.E2E_CHROMIUM_PATH || undefined;
 

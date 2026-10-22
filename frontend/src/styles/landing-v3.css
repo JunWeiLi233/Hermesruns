@@ -75,6 +75,15 @@
 .lv3-nav-links { display: flex; gap: 32px; font-size: 15px; font-weight: 600; }
 .lv3-nav-links a:hover { opacity: .7; }
 .lv3-nav-actions { display: flex; gap: 10px; align-items: center; }
+.lv3-methods-link { width: fit-content; text-decoration: underline; text-underline-offset: 3px; font-weight: 700; }
+.lv3-sync-note { flex-basis: 100%; text-align: center; font-size: 14px; line-height: 1.6; font-weight: 500; }
+.lv3-methods-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.lv3-methods-card, .lv3-methods-example { padding: 32px; border-radius: 24px; background: #fff; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.lv3-methods-card h3, .lv3-methods-example h3 { font-size: 26px; line-height: 1.2; letter-spacing: -.02em; }
+.lv3-methods-card p, .lv3-methods-example p, .lv3-methods-provenance { font-size: 16.5px; line-height: 1.7; color: var(--lv3-body); }
+.lv3-methods-values { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 8px 0; }
+.lv3-methods-values dt { font-size: 14px; line-height: 1.5; color: var(--lv3-muted); }
+.lv3-methods-values dd { margin: 8px 0 0; font-size: 30px; line-height: 1.2; font-weight: 800; font-variant-numeric: tabular-nums; }
 
 /* Hero */
 .lv3-hero { position: relative; min-height: 860px; padding-top: 84px; display: flex; flex-direction: column; color: #fff; background: #2a2420; }
@@ -213,6 +222,12 @@
 }
 
 @media (max-width: 760px) {
+  .lv3-methods-grid { grid-template-columns: 1fr; }
+  .lv3-methods-card, .lv3-methods-example { padding: 24px; }
+  .lv3-methods-values { grid-template-columns: 1fr; gap: 20px; }
+  .lv3-nav-inner { gap: 8px; height: auto; min-height: 84px; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+  .lv3-nav-inner > a { min-width: 0; }
+  .lv3-nav-actions { flex-wrap: wrap; margin-left: auto; }
   .lv3-width, .lv3-faq { padding-left: 20px; padding-right: 20px; }
   .lv3-nav-links { display: none; }
   .lv3-nav-actions { gap: 4px; }
@@ -234,6 +249,7 @@
 }
 
 @media (max-width: 400px) {
+  .lv3-nav-actions .lv3-btn { padding: 0 10px; }
   .lv3-logo-mark { height: 24px; }
   .lv3-logo-word { height: 18px; }
   .lv3-logo { gap: 8px; }

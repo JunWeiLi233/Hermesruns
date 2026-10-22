@@ -14,6 +14,7 @@ import { formatDistance } from './format.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const todayRunSource = readFileSync(path.join(here, "../pages/today-run/TodayRun.jsx"), 'utf8');
+const personalizedSource = readFileSync(path.join(here, 'personalizedCoachPlan.js'), 'utf8');
 
 // 1. TodayRun must import formatDistance from the shared util
 assert.match(
@@ -24,9 +25,9 @@ assert.match(
 
 // 2. TodayRun must use formatDistance for coachPlannedDistance
 assert.match(
-  todayRunSource,
-  /formatDistance\(coachPayload\.today\.plannedDistanceKm/,
-  'TodayRun.jsx should pass plannedDistanceKm through formatDistance'
+  personalizedSource,
+  /formatDistance\(distanceKm, 1, lang, unit\)/,
+  'The shared coach presentation should format planned distance once for every page'
 );
 
 // 3. Formatter output changes with unit selection

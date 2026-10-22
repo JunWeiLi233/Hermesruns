@@ -10,6 +10,7 @@ import type { Locator, Page } from '@playwright/test';
 import { Api, newRunner } from '../fixtures/api.ts';
 import { daysAgo, gpxRun } from '../fixtures/gpx.ts';
 import { pageOpener } from '../fixtures/pages.ts';
+import { expandRunLabels } from '../fixtures/run-labels.ts';
 import { unzip } from '../fixtures/unzip.ts';
 import { a11yViolations, contrastProblems, expect, expectNoHorizontalOverflow, expectNoRawKeys, test } from '../fixtures/test.ts';
 
@@ -64,7 +65,7 @@ const editButton = (page: Page): Locator => page.getByRole('button', { name: 'Ed
 const heading = (page: Page): Locator => page.getByRole('heading', { level: 1 });
 const notesBlock = (page: Page): Locator => page.getByRole('region', { name: 'Notes', exact: true });
 const effortCard = (page: Page): Locator => page.getByRole('region', { name: 'Effort', exact: true });
-const labelsCard = (page: Page): Locator => page.getByRole('region', { name: 'Type and tags' });
+const labelsCard = (page: Page): Locator => page.getByRole('region', { name: 'Labels' });
 const SAVED = 'Run saved.';
 
 async function openRun(page: Page, id = mainId): Promise<void> {
@@ -264,6 +265,7 @@ test.describe('F01 edit a run: happy path', () => {
     const edit = await editOnServer();
     expect(edit.runType).toBe('WORKOUT');
     expect(edit.tags).toEqual(['Hill repeats', 'windy']);
+    await expandRunLabels(page);
     await expect(labelsCard(page).getByRole('radio', { name: 'Workout' })).toBeChecked();
     await expect(labelsCard(page).getByRole('list', { name: 'Tags' })).toContainText('Hill repeats');
     await expect(labelsCard(page).getByRole('list', { name: 'Tags' })).toContainText('windy');
@@ -336,6 +338,7 @@ test.describe('F01 edit a run: happy path', () => {
     await expect(heading(page)).toHaveText('Track night');
     await expect(notesBlock(page)).toContainText('6 x 800 with a 90 s jog');
     await expect(effortCard(page)).toContainText('as you chose');
+    await expandRunLabels(page);
     await expect(labelsCard(page).getByRole('radio', { name: 'Workout' })).toBeChecked();
   });
 
@@ -722,6 +725,7 @@ test.describe('F01 edit a run: edges', () => {
     await expect(drawer(page)).toHaveCount(0);
     // Without a reload: the rating is on the Effort card's scale, and the Type and tags card shows the new type.
     await expect(effortCard(page).getByRole('button', { name: '4 out of 10' })).toHaveAttribute('aria-pressed', 'true');
+    await expandRunLabels(page);
     await expect(labelsCard(page).getByRole('radio', { name: 'Long run' })).toBeChecked();
   });
 

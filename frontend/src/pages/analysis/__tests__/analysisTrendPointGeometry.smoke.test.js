@@ -15,8 +15,8 @@ assert.match(
 );
 assert.match(
   pageSource,
-  /<span\s+key=\{`injury-point-\$\{point\.x\}`\}\s+className="analysis-cinematic-point"\s+style=\{getTrendPointStyle\(point\)\}/,
-  'Injury trend markers must render as positioned HTML points instead of stretched SVG circles.',
+  /<span\s+key=\{`injury-point-\$\{point\.key\}`\}\s+className="analysis-cinematic-point"\s+style=\{getTrendPointStyle\(point\)\}/,
+  'Injury trend markers must use stable activity keys and the shared chart coordinates.',
 );
 assert.doesNotMatch(
   pageSource,
