@@ -20,7 +20,7 @@ assert.match(
 
 assert.match(
   pageSource,
-  /if \(dashboardData\.deferredEnrichment\)[\s\S]*loadProfileDashboardFallbackEnrichmentData\(\)/,
+  /if \(dashboardData\.deferredEnrichment \|\| !dashboardData\.coachToday\?\.today\)[\s\S]*loadProfileDashboardFallbackEnrichmentData\(publishCoach\)/,
   'Profile dashboard should lazy-load optional batch enrichment when deferredEnrichment is true.',
 );
 console.log('[PASS] Profile dashboard batch endpoint guard passed.');

@@ -1,6 +1,7 @@
 import {mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {test,expect,browserLogin,candidate,activation,get,post,command,scan,inputs,addDays,today} from './helpers.mjs';
+import {expectNativeCalendar} from './native-plan.ui.mjs';
 
 const note='Some future runs were shortened to follow individual-session progression from your confirmed recent longest run. Weekly distance may be lower; removed distance is not added elsewhere. Goal day and protected history stay unchanged.';
 function fewerDays() {
@@ -29,7 +30,7 @@ for(const [width,height,n] of [[390,844,61],[1440,900,62]])test(`S08 frequency r
   await expect(dialog.getByRole('button',{name:'Activate this plan',exact:true})).toBeDisabled();
   for(const checkbox of await dialog.getByRole('checkbox',{name:'I understand this note.',exact:true}).all())await checkbox.check();
   await dialog.getByRole('button',{name:'Activate this plan',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Full calendar',exact:true})).toBeVisible();
+  await expectNativeCalendar(page,c.v.title);
   const first=c.days.find(d=>d.workoutType==='EASY');const published=await get(request,auth,`/api/run-plans/${c.p.id}/workouts/${first.id}`);
   expect(published.workout.targetDistanceM).toBe(5400);expect(published.workout.steps).toEqual(first.steps);
   await page.goto(`/training-plan/${c.p.id}/workouts/${first.id}`);

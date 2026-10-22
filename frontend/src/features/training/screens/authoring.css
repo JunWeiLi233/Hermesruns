@@ -1,7 +1,7 @@
 /* Workout authoring follows the supplied library reference; styles stay local. */
 .modal-shell.workout-authoring-shell { padding: 24px 16px; background: rgb(28 25 23 / 44%); }
 .modal-card.workout-authoring-modal {
-  --wa-ink: #1c1917; --wa-muted: #625c56; --wa-faint: #827b74; --wa-surface: #fff;
+  --wa-ink: #1c1917; --wa-muted: #625c56; --wa-faint: #716b65; --wa-surface: #fff;
   --wa-soft: #f7f6f5; --wa-border: rgb(28 25 23 / 12%); --wa-accent: #a0392a;
   --wa-shared: #3f6b5c; --wa-shared-bg: #e8f0ed;
   width: min(900px, 100%); max-width: 900px; max-height: calc(100dvh - 48px); padding: 0;
@@ -62,7 +62,7 @@ body.theme-light .workout-authoring-modal .modal-header h3 { color: var(--wa-ink
 .workout-library-empty { min-height: 260px; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; }
 .workout-library-empty h2 { margin: 0; font: italic 800 20px/1.3 var(--font-display, Manrope, sans-serif); letter-spacing: -.02em; }
 .workout-library-empty p { margin: 0 0 8px; max-width: 36ch; color: var(--wa-muted); font-size: 13.5px; line-height: 1.5; }
-.workout-library-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 24px; border-top: 1px solid var(--wa-border); font-size: 12px; line-height: 1.5; color: var(--wa-faint, #827b74); }
+.workout-library-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 12px 24px; border-top: 1px solid var(--wa-border); font-size: 12px; line-height: 1.5; color: var(--wa-faint, #716b65); }
 .workout-library .library-personalized { padding-top: 16px; border-bottom: 1px solid var(--wa-border); }
 .library-personalized-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; padding: 0 24px; }
 .workout-library .library-personalized-heading h2, .workout-library .library-saved-heading { font: 800 14px/1.5 var(--font-display, sans-serif); margin: 0; color: var(--wa-ink); }

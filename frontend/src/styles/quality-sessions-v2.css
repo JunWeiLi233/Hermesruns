@@ -139,3 +139,9 @@ body:is(.theme-midnight, .theme-high-contrast) #root .quality-sessions-v2 {
   #root .quality-sessions-v2__table :is(th, td) { padding: 10px 12px; }
   #root .quality-sessions-v2__skeleton-table { height: 220px; }
 }
+.quality-sessions-v2__full-details {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 16px 0;
+}

@@ -83,6 +83,8 @@ it('keeps the shell and actual data, and resets the entire easier session', asyn
   expect(screen.getByRole('meter', { name: en.today_run.readiness_signal_sleep })).toHaveAttribute('aria-valuenow', '82');
   expect(container.querySelector('.tr-v2-targets')).toHaveTextContent('10.0km');
   expect(container.querySelector('.tr-v2-targets')).toHaveTextContent('50 min');
+  const structure = screen.getByRole('group', { name: en.today_run.plan_title });
+  expect(within(structure).getAllByRole('listitem')).toHaveLength(3);
   const bars = container.querySelectorAll('.tr-v2-structure-bar > span');
   expect(bars).toHaveLength(3);
   [...bars].forEach((bar) => expect(Number(bar.style.flexGrow)).toBe(1));

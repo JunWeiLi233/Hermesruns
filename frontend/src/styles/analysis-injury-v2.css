@@ -55,7 +55,7 @@ body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag 
   font-weight: 700;
 }
 
-body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-low { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-low { background: rgba(52, 199, 89, 0.12); color: #1e7a35; }
 body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-moderate { background: rgba(255, 149, 0, 0.14); color: #a15c00; }
 body #root .analysis-insight-detail-page.is-injury-risk .analysis-injury-v2-tag.is-high { background: rgba(255, 59, 48, 0.1); color: #c4261a; }
 

@@ -1,4 +1,5 @@
 import {test,expect,browserLogin,inputs,active,get,post,command,openWorkout,scan} from './helpers.mjs';
+import {expectSavedWorkoutRun} from './native-plan.ui.mjs';
 
 test('PAR-F07 saved active-plan edits survive reload without mutating the active prescription',async({page,request},info)=>{
   const auth=await browserLogin(page,request,6);const c=await active(request,auth);
@@ -33,7 +34,7 @@ test('PAR-F06 successful linking clears a recovered manual-save banner',async({p
   await dialog.getByRole('textbox',{name:'Run name',exact:true}).fill('Parity recovery run');
   await dialog.getByRole('spinbutton',{name:'Actual distance (km)',exact:true}).fill('2.3');
   await dialog.getByRole('spinbutton',{name:'Duration (minutes)',exact:true}).fill('18');
-  await dialog.getByRole('button',{name:'Save run',exact:true}).click();await expect(dialog.getByText('Run saved; workout link needs review.')).toBeVisible();
+  await dialog.getByRole('button',{name:'Save run',exact:true}).click();await expectSavedWorkoutRun(page);
   await page.reload();await expect(page.getByRole('link',{name:'Review / retry this save'})).toBeVisible();
   await page.getByRole('button',{name:'Link a completed run',exact:true}).click();dialog=page.getByRole('dialog');
   await dialog.getByRole('radio',{name:/Parity recovery run/}).check();await dialog.getByRole('radio',{name:'Partly completed',exact:true}).check();

@@ -364,7 +364,8 @@ public class AdminRacePortalController {
      * by this endpoint, regardless of the {@code overwriteSynthetic} flag.
      *
      * <p>Request body (all optional):
-     * <pre>{ "overwriteSynthetic": false, "catalogPath": "../frontend/src/data/worldRaceCatalog.json" }</pre>
+     * <pre>{ "overwriteSynthetic": false }</pre>
+     * Seeds from the bundled race catalog; {@code catalogPath} is rejected.
      */
     @PostMapping("/bulk-seed")
     public ResponseEntity<?> bulkSeedRaceCourseMaps(@RequestHeader(value = "Authorization", required = false) String authorizationHeader,
@@ -377,13 +378,15 @@ public class AdminRacePortalController {
         }
         Runner admin = adminOptional.get();
         boolean overwriteSynthetic = body != null && Boolean.TRUE.equals(body.get("overwriteSynthetic"));
-        Object catalogPathRaw = body == null ? null : body.get("catalogPath");
-        java.nio.file.Path catalogPath = catalogPathRaw instanceof String s && !s.isBlank()
-                ? java.nio.file.Path.of(s)
-                : null;
+        if (body != null && body.get("catalogPath") != null) {
+            // A request must not choose which server file gets read; custom
+            // catalogs go through the RaceCourseMapBulkSeedCommand CLI instead.
+            return AdminApiResponses.error(HttpStatus.BAD_REQUEST,
+                    "catalogPath is not accepted over HTTP; the bundled race catalog is always used.", "catalog_path_not_allowed");
+        }
         try {
             RaceCourseMapBulkSeedService.BulkSeedSummary summary =
-                    bulkSeedService.seedAllMissingFromCatalog(catalogPath, admin.getEmail(), overwriteSynthetic);
+                    bulkSeedService.seedAllMissingFromCatalog(null, admin.getEmail(), overwriteSynthetic);
             safeAuditLog(admin, "race_course_map.bulk_seeded", "race_course_map", "*",
                     "Bulk-seeded synthetic course maps: " + summary);
             return ResponseEntity.ok(Map.of(

@@ -7,9 +7,9 @@ import useTrainingMetrics from './useTrainingMetrics';
  * The effort score and the heart-rate zones of one run, side by side under the telemetry. The section is always
  * on the page, loaded or not, so the "Effort and zones" link in the run navigation has somewhere to go.
  */
-export default function RunTrainingCards({ runId }) {
+export default function RunTrainingCards({ runId, refreshToken = 0 }) {
   const { t } = useI18n();
-  const { status, data, stale, reload } = useTrainingMetrics(runId);
+  const { status, data, stale, reload } = useTrainingMetrics(runId, { refreshToken });
 
   let body;
   if (data) {

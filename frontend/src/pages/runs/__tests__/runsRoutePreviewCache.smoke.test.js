@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runsSource = readFileSync(path.join(here, "../Runs.jsx"), 'utf8').replace(/\r\n/g, '\n');
 const runsCacheSource = readFileSync(path.join(here, "../runsCache.ts"), 'utf8').replace(/\r\n/g, '\n');
+const historyApiSource = readFileSync(path.join(here, '../../../api/activityHistoryApi.ts'), 'utf8');
 const styleSource = readFileSync(path.join(here, "../../../styles/style.generated.css"), 'utf8').replace(/\r\n/g, '\n');
 const splitRunsStyle = readFileSync(path.join(here, "../../../styles/_split/runs.css"), 'utf8').replace(/\r\n/g, '\n');
 
@@ -23,9 +24,10 @@ assert.match(
 
 assert.match(
   runsSource,
-  /const runsPromise = withRequestDeadline\([\s\S]*?cachedApiJson\('\/api\/activities', \{ signal \}\)[\s\S]*?if \(!Array\.isArray\(data\)[\s\S]*?throw new Error\('Invalid activity list'\);[\s\S]*?const list = data;[\s\S]*?sortRecentRuns\(list\);/,
-  'Runs should bound the cached activity read and reject malformed payloads before sorting and rendering activity cards.',
+  /const runsPromise = withRequestDeadline\([\s\S]*?fetchActivityHistoryPage\(historyQuery, null, \{ signal \}\)[\s\S]*?const list = appendActivityHistoryRuns\(\[\], data\.items\);/,
+  'Runs should bound the first history page and use server ordering before rendering activity cards.',
 );
+assert.match(historyApiSource, /normalizeActivityHistoryPage[\s\S]*throw new Error\('Invalid activity history page'\)/, 'Malformed history responses must be rejected before the Runs component receives them.');
 
 assert.match(
   runsSource,
@@ -185,7 +187,7 @@ assert.match(
 assert.match(
   runsSource,
   /const cachedHit = readRunsCache\(localStorage, email, Date\.now\(\)\);\s*if \(fromCache && cachedHit && isCurrentLoad\(\)\) \{/,
-  'Non-cache Runs refreshes should still read the v2 snapshot for last-known-good metadata fallback.',
+  'Non-cache Runs refreshes should still read the v3 snapshot for last-known-good metadata fallback.',
 );
 
 assert.match(
@@ -196,7 +198,7 @@ assert.match(
 
 assert.match(
   runsSource,
-  /if \(isCurrentLoad\(\) && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null\)/,
+  /if \(isCurrentLoad\(\) && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null[\s\S]*?&& isWholeHistoryQuery && !historyRequestRef\.current\.page\?\.hasMore/,
   'Runs should not replace a complete cache snapshot with null metadata after a partial revalidation failure.',
 );
 
@@ -232,8 +234,8 @@ assert.doesNotMatch(
 
 assert.match(
   runsCacheSource,
-  /RUNS_CACHE_KEY_PREFIX = 'hermes_runs_v2_';[\s\S]*runs\.map\(slimRunForRunsCache\)[\s\S]*sourceCount: runs\.length[\s\S]*complete: true/,
-  'Runs cache should write every slim run as a complete v2 snapshot with its source count.',
+  /RUNS_CACHE_KEY_PREFIX = 'hermes_runs_v3_';[\s\S]*runs\.map\(slimRunForRunsCache\)[\s\S]*sourceCount: runs\.length[\s\S]*complete: true/,
+  'Runs cache should write every slim run as a complete v3 snapshot with its source count.',
 );
 
 assert.match(
@@ -253,8 +255,8 @@ assert.doesNotMatch(cacheHitBlock, /\breturn;/, 'A valid cache hit should not re
 
 assert.match(
   runsSource,
-  /if \(isCurrentLoad\(\) && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null\) \{\s*writeRunsCache\(localStorage, email, latestRuns, latestProfile, latestStrava, Date\.now\(\)\);\s*\}/,
-  'Fresh activity responses should rewrite the complete slim Runs cache.',
+  /if \(isCurrentLoad\(\) && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null[\s\S]*?&& isWholeHistoryQuery && !historyRequestRef\.current\.page\?\.hasMore[\s\S]*?latestRuns\.length === historyRequestRef\.current\.page\?\.totalCount[\s\S]*?writeRunsCache\(localStorage, email, latestRuns, latestProfile, latestStrava, Date\.now\(\), \{ complete: true, sourceCount:/,
+  'Only a terminal, count-verified unfiltered history response should rewrite the complete slim Runs cache.',
 );
 
 assert.match(
@@ -283,7 +285,7 @@ assert.match(
 
 assert.match(
   runsSource,
-  /await apiJson\(`\/api\/activities\/\$\{run\.id\}`, \{ method: 'DELETE' \}\);\s*resetRoutePreviewState\(\);/,
+  /await apiJson\(`\/api\/activities\/\$\{run\.id\}`, \{ method: 'DELETE' \}\);\s*if \(!runsLoadGenerationRef\.current\.isCurrent\(token\)\) return;\s*resetRoutePreviewState\(\);/,
   'Deleting an activity should reset route-preview coordination before its cached card state is removed.',
 );
 
@@ -361,8 +363,8 @@ assert.match(
 
 assert.match(
   runsSource,
-  /className="recent-runs-load-more"[\s\S]*onClick=\{\(\) => setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RUNS_RENDER_BATCH_SIZE, filteredRuns\.length\)\)\}[\s\S]*\{t\('runs\.load_more'\)\}/,
-  'Runs history should expose a manual load-more control when IntersectionObserver is unavailable.',
+  /className="recent-runs-load-more"[\s\S]*onClick=\{\(\) => \{[\s\S]*?setVisibleRunsCount\(\(current\) => Math\.min\(current \+ RUNS_RENDER_BATCH_SIZE, filteredRuns\.length\)\)[\s\S]*?else loadNextHistoryPage\(\);/,
+  'Runs history should expose a manual load-more control for both complete-cache rendering and server continuation.',
 );
 
 assert.doesNotMatch(

@@ -144,10 +144,21 @@ export function predictRaceTime(vdot, distanceMeters) {
   return (lo + hi) / 2;
 }
 
+/**
+ * How far back a run can anchor a prediction: the same 90 days the fitness figure (VDOT) is taken from, which is also what the
+ * prediction pages say they look at. It used to be 180, so a run the page did not list still moved the time (BUG-015).
+ */
+export const PREDICTION_ANCHOR_DAYS = Math.round(VDOT_LOOKBACK_MS / (24 * 60 * 60 * 1000));
+
+/**
+ * The best recent run near the target distance, as the time it would give over that distance.
+ * `asOf` (a time in ms) puts the question on an earlier day: ages are counted from it and runs after it are not there yet, which is
+ * how a point of the prediction history is worked out (BUG-035).
+ */
 function bestRecentNormalizedRaceTimeSec(runs, targetMeters, options = {}) {
-  const { lookbackDays = 180 } = options;
+  const { lookbackDays = PREDICTION_ANCHOR_DAYS } = options;
   if (!Array.isArray(runs) || !runs.length || targetMeters <= 0) return null;
-  const now = Date.now();
+  const now = Number.isFinite(options.asOf) ? options.asOf : Date.now();
   const lookbackMs = lookbackDays * 24 * 60 * 60 * 1000;
   const targetKm = targetMeters / 1000;
   let best = null;
@@ -157,7 +168,7 @@ function bestRecentNormalizedRaceTimeSec(runs, targetMeters, options = {}) {
     const rawSec = Number(run.movingTimeSeconds || run.durationSeconds || 0);
     const t = new Date(run.startTime || run.startDate || 0).getTime();
     if (!Number.isFinite(km) || !Number.isFinite(rawSec) || !Number.isFinite(t)) continue;
-    if (km <= 0 || rawSec <= 0 || now - t > lookbackMs) continue;
+    if (km <= 0 || rawSec <= 0 || now - t > lookbackMs || t > now) continue;
 
     let sec = rawSec;
     if (options.weatherAdjustedAnchors) {
@@ -194,7 +205,7 @@ export function predictRaceTimeCalibrated(vdot, distanceMeters, runs, options = 
 
   const baseSec = baseMin * 60;
   const closeness = Math.max(0, 1 - Math.abs(anchor.distRatio - 1) / 0.2);
-  const lookbackDays = options.lookbackDays ?? 180;
+  const lookbackDays = options.lookbackDays ?? PREDICTION_ANCHOR_DAYS;
   const freshness = Math.max(0, 1 - (anchor.ageDays || 0) / lookbackDays);
   const recencyFactor = Math.max(0.15, freshness ** 1.7);
   const weight = (0.45 + 0.35 * closeness) * recencyFactor;

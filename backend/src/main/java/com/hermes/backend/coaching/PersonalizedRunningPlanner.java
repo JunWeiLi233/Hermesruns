@@ -663,29 +663,6 @@ public class PersonalizedRunningPlanner {
             String name
     ) {}
 
-    public record PlannedSession(
-            LocalDate date,
-            CoachWorkoutType workoutType,
-            Double distanceKm,
-            Integer durationMinutes,
-            boolean stridesSuggested,
-            String phase,
-            String intent,
-            String reasonCode,
-            Integer targetPaceMinSecondsPerKm,
-            Integer targetPaceMaxSecondsPerKm,
-            CoachWorkoutType mutatedFrom,
-            boolean readinessAdjusted,
-            Double originalDistanceKm
-    ) {
-        public PlannedSession(LocalDate date, CoachWorkoutType workoutType, Double distanceKm, Integer durationMinutes,
-                boolean stridesSuggested, String phase, String intent, String reasonCode,
-                Integer targetPaceMinSecondsPerKm, Integer targetPaceMaxSecondsPerKm, CoachWorkoutType mutatedFrom, boolean readinessAdjusted) {
-            this(date, workoutType, distanceKm, durationMinutes, stridesSuggested, phase, intent, reasonCode,
-                    targetPaceMinSecondsPerKm, targetPaceMaxSecondsPerKm, mutatedFrom, readinessAdjusted, null);
-        }
-    }
-
     public record PersonalizedPlan(
             String phase,
             double targetWeeklyKm,

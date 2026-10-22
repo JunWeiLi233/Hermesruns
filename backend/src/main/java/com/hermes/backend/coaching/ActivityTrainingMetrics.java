@@ -15,6 +15,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.ColumnDefault;
 
 /**
  * What Hermes worked out about one run: its effort score and the time it spent in each heart-rate zone.
@@ -89,6 +90,11 @@ public class ActivityTrainingMetrics {
 
     /** The runner's rating at the time, so a changed rating is noticed. */
     private Integer perceivedExertionUsed;
+
+    /** Whether the runner had asked for the rating to be used instead of the heart rate, so a changed choice is noticed. */
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean ratingPreferred = false;
 
     /** Which version of the effort model produced the row; a new version makes every row out of date. */
     @Column(nullable = false)
@@ -203,6 +209,14 @@ public class ActivityTrainingMetrics {
         hrBoundary2Bpm = zones.boundary(1);
         hrBoundary3Bpm = zones.boundary(2);
         hrBoundary4Bpm = zones.boundary(3);
+    }
+
+    public boolean isRatingPreferred() {
+        return ratingPreferred;
+    }
+
+    public void setRatingPreferred(boolean ratingPreferred) {
+        this.ratingPreferred = ratingPreferred;
     }
 
     public Integer getPerceivedExertionUsed() {

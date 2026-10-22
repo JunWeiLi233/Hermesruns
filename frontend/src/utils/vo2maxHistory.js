@@ -13,6 +13,7 @@ import {
   estimateCurrentVdot,
   representativeVdotFromEntries,
 } from './vdot';
+import { runDayKey, runnersToday } from './calendarDays';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** How far back a point looks: the window of the number itself (90 days). */
@@ -39,6 +40,23 @@ export function historyRangeStart(rangeKey, now = Date.now()) {
 function startOf(run) {
   const time = new Date(run?.startTime || run?.startDate || 0).getTime();
   return Number.isFinite(time) && time > 0 ? time : null;
+}
+
+/** Resolve the supplied account zone's calendar boundary without changing point instants. */
+function startOfYear(year, timeZone) {
+  if (timeZone) {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+      const wall = Date.UTC(year, 0, 1);
+      let instant = wall;
+      for (let step = 0; step < 3; step += 1) {
+        const parts = Object.fromEntries(formatter.formatToParts(new Date(instant)).map(({ type, value }) => [type, value]));
+        instant += wall - Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+      }
+      return instant;
+    } catch { /* Older histories without a usable account zone keep their original boundary. */ }
+  }
+  return new Date(year, 0, 1).getTime();
 }
 
 /** Puts `value` into the ascending list `sorted` where it belongs. */
@@ -93,6 +111,8 @@ export function averageOfPoints(points, { to }) {
  */
 export function buildVo2maxHistory(runs, { now = Date.now() } = {}) {
   const list = (Array.isArray(runs) ? runs : []).filter((run) => run && typeof run === 'object');
+  const today = runnersToday(list, new Date(now));
+  const accountZone = list.find(run => run.accountTimeZone)?.accountTimeZone;
   const dated = list
     .map((run) => ({ run, time: startOf(run) }))
     .filter((item) => item.time != null)
@@ -120,7 +140,7 @@ export function buildVo2maxHistory(runs, { now = Date.now() } = {}) {
     const { value, usedCount } = representativeVdotFromEntries(entries);
     if (value > 0) {
       points.push({
-        time, date: new Date(time), value, usedCount, firm: usedCount >= FIRM_POINT_RUNS, id: run.id ?? null, name: typeof run.name === 'string' ? run.name : '',
+        time, date: new Date(time), day: runDayKey(run), value, usedCount, firm: usedCount >= FIRM_POINT_RUNS, id: run.id ?? null, name: typeof run.name === 'string' ? run.name : '',
       });
     }
   });
@@ -130,7 +150,7 @@ export function buildVo2maxHistory(runs, { now = Date.now() } = {}) {
   const nowValue = current.representativeVdot > 0 ? current.representativeVdot : null;
   const last = points[points.length - 1];
   if (nowValue != null && (!last || last.time < now)) {
-    points.push({ time: now, date: new Date(now), value: nowValue, usedCount: current.usedTopN, firm: current.usedTopN >= FIRM_POINT_RUNS, id: null, name: '', now: true });
+    points.push({ time: now, date: new Date(now), day: today, value: nowValue, usedCount: current.usedTopN, firm: current.usedTopN >= FIRM_POINT_RUNS, id: null, name: '', now: true });
   }
 
   const byYear = new Map();
@@ -138,24 +158,25 @@ export function buildVo2maxHistory(runs, { now = Date.now() } = {}) {
     if (!byYear.has(year)) byYear.set(year, { year, high: null, low: null, average: null, end: null, runs: 0, km: 0, current: false });
     return byYear.get(year);
   };
-  for (const { run, time } of dated) {
-    const row = yearOf(new Date(time).getFullYear());
+  for (const { run } of dated) {
+    const row = yearOf(Number(runDayKey(run).slice(0, 4)));
     row.runs += 1;
     row.km += Number(run.distanceKm || 0) > 0 ? Number(run.distanceKm) : 0;
   }
   for (const point of points) {
-    const row = yearOf(point.date.getFullYear());
+    const row = yearOf(Number(point.day.slice(0, 4)));
     row.end = point.value;
     if (!point.firm) continue;
-    if (row.high == null || point.value >= row.high.value) row.high = { value: point.value, date: point.date };
-    if (row.low == null || point.value < row.low.value) row.low = { value: point.value, date: point.date };
+    const date = new Date(`${point.day}T12:00:00`);
+    if (row.high == null || point.value >= row.high.value) row.high = { value: point.value, date };
+    if (row.low == null || point.value < row.low.value) row.low = { value: point.value, date };
   }
-  const thisYear = new Date(now).getFullYear();
+  const thisYear = Number(today.slice(0, 4));
   if (byYear.has(thisYear)) byYear.get(thisYear).current = true;
   for (const row of byYear.values()) {
     // The year's own points, up to the end of the year (up to today for this year).
-    const ofYear = points.filter((point) => point.date.getFullYear() === row.year);
-    row.average = averageOfPoints(ofYear, { to: row.year === thisYear ? now : new Date(row.year + 1, 0, 1).getTime() });
+    const ofYear = points.filter((point) => Number(point.day.slice(0, 4)) === row.year);
+    row.average = averageOfPoints(ofYear, { to: row.year === thisYear ? now : startOfYear(row.year + 1, accountZone) });
   }
 
   return {

@@ -21,8 +21,10 @@ import { useAccountDate } from '../../hooks/useAccountDate';
 import useRecommendationRevision from '../../hooks/useRecommendationRevision';
 import {
   buildProgressionAtlas,
+  canCompareProgression,
   PROGRESSION_TIMEFRAMES,
 } from '../../utils/progressionAtlas';
+import { describeProgressionDeltas } from '../../utils/progressionDeltas';
 import { getTodayRunRecommendation } from '../../utils/todayRun';
 import { formatPlannedDuration, prettifyWorkoutType } from '../../utils/coach/presentation.js';
 import { parseCheckoutBannerQuery, parseProfileLinkingQuery } from '../../utils/stravaLinking';
@@ -36,6 +38,7 @@ import RewardIllustration from '../../components/RewardIllustration';
 import ComebackMessage from '../../components/ComebackMessage';
 import PageSkeleton from '../../components/PageSkeleton';
 import GoalsCard from '../../components/goals/GoalsCard';
+import BestEffortsAnalysis from './BestEffortsAnalysis';
 import ProgressionChart from './ProgressionChart';
 import TeamProfileCard from '../team/TeamProfileCard';
 import WeeklyLoadCard from './WeeklyLoadCard';
@@ -130,7 +133,7 @@ function writeJsonStorage(key, value) {
       return;
     } catch { /* keep evicting */ }
     try {
-      const evictPrefixes = ['hermes_profile_dashboard_', 'hermes_runs_v1_'];
+      const evictPrefixes = ['hermes_profile_dashboard_', 'hermes_runs_v1_', 'hermes_runs_v2_', 'hermes_runs_v3_'];
       const doomed = [];
       for (let i = 0; i < window.localStorage.length; i += 1) {
         const storedKey = window.localStorage.key(i);
@@ -184,6 +187,22 @@ function formatDurationCompact(totalSeconds) {
 function formatPaceDisplay(secondsPerKm, t) {
   if (!Number.isFinite(secondsPerKm) || secondsPerKm <= 0) return '--';
   return `${formatPaceSeconds(secondsPerKm)} ${t('run_detail.unit_pace')}`;
+}
+
+const PROGRESSION_COMPARE_KEY = 'hermes_progression_compare';
+
+function readProgressionCompare() {
+  try {
+    return window.localStorage.getItem(PROGRESSION_COMPARE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/** The change in one figure of the Progression card against the stretch before it, in words, under the figure. */
+function ProgressionDelta({ delta }) {
+  if (!delta) return null;
+  return <small className={`hd-progression-delta is-${delta.tone}`}>{delta.text}</small>;
 }
 
 function formatElevationDisplay(totalMeters, t) {
@@ -623,6 +642,7 @@ export default function ProfileDashboard() {
   // pending | settled | timed_out �� only render comeback after coach enrichment settles
   const [comebackGateStatus, setComebackGateStatus] = useState('pending');
   const [activeProgressionFrame, setActiveProgressionFrame] = useState('total');
+  const [compareProgression, setCompareProgression] = useState(readProgressionCompare);
   const [_musclePlan, setMusclePlan] = useState(null);
   const [weeklyDigest, setWeeklyDigest] = useState(null);
   const [weeklyDigestLoading, setWeeklyDigestLoading] = useState(false);
@@ -1037,10 +1057,25 @@ export default function ProfileDashboard() {
   const staminaScorePercent = stamina.scorePercent == null ? null : Math.max(0, Math.min(100, Number(stamina.scorePercent)));
   const staminaCapPercent = stamina.recoveryCapPercent == null ? null
     : Math.max(0, Math.min(100, Number(stamina.recoveryCapPercent)));
+  const progressionCanCompare = canCompareProgression(activeProgressionFrame);
+  const progressionComparing = compareProgression && progressionCanCompare;
   const progressionAtlas = useMemo(
-    () => buildProgressionAtlas(dashboardMetricRuns, activeProgressionFrame, lang, new Date(`${accountToday}T12:00:00`)),
-    [activeProgressionFrame, lang, dashboardMetricRuns, accountToday],
+    () => buildProgressionAtlas(dashboardMetricRuns, activeProgressionFrame, lang, new Date(`${accountToday}T12:00:00`), { compare: progressionComparing }),
+    [activeProgressionFrame, lang, dashboardMetricRuns, accountToday, progressionComparing],
   );
+  const progressionDeltas = useMemo(
+    () => (progressionAtlas.comparison ? describeProgressionDeltas(progressionAtlas.comparison.deltas, { t, lang, unit }) : null),
+    [progressionAtlas, t, lang, unit],
+  );
+  const toggleProgressionCompare = () => {
+    const next = !compareProgression;
+    setCompareProgression(next);
+    try {
+      window.localStorage.setItem(PROGRESSION_COMPARE_KEY, next ? '1' : '0');
+    } catch {
+      // Storage can be blocked; the choice then lasts until the page is closed.
+    }
+  };
 
   const navItems = [
     { key: 'dashboard', label: t('profile.dashboard_nav_dashboard'), route: '/profile', icon: 'dashboard', active: true },
@@ -1430,6 +1465,22 @@ export default function ProfileDashboard() {
                       <span className="hd-card-kicker">{t('profile.dashboard_redesign.progression_kicker')}</span>
                       <h3 className="hd-card-title">{t('profile.dashboard_redesign.progression_title')}</h3>
                     </div>
+                    <div className="hd-progression-controls">
+                    <button
+                      type="button"
+                      className={`hd-progression-compare${progressionComparing ? ' is-active' : ''}`}
+                      aria-pressed={progressionComparing}
+                      aria-describedby="hd-progression-compare-hint"
+                      disabled={!progressionCanCompare}
+                      onClick={toggleProgressionCompare}
+                    >
+                      {t('profile.dashboard_redesign.progression_compare')}
+                    </button>
+                    <span id="hd-progression-compare-hint" className="sr-only">
+                      {progressionCanCompare
+                        ? t('profile.dashboard_redesign.progression_compare_hint')
+                        : t('profile.dashboard_redesign.progression_compare_unavailable')}
+                    </span>
                     <div className="hd-progression-switcher">
                       {[
                         { key: 'total', label: t('profile.dashboard_redesign.progression_total') },
@@ -1449,32 +1500,41 @@ export default function ProfileDashboard() {
                         </button>
                       ))}
                     </div>
+                    </div>
                   </div>
                   <div className="hd-progression-summary">
                     <div className="hd-progression-hero-stat">
                       <span>{t('profile.dashboard_redesign.progression_total_distance')}</span>
                       <strong>{formatDistance(progressionAtlas.totalDistanceKm, 1, lang, unit)}</strong>
+                      <ProgressionDelta delta={progressionDeltas?.distance} />
+                      {progressionAtlas.comparison ? (
+                        <small className="hd-progression-compared">{t('profile.dashboard_redesign.progression_compare_vs', { range: progressionAtlas.comparison.rangeLabel })}</small>
+                      ) : null}
                     </div>
                     <div className="hd-progression-meta-row">
                       <div className="hd-progression-stat">
                         <span>{t('profile.dashboard_redesign.progression_elevation')}</span>
                         <strong>{formatElevationDisplay(progressionAtlas.totalElevationMeters, t)}</strong>
+                        <ProgressionDelta delta={progressionDeltas?.elevation} />
                       </div>
                       <div className="hd-progression-stat">
                         <span>{t('profile.dashboard_redesign.progression_avg_pace')}</span>
                         <strong>{formatPaceDisplay(progressionAtlas.averagePaceSeconds, t)}</strong>
+                        <ProgressionDelta delta={progressionDeltas?.pace} />
                       </div>
                       <div className="hd-progression-stat">
                         <span>{t('profile.dashboard_redesign.progression_total_time')}</span>
                         <strong>{formatDuration(progressionAtlas.totalMovingSeconds)}</strong>
+                        <ProgressionDelta delta={progressionDeltas?.time} />
                       </div>
                       <div className="hd-progression-stat">
                         <span>{t('profile.dashboard_redesign.progression_sessions')}</span>
                         <strong>{progressionAtlas.sessionCount}</strong>
+                        <ProgressionDelta delta={progressionDeltas?.sessions} />
                       </div>
                     </div>
                   </div>
-                  <ProgressionChart key={`${activeProgressionFrame}-${lang}-${unit}`} atlas={progressionAtlas} lang={lang} unit={unit} t={t} />
+                  <ProgressionChart key={`${activeProgressionFrame}-${lang}-${unit}-${progressionComparing}`} atlas={progressionAtlas} lang={lang} unit={unit} t={t} />
                 </section>
 
                 {/* 5b. Weekly Digest */}
@@ -1543,6 +1603,7 @@ export default function ProfileDashboard() {
                 })()}
 
                 <GoalsCard defer showRecommendationEvidence={false} />
+                <BestEffortsAnalysis />
 
                 {/* 6. Bottom Grid */}
                 <div className="hd-bottom-grid">

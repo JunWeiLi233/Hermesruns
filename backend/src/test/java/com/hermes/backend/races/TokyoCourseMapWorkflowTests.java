@@ -34,7 +34,7 @@ class TokyoCourseMapWorkflowTests {
                     return asset;
                 });
         var exporter = new MarathonRouteMatchAndExportService(matching, new GpxExportService(), persistence);
-        var pipeline = new MarathonRoutePipelineService(extraction, georeferencing, exporter);
+        var pipeline = new MarathonRoutePipelineService(extraction, georeferencing, exporter, mock(RaceCourseMapImageService.class));
 
         var result = pipeline.runPipeline(new Runner(), "tokyo-marathon", "Tokyo Marathon", "Tokyo", "Japan",
                 "https://www.marathon.tokyo", 35.6762, 139.6503, 42.195, imageDataUrl());
@@ -51,7 +51,7 @@ class TokyoCourseMapWorkflowTests {
     @Test
     void officialTokyoImageDoesNotSupplyGeometryForAnotherRace() throws Exception {
         var pipeline = new MarathonRoutePipelineService(mock(MarathonRouteExtractionService.class),
-                mock(MarathonRouteGeoreferencingService.class), mock(MarathonRouteMatchAndExportService.class));
+                mock(MarathonRouteGeoreferencingService.class), mock(MarathonRouteMatchAndExportService.class), mock(RaceCourseMapImageService.class));
         assertThatThrownBy(() -> pipeline.runPipeline(new Runner(), "berlin-marathon", "Berlin Marathon", "Berlin", "Germany",
                 "https://example.com", 52.5, 13.4, 42.195, imageDataUrl())).hasMessageContaining("disabled");
     }

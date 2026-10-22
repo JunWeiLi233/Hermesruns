@@ -31,13 +31,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,7 +53,6 @@ public class AutomatedCoachService {
     private static final double HIGH_MILEAGE_KM_28D = 200.0;
     private static final double LONG_RUN_WEEKLY_BUMP = 1.12;
     private static final int SCHEDULE_HORIZON_DAYS = 14;
-    private final ConcurrentMap<Long, Object> scheduleHorizonLocks = new ConcurrentHashMap<>();
 
     private final RunnerRepository runnerRepository;
     private final ActivityRepository activityRepository;
@@ -181,8 +177,7 @@ public class AutomatedCoachService {
     @Transactional
     public CoachStateDto getCoachState(Runner runner) {
         CoachRunnerState state = getOrCreateState(runner);
-        if (state.getLastAggregatedAt() == null) {
-            aggregateState(runner);
+        if (refreshIfADayHasPassed(runner, state)) {
             state = coachRunnerStateRepository.findByRunner(runner).orElse(state);
         }
         refreshPersonalizedPlan(runner, SCHEDULE_HORIZON_DAYS);
@@ -201,8 +196,7 @@ public class AutomatedCoachService {
     @Transactional
     public CoachStateDto getCoachStatePreservingSchedule(Runner runner) {
         CoachRunnerState state = getOrCreateState(runner);
-        if (state.getLastAggregatedAt() == null) {
-            aggregateState(runner);
+        if (refreshIfADayHasPassed(runner, state)) {
             state = coachRunnerStateRepository.findByRunner(runner).orElse(state);
         }
         CoachScheduledWorkout todayWorkout = coachScheduledWorkoutRepository
@@ -225,8 +219,8 @@ public class AutomatedCoachService {
         LocalDate today = LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)));
         List<CoachScheduledWorkout> rows = coachScheduledWorkoutRepository
                 .findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(runner, today, today.plusDays(d - 1L));
-        Map<LocalDate, PersonalizedRunningPlanner.PlannedSession> sessionsByDate = plan.sessions().stream()
-                .collect(java.util.stream.Collectors.toMap(PersonalizedRunningPlanner.PlannedSession::date, session -> session));
+        Map<LocalDate, PlannedSession> sessionsByDate = plan.sessions().stream()
+                .collect(java.util.stream.Collectors.toMap(PlannedSession::date, session -> session));
         return rows.stream()
                 .map(row -> toScheduledDto(recommendationRow(row, sessionsByDate.get(row.getScheduledDate())), sessionsByDate.get(row.getScheduledDate())))
                 .toList();
@@ -359,8 +353,8 @@ public class AutomatedCoachService {
 
         String runnerState = computeRunnerState(runner, state);
         String coachMessage = buildCoachMessage(state, adjusted, runnerState, runner);
-        Map<LocalDate, PersonalizedRunningPlanner.PlannedSession> sessionsByDate = plan.sessions().stream()
-                .collect(java.util.stream.Collectors.toMap(PersonalizedRunningPlanner.PlannedSession::date, session -> session));
+        Map<LocalDate, PlannedSession> sessionsByDate = plan.sessions().stream()
+                .collect(java.util.stream.Collectors.toMap(PlannedSession::date, session -> session));
         List<CoachScheduledWorkoutDto> weekSchedule;
         if (versioned) {
             weekSchedule = versionedPlans.weekSessions(runner).stream().map(session -> {
@@ -572,6 +566,7 @@ public class AutomatedCoachService {
 
     @Transactional
     public void logRecoveryMetrics(Runner runner, Integer restingHr, Integer sleepScore, Integer hrvMs, Integer stressScore) {
+        runnerRepository.findByIdForUpdate(runner.getId());
         readinessService.recordManualRecovery(runner, LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner))),
                 restingHr != null && restingHr > 30 && restingHr < 120 ? restingHr : null,
                 sleepScore != null && sleepScore >= 0 && sleepScore <= 100 ? sleepScore : null,
@@ -589,6 +584,7 @@ public class AutomatedCoachService {
 
     @Transactional
     public void updateCoachProfile(Runner runner, Integer maxHr, Integer restingHr) {
+        runnerRepository.findByIdForUpdate(runner.getId());
         boolean zonesChange = false;
         if (maxHr != null) {
             if (maxHr < 120 || maxHr > 230) throw new IllegalArgumentException("maxHeartRateBpm out of range.");
@@ -613,6 +609,7 @@ public class AutomatedCoachService {
 
     @Transactional
     public CoachTrainingBlock startTrainingBlock(Runner runner, double raceDistanceKm, LocalDate targetRaceDate, String name) {
+        runnerRepository.findByIdForUpdate(runner.getId());
         if (versionedPlans != null && versionedPlans.selected(runner)) {
             throw new IllegalArgumentException("Review changes through the selected training plan.");
         }
@@ -639,6 +636,7 @@ public class AutomatedCoachService {
 
     @Transactional
     public void stopTrainingBlock(Runner runner) {
+        runnerRepository.findByIdForUpdate(runner.getId());
         coachTrainingBlockRepository.findByRunnerAndActiveTrue(runner).ifPresent(b -> {
             b.setActive(false);
             coachTrainingBlockRepository.save(b);
@@ -663,27 +661,41 @@ public class AutomatedCoachService {
         return true;
     }
 
+    /**
+     * The runner's volumes and heart-rate minutes over the last 7 and 28 calendar days: today and the days before it, each run on
+     * the day it was run in the runner's time zone, whatever the hour (BUG-026; Home and Load balance count a week the same way).
+     * A run with no start time has no day and is left out. The window is by days, so the figure goes stale at midnight:
+     * {@link #refreshIfADayHasPassed} brings it up to date when the state is read.
+     */
     private void aggregateState(Runner runner) {
-        Instant now = clock.instant();
-        Instant from7 = now.minus(7, ChronoUnit.DAYS);
-        Instant from28 = now.minus(28, ChronoUnit.DAYS);
+        CoachRunnerState state = getOrCreateState(runner);
+        ZoneId zone = ActivityLocalDates.zoneOf(runner);
+        LocalDate today = LocalDate.now(clock.withZone(zone));
+        LocalDate from7 = today.minusDays(6);
+        LocalDate from28 = today.minusDays(27);
+        LocalDate from90 = today.minusDays(89);
 
-        List<RunMetricsProjection> runs90 = findRecentRuns(runner, 90);
+        // The query's bounds are padded by a day on each side: the stored start is UTC for a file run, the day is the runner's.
+        List<RunMetricsProjection> runs90 = activityRepository.findRunMetricsBetween(
+                runner, ActivityType.RUN, from90.minusDays(1).atStartOfDay(), today.plusDays(2).atStartOfDay());
         double hrMax = resolveHrMax(runner, runs90);
 
         int low = 0, grey = 0, high = 0, unknown = 0;
         double vol7 = 0, vol28 = 0;
         for (RunMetricsProjection a : runs90) {
-            Instant ts = runInstant(a, runner);
-            if (ts == null) continue;
-            // Duration/RPE-only sessions have no measured distance. Exclude them from this
-            // distance-based legacy summary; the training workspace retains their RPE load.
+            LocalDateTime start = a.getEffectiveStartTime();
+            if (start == null || Boolean.TRUE.equals(a.getUndated())) continue;
+            Instant startedAt = runInstant(a, runner);
+            if (startedAt == null || startedAt.isAfter(clock.instant())) continue;
+            LocalDate day = ActivityLocalDates.localStart(start, a.getStravaApiSourced(), zone).toLocalDate();
+            if (day.isBefore(from90) || day.isAfter(today)) continue;
+            // Duration/RPE-only sessions retain their training load but have no measured distance.
             if ((a.getDistanceKm() == null || a.getDistanceKm() <= 0)
                     && (a.getDistanceMeters() == null || a.getDistanceMeters() <= 0)) continue;
             double dist = (a.getDistanceKm() != null && a.getDistanceKm() > 0)
                     ? a.getDistanceKm() : a.getDistanceMeters() / 1000.0;
-            if (!ts.isBefore(from28)) vol28 += dist;
-            if (!ts.isBefore(from7)) {
+            if (!day.isBefore(from28)) vol28 += dist;
+            if (!day.isBefore(from7)) {
                 vol7 += dist;
                 Double maxHrRow = a.getMaxHeartRate();
                 int durationMinutes = durationMinutes(a);
@@ -698,7 +710,6 @@ public class AutomatedCoachService {
             }
         }
 
-        CoachRunnerState state = getOrCreateState(runner);
         state.setVolumeKm7d(round1(vol7));
         state.setVolumeKm28d(round1(vol28));
         state.setMinutesLowZ1Z2Last7d(low);
@@ -710,6 +721,23 @@ public class AutomatedCoachService {
         state.setHighMileageGrinder(vol28 > HIGH_MILEAGE_KM_28D);
         state.setLastAggregatedAt(LocalDateTime.now(clock));
         coachRunnerStateRepository.save(state);
+    }
+
+    /**
+     * Works the state out again when it never was, or was last worked out before the runner's today began: the windows are by
+     * calendar days, so yesterday's figure for "the last 7 days" is a day stale at midnight. True when it did.
+     */
+    private boolean refreshIfADayHasPassed(Runner runner, CoachRunnerState state) {
+        LocalDateTime aggregatedAt = state.getLastAggregatedAt();
+        if (aggregatedAt != null) {
+            ZoneId zone = ActivityLocalDates.zoneOf(runner);
+            LocalDate aggregatedDay = aggregatedAt.atZone(clock.getZone()).withZoneSameInstant(zone).toLocalDate();
+            if (!aggregatedDay.isBefore(LocalDate.now(clock.withZone(zone)))) {
+                return false;
+            }
+        }
+        aggregateState(runner);
+        return true;
     }
 
     private int durationMinutes(RunMetricsProjection activity) {
@@ -784,55 +812,41 @@ public class AutomatedCoachService {
         );
         PersonalizedRunningPlanner.PersonalizedPlan plan = personalizedRunningPlanner.plan(plannerInput);
 
-        synchronized (scheduleHorizonLocks.computeIfAbsent(runner.getId(), ignored -> new Object())) {
-            Set<LocalDate> completedRunDates = findCompletedRunDates(runner, today, horizonEnd);
-            Map<LocalDate, CoachScheduledWorkout> existingByDate = new HashMap<>();
-            for (CoachScheduledWorkout existing : findScheduleRange(runner, today, horizonEnd)) {
-                if (existing.getScheduledDate() != null) {
-                    existingByDate.put(existing.getScheduledDate(), existing);
-                }
+        // getOrCreateState holds the runner row until this transaction commits. A Java monitor here would end
+        // before commit and let another request generate the same dates from an uncommitted horizon.
+        Set<LocalDate> completedRunDates = findCompletedRunDates(runner, today, horizonEnd);
+        Map<LocalDate, CoachScheduledWorkout> existingByDate = new HashMap<>();
+        for (CoachScheduledWorkout existing : findScheduleRange(runner, today, horizonEnd)) {
+            if (existing.getScheduledDate() != null) {
+                existingByDate.put(existing.getScheduledDate(), existing);
             }
+        }
 
-            CoachScheduledWorkout currentRow = existingByDate.get(today);
-            if (currentRow != null && currentRow.getNotes() != null
-                    && currentRow.getNotes().contains(CoachPlanAdjustment.MARKER)
-                    && !completedRunDates.contains(today)) {
-                plan = CoachPlanAdjustment.easeToday(plan);
-            }
+        CoachScheduledWorkout currentRow = existingByDate.get(today);
+        if (currentRow != null && currentRow.getNotes() != null
+                && currentRow.getNotes().contains(CoachPlanAdjustment.MARKER)
+                && !completedRunDates.contains(today)) {
+            plan = CoachPlanAdjustment.easeToday(plan);
+        }
 
-            List<CoachScheduledWorkout> toSave = new ArrayList<>();
-            for (PersonalizedRunningPlanner.PlannedSession session : plan.sessions()) {
-                CoachScheduledWorkout workout = existingByDate.get(session.date());
-                if (workout != null && completedRunDates.contains(session.date())) {
-                    continue;
-                }
-                // These rows are planner-owned. Reassess automatic rest as inputs
-                // change; completed runs and explicit check-in reads stay preserved.
-                if (workout == null) {
-                    workout = new CoachScheduledWorkout();
-                    workout.setRunner(runner);
-                }
-                applyPlannedSession(workout, session);
-                toSave.add(workout);
+        List<CoachScheduledWorkout> toSave = new ArrayList<>();
+        for (PlannedSession session : plan.sessions()) {
+            CoachScheduledWorkout workout = existingByDate.get(session.date());
+            if (workout != null && completedRunDates.contains(session.date())) {
+                continue;
             }
+            // These rows are planner-owned. Reassess automatic rest as inputs
+            // change; completed runs and explicit check-in reads stay preserved.
+            if (workout == null) {
+                workout = new CoachScheduledWorkout();
+                workout.setRunner(runner);
+            }
+            applyPlannedSession(workout, session);
+            toSave.add(workout);
+        }
 
-            if (!toSave.isEmpty()) {
-                try {
-                    coachScheduledWorkoutRepository.saveAll(toSave);
-                } catch (DataIntegrityViolationException race) {
-                    long persistedDates = coachScheduledWorkoutRepository
-                            .findByRunnerAndScheduledDateBetween(runner, today, horizonEnd)
-                            .stream()
-                            .map(CoachScheduledWorkout::getScheduledDate)
-                            .filter(java.util.Objects::nonNull)
-                            .distinct()
-                            .count();
-                    if (persistedDates < horizonDays) {
-                        throw race;
-                    }
-                    log.debug("Recovered personalized coach schedule race for runner {}", runner.getId());
-                }
-            }
+        if (!toSave.isEmpty()) {
+            coachScheduledWorkoutRepository.saveAll(toSave);
         }
         return plan;
     }
@@ -856,7 +870,7 @@ public class AutomatedCoachService {
         return Map.copyOf(mileage);
     }
 
-    private CoachScheduledWorkout recommendationRow(CoachScheduledWorkout row, PersonalizedRunningPlanner.PlannedSession session) {
+    private CoachScheduledWorkout recommendationRow(CoachScheduledWorkout row, PlannedSession session) {
         if (session == null || !"run_completed".equals(session.reasonCode())) return row;
         CoachScheduledWorkout view = new CoachScheduledWorkout();
         view.setRunner(row.getRunner());
@@ -996,7 +1010,7 @@ public class AutomatedCoachService {
                 .orElse(null);
     }
 
-    private void applyPlannedSession(CoachScheduledWorkout workout, PersonalizedRunningPlanner.PlannedSession session) {
+    private void applyPlannedSession(CoachScheduledWorkout workout, PlannedSession session) {
         workout.setScheduledDate(session.date());
         workout.setWorkoutType(session.workoutType());
         workout.setPlannedDistanceKm(session.distanceKm());
@@ -1132,15 +1146,13 @@ public class AutomatedCoachService {
     }
 
     private CoachRunnerState getOrCreateState(Runner runner) {
-        Optional<CoachRunnerState> existing = coachRunnerStateRepository.findByRunner(runner);
-        if (existing.isPresent()) return existing.get();
-        // Serialize first-use initialization until commit, including across app instances.
-        // Retrying a unique-key failure inside the same Hibernate session cannot recover it.
+        // All coach writers take the runner first, before loading state or schedule rows. Hold that lock through commit,
+        // including when state already exists: schedule generation can still be racing with another request's first horizon.
         runnerRepository.findByIdForUpdate(runner.getId());
         return coachRunnerStateRepository.findByRunner(runner).orElseGet(() -> {
-            CoachRunnerState s = new CoachRunnerState();
-            s.setRunner(runner);
-            return coachRunnerStateRepository.save(s);
+            CoachRunnerState state = new CoachRunnerState();
+            state.setRunner(runner);
+            return coachRunnerStateRepository.save(state);
         });
     }
 
@@ -1197,7 +1209,7 @@ public class AutomatedCoachService {
 
     private static CoachScheduledWorkoutDto toScheduledDto(
             CoachScheduledWorkout w,
-            PersonalizedRunningPlanner.PlannedSession session
+            PlannedSession session
     ) {
         // Completed rows can be preserved while the planner produces a different session.
         // Only attach evidence/pace belonging to the workout actually returned to the client.

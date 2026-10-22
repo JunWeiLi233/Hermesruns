@@ -101,6 +101,29 @@ class SessionAnalysisMvcTests {
         assertThat(n.at("/source/elapsedDurationSeconds").isNull()).isTrue();
         assertThat(save(a, r, "{\"segments\":null}").at("/segments").size()).isZero();
     }
+    @Test void timestampFreeImportedRouteKeepsMeasuredDistanceAndUnavailableDurations() throws Exception {
+        Runner r = owner();
+        String gpx = "<gpx><trk><name>Route without times</name><type>running</type><trkseg>"
+                + "<trkpt lat=\"40\" lon=\"-74\"/><trkpt lat=\"40.004\" lon=\"-74\"/>"
+                + "</trkseg></trk></gpx>";
+        mvc.perform(multipart("/api/import/files").file(new MockMultipartFile("file", "untimed.gpx", "application/gpx+xml",
+                        gpx.getBytes(StandardCharsets.UTF_8)))
+                .param("provider", "GARMIN").header("Authorization", token(r)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.importedActivities").value(1));
+        Activity a = activities.findByRunnerAndActivityTypeOrderByIdDesc(r, ActivityType.RUN).get(0);
+        assertThat(a.getDurationSeconds()).isNull();
+        assertThat(a.getMovingTimeSeconds()).isZero();
+        JsonNode n = read(a, r);
+        assertThat(n.at("/source/durationSeconds").isNull()).isTrue();
+        assertThat(n.at("/source/elapsedDurationSeconds").isNull()).isTrue();
+        assertThat(n.at("/measurements/durationSeconds").isNull()).isTrue();
+        assertThat(n.at("/measurements/elapsedDurationSeconds").isNull()).isTrue();
+        assertThat(n.at("/measurements/paceSecondsPerKm").isNull()).isTrue();
+        assertThat(n.at("/measurements/distanceMeters").asDouble()).isBetween(440d, 450d);
+        assertThat(n.at("/segments").size()).isZero();
+        assertThat(n.at("/sourceSegments").size()).isZero();
+    }
+
     @Test void timerOnlyImportedTcxLapRetainsTotalsWithoutInventingElapsedBoundaries() throws Exception {
         Runner r = owner();
         // Same supported shape as parent's no-telemetry.tcx: coordinates, but no timestamp stream.

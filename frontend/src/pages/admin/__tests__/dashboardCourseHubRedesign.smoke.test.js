@@ -1,38 +1,15 @@
-import { readDashboardSources } from '../readDashboardSources.mjs';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { readDashboardSources } from '../readDashboardSources.mjs';
 
-const dashboardSource = readDashboardSources();
-
-// DV-2026-08-15-31 rework: the hero is a clean card (kicker/title/intro/meta
-// chips) — no decorative stats block or atmosphere layer.
-assert.match(
-  dashboardSource,
-  /admin-coursemap-rework__hero[\s\S]*?course_maps_title[\s\S]*?admin-coursemap-rework__hero-meta/,
-  'Course maps should expose the clean rework hero with kicker, title, intro, and meta chips.',
-);
-
-assert.match(
-  dashboardSource,
-  /admin-coursemap-rework__grid/,
-  'Course maps should render the two-column rail + stage grid.',
-);
-
-assert.match(
-  dashboardSource,
-  /admin-coursemap-rework__rail admin-track-hub-sidebar/,
-  'Course maps should render a left-side race-selection rail.',
-);
-
-assert.match(
-  dashboardSource,
-  /admin-coursemap-rework__stage/,
-  'Course maps should render the stacked stage column for the selected race.',
-);
-
-assert.doesNotMatch(
-  dashboardSource,
-  /admin-track-hub-hero__atmosphere/,
-  'The decorative hero atmosphere layer should stay removed.',
-);
-
-console.log('[PASS] Dashboard course-maps hero guard passed.');
+// The dedicated admin console owns these controls after the reference redesign.
+const source = readDashboardSources();
+const styles = readFileSync(new URL('../../../styles/admin-reference.css', import.meta.url), 'utf8');
+assert.ok(styles.includes('.admin-reference'), 'Admin console styling remains scoped to its route.');
+for (const marker of [
+  "admin-ref-map-workspace",
+  "admin-ref-review-rail",
+  "admin-ref-review-detail",
+  "getCourseMapRaceName(selectedCourseMapItem)",
+  "getCourseMapStatus(selectedCourseMapItem)"
+]) assert.ok(source.includes(marker), `Admin console must retain ${marker}`);

@@ -70,10 +70,10 @@ assert.match(
 
 // Cross-page remounts reuse cached profile/activities.
 assert.match(insight, /cachedApiJson\('\/api\/profile\/me'\)/);
-assert.match(insight, /cachedApiJson\('\/api\/activities'\)/);
+assert.match(insight, /cachedApiJson\('\/api\/activities(?:\/analysis)?'\)/);
 assert.match(schedule, /cachedApiJson\('\/api\/profile\/me'\)/);
-assert.match(schedule, /cachedApiJson\('\/api\/activities'\)/);
+assert.match(schedule, /cachedApiJson\('\/api\/activities(?:\/analysis)?'\)/);
 assert.match(todayRun, /cachedApiJson\('\/api\/profile\/me'\)/);
-assert.match(todayRun, /cachedApiJson\('\/api\/activities'\)/);
+assert.match(todayRun, /cachedApiJson\('\/api\/activities(?:\/analysis)?'\)/);
 
 console.log('[PASS] FE wake fan-out round-2 smoke test passed.');

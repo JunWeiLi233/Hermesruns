@@ -56,7 +56,7 @@ public class MarathonRouteMatchAndExportService {
     public record MarathonRouteMatchAndExportResult(
             List<MatchedBreadcrumbPointDTO> matchedBreadcrumbs,
             String gpxXml,
-        @com.fasterxml.jackson.annotation.JsonIgnore GeneratedRaceGpxAsset persistedAsset,
+            GeneratedRaceGpxAsset persistedAsset,
             String matchingSemanticsNote
     ) {}
 
@@ -65,13 +65,13 @@ public class MarathonRouteMatchAndExportService {
             String officialWebsite, Double distanceKm, TokyoCourseMapReference.Course course
     ) {
         return exportVerifiedCourse(runner, raceId, raceName, city, country, officialWebsite, distanceKm,
-                new VerifiedCourseMapReference.Course(TokyoMarathonOfficialCourse.OFFICIAL_SOURCE, TokyoCourseMapReference.SUMMARY,
+                new VerifiedCourseMap(TokyoMarathonOfficialCourse.OFFICIAL_SOURCE, TokyoCourseMapReference.SUMMARY,
                         course.sourceUrl(), course.routePoints(), course.elevationSamples(), course.totalClimbMeters()));
     }
 
     MarathonRouteMatchAndExportResult exportVerifiedCourse(
             Runner runner, String raceId, String raceName, String city, String country,
-            String officialWebsite, Double distanceKm, VerifiedCourseMapReference.Course course
+            String officialWebsite, Double distanceKm, VerifiedCourseMap course
     ) {
         List<RawBreadcrumbPointDTO> points = course.routePoints().stream()
                 .map(point -> new RawBreadcrumbPointDTO(point.lat(), point.lng())).toList();

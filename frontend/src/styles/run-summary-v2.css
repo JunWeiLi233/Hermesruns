@@ -1,0 +1,94 @@
+/* Run summary (M7, S10): a card on the run page, under the overview. It takes the page's own card, link and muted styles and the
+   same --v2-* tokens, so light and midnight come from the page; only what is new is defined here. The shell restyles every
+   label and span on this page as a small muted caption, so the text here is paragraphs, definitions and buttons. */
+
+#root .run-detail-v2 .run-summary { gap: 14px; }
+#root .run-detail-v2 .run-summary:focus,
+#root .run-detail-v2 .run-summary h2:focus { outline: none; }
+#root .run-detail-v2 .run-summary.is-hidden { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-block: 16px; }
+
+#root .run-detail-v2 .run-summary__list { display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; list-style: none; }
+
+#root .run-detail-v2 .run-summary__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 18px;
+  border-left: 4px solid var(--v2-line);
+  border-radius: 14px;
+  background: var(--v2-fill);
+}
+#root .run-detail-v2 .run-summary__item.is-headline { border-left-color: var(--v2-accent); background: var(--v2-accent-soft); }
+#root .run-detail-v2 .run-summary__item.is-positive { border-left-color: var(--v2-good); }
+#root .run-detail-v2 .run-summary__item.is-caution { border-left-color: var(--v2-zone-4); }
+
+/* The runner pages paint every paragraph in the muted colour with !important (analysis.css, contrast-fixes.css), at a specificity
+   that only a longer selector beats; the sentences are the card's point, so they are in the ink colour. */
+#root .run-detail-v2 .run-summary .run-summary__item .run-summary__text {
+  margin: 0;
+  color: var(--v2-ink) !important;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+#root .run-detail-v2 .run-summary .run-summary__item.is-headline .run-summary__text { font-size: 1.08rem; font-weight: 700; }
+
+#root .run-detail-v2 .run-summary__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--v2-accent);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+#root .run-detail-v2 .run-summary__toggle::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.15s ease;
+}
+#root .run-detail-v2 .run-summary__toggle[aria-expanded="true"]::after { transform: translateY(1px) rotate(-135deg); }
+#root .run-detail-v2 .run-summary__toggle:hover { text-decoration: underline; }
+#root .run-detail-v2 .run-summary__toggle:focus-visible { outline: 2px solid var(--v2-accent); outline-offset: 2px; border-radius: 6px; }
+
+#root .run-detail-v2 .run-summary__working {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--v2-line);
+}
+#root .run-detail-v2 .run-summary__working[hidden] { display: none; }
+#root .run-detail-v2 .run-summary__caption { margin: 0; color: var(--v2-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+#root .run-detail-v2 .run-summary__working dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 12px 20px; margin: 0; }
+#root .run-detail-v2 .run-summary__working dl > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#root .run-detail-v2 .run-summary__working dt { color: var(--v2-muted); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+#root .run-detail-v2 .run-summary__working dd { margin: 0; color: var(--v2-ink); font-size: 0.92rem; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#root .run-detail-v2 .run-summary__rule { margin: 0; color: var(--v2-muted); font-size: 0.82rem; line-height: 1.55; text-wrap: pretty; }
+
+#root .run-detail-v2 .run-summary__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+#root .run-detail-v2 .run-summary__foot p { flex-basis: 100%; }
+
+#root .run-detail-v2 .run-summary__state { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+#root .run-detail-v2 .run-summary .run-summary__state .run-summary__error { margin: 0; color: var(--v2-error) !important; font-size: 0.88rem; }
+
+#root .run-detail-v2 .run-summary__skeleton { display: flex; flex-direction: column; gap: 10px; }
+#root .run-detail-v2 .run-summary__skeleton .page-skeleton__block { display: block; height: 18px; border-radius: 8px; }
+#root .run-detail-v2 .run-summary__skeleton .page-skeleton__block.is-short { width: 55%; }
+
+@media (max-width: 720px) {
+  #root .run-detail-v2 .run-summary__item { padding: 12px 14px; }
+  #root .run-detail-v2 .run-summary__working dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #root .run-detail-v2 .run-summary__toggle { min-height: 40px; }
+}

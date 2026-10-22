@@ -1,7 +1,6 @@
 package com.hermes.backend.races;
 
 import com.hermes.backend.infrastructure.web.SafeTempFileGuard;
-import com.hermes.backend.routing.RoutePoint;
 import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.Base64;
@@ -20,18 +19,18 @@ final class VerifiedCourseMapReference {
 
     private VerifiedCourseMapReference() { }
 
-    static Optional<Course> match(byte[] image, String raceName, String city, String country, Double distanceKm) {
+    static Optional<VerifiedCourseMap> match(byte[] image, String raceName, String city, String country, Double distanceKm) {
         var tokyo = TokyoCourseMapReference.match(image, raceName, city, country, distanceKm);
         if (tokyo.isPresent()) {
             var route = tokyo.get();
-            return Optional.of(new Course(TokyoMarathonOfficialCourse.OFFICIAL_SOURCE, TokyoCourseMapReference.SUMMARY,
+            return Optional.of(new VerifiedCourseMap(TokyoMarathonOfficialCourse.OFFICIAL_SOURCE, TokyoCourseMapReference.SUMMARY,
                     route.sourceUrl(), route.routePoints(), route.elevationSamples(), route.totalClimbMeters()));
         }
         if (Set.of("amsterdammarathon", "tcsamsterdammarathon", "amsterdammarathon2025").contains(normalize(raceName))
                 && normalize(city).equals("amsterdam") && normalize(country).equals("netherlands")
                 && distanceKm != null && Double.isFinite(distanceKm) && Math.abs(distanceKm - 42.195) < 0.05
                 && AMSTERDAM_2025_HASHES.contains(hash(image))) {
-            return Optional.of(new Course(AmsterdamMarathonOfficialCourse.OFFICIAL_SOURCE,
+            return Optional.of(new VerifiedCourseMap(AmsterdamMarathonOfficialCourse.OFFICIAL_SOURCE,
                     "Matched the verified official Amsterdam Marathon 2025 course. The source image is retained for reference; the checked Olympic Stadium and Amstel street route is ready for review.",
                     AmsterdamMarathonOfficialCourse.OFFICIAL_COURSE_IMAGE_URL,
                     AmsterdamMarathonOfficialCourse.routePoints(), List.of(), null));
@@ -39,7 +38,7 @@ final class VerifiedCourseMapReference {
         return RecoveredCourseMapReference.match(hash(image), raceName, city, country, distanceKm);
     }
 
-    static Optional<Course> matchReference(String reference, String raceName, String city, String country, Double distanceKm) {
+    static Optional<VerifiedCourseMap> matchReference(String reference, String raceName, String city, String country, Double distanceKm) {
         if (reference == null) return Optional.empty();
         try {
             byte[] bytes;
@@ -74,12 +73,4 @@ final class VerifiedCourseMapReference {
         return text == null ? "" : text.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]", "");
     }
 
-    record Course(String source, String summary, String sourceUrl, List<RoutePoint> routePoints,
-                  List<Integer> elevationSamples, Integer totalClimbMeters) {
-        RaceCourseMapResult preview(String imageUrl) {
-            var bounds = new RaceCourseMapGeometryService().boundsFromRoute(routePoints);
-            return new RaceCourseMapResult(imageUrl, source, true, source.startsWith("reviewed-source-map:") ? 85 : 90, summary, bounds, routePoints,
-                    elevationSamples, totalClimbMeters, false);
-        }
-    }
 }

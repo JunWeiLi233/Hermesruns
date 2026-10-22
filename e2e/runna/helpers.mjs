@@ -1,7 +1,14 @@
 import { test as base, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { installSyntheticMapTiles, setBrowserActor, freshSyntheticClientAddress, waitForVisualStability } from '../fixtures/safety.mjs';
 export { expect };
 export const test = base.extend({
+  // Each test is a separate synthetic client behind the isolated trusted loopback proxy.
+  // Keep production IP budgets intact while unrelated test scenarios run back to back.
+  extraHTTPHeaders: async ({}, use) => {
+    await use({ 'X-Forwarded-For': freshSyntheticClientAddress() });
+  },
+  context: async ({ context }, use) => { await installSyntheticMapTiles(context); await use(context); },
   page: async ({ page }, use, testInfo) => {
     const errors = [];
     const watch = p => {
@@ -53,20 +60,12 @@ export async function manual(request, auth, overrides = {}) {
 }
 export async function browserLogin(page, request, n = 0, origin = '') {
   const auth = await login(request, n, origin);
-  await page.addInitScript(({ auth }) => {
-    const key = `qa-initial-session:${auth.token}`;
-    if (sessionStorage.getItem(key)) return;
-    sessionStorage.setItem(key, '1');
-    localStorage.setItem('hermes_jwt', auth.token); localStorage.setItem('hermes_email', auth.email); localStorage.setItem('hermes_lang', 'en'); localStorage.setItem('hermes_unit', 'km');
-  }, { auth });
+  await setBrowserActor(page, auth, origin || test.info().project.use.baseURL);
   return auth;
 }
 export async function scan(page, name, testInfo) {
   await expect(page.getByRole('main')).toBeVisible();
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await Promise.all(document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => {})));
-  });
+  await waitForVisualStability(page);
   const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   await testInfo.attach(`axe-${name}`, { body: JSON.stringify(results.violations, null, 2), contentType: 'application/json' });
   expect(results.violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.map(n => ({ target: n.target, summary: n.failureSummary })) })), `axe ${name}`).toEqual([]);

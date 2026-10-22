@@ -189,3 +189,5 @@
   /* 16px keeps a phone from zooming into the text box. */
   #root .run-detail-v2 .run-labels__add input { font-size: 1rem; }
 }
+
+#root .run-detail-v2 .run-labels__preview-tag { overflow-wrap: anywhere; }

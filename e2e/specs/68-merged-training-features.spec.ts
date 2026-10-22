@@ -2,6 +2,7 @@ import { Api } from '../fixtures/api.ts';
 import { importRunSpecs, sharedRunner } from '../fixtures/analysis.ts';
 import { daysAgo } from '../fixtures/gpx.ts';
 import { test, expect, contextWith } from '../fixtures/test.ts';
+import { expandRunLabels } from '../fixtures/run-labels.ts';
 
 async function runner() {
   return sharedRunner('merged-training', async ({ api }) => {
@@ -88,6 +89,7 @@ for (const mobile of [false, true]) {
       const page = await context.newPage();
       await page.goto('/analysis/quality-sessions');
       const quality = page.locator('.quality-sessions-v2');
+      await quality.locator('.intensity-quality-methods > summary').click();
       await expect(quality.locator('tbody tr')).toHaveCount(2);
       await quality.getByRole('button', { name: 'Long runs', exact: true }).click();
       await expect(quality.locator('tbody tr')).toHaveCount(3);
@@ -117,6 +119,7 @@ for (const mobile of [false, true]) {
     try {
       const page = await context.newPage();
       await page.goto(`/runs/${id}`);
+      await expandRunLabels(page);
       const labels = page.locator('.run-labels');
       await labels.getByRole('radio', { name: 'Race', exact: true }).check();
       await expect.poll(async () => (await who.api.get(`/api/activities/${id}/labels`)).json.runType).toBe('RACE');

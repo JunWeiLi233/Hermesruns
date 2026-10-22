@@ -1,7 +1,7 @@
 import { resolveCoachReadinessScore, resolveCoachReadinessLabel, resolveCoachWeeklyTarget } from '../../utils/personalizedCoachPlan';
 import RecommendationEvidence from '../../components/RecommendationEvidence';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import VersionedPlanRoute, { useVersionedPlan } from '../training-plan/VersionedPlanRoute';
 import { SchedulePlanTools, usePublishedCalendar, planWorkoutUrl } from '../training-plan/TrainingPlan';
@@ -45,7 +45,7 @@ import { useAccountDate } from '../../hooks/useAccountDate';
 import useRecommendationRevision from '../../hooks/useRecommendationRevision';
 import { planReadOnly } from '../../utils/trainingPlanCache';
 import { getSafeImageUrl } from '../../utils/safeImageUrl';
-import scheduleSessionPhoto from '../../assets/schedule-session.jpg';
+import scheduleSessionPhoto from '../../assets/schedule-session.webp';
 
 
 function resolveRunDistanceKm(run) {
@@ -278,6 +278,9 @@ export default function ScheduleRoute() {
 
 function Schedule() {
   const recommendationRevision = useRecommendationRevision();
+  const {search}=useLocation();
+  const planView=new URLSearchParams(search).get('planView');
+  const showingPlanTools=planView==='setup'||planView==='preview';
   const selection=useVersionedPlan();
   const activePlan=selection.data?.plan;
   const [selectedWeek,setSelectedWeek]=useState(null);
@@ -328,8 +331,8 @@ function Schedule() {
       setLoadState(current=>current==='ready'?'ready':'loading');
       try {
         const [profileData, activitiesData, coachStateData, coachTodayData, coachScheduleData, shoeData, plannedRouteData, anchorData] = await Promise.all([
-          cachedApiJson('/api/profile/me').catch(error=>{if(activePlan)return null;throw error;}),
-          cachedApiJson('/api/activities').catch(error=>{if(activePlan)return [];throw error;}),
+          cachedApiJson('/api/profile/me').catch(error=>{if(activePlan||showingPlanTools)return null;throw error;}),
+          cachedApiJson('/api/activities').catch(error=>{if(activePlan||showingPlanTools)return [];throw error;}),
           apiJson('/api/coach/state').catch(() => null),
           selection.allowLegacy&&!authoredToday?apiJson('/api/coach/today').catch(() => null):null,
           selection.allowLegacy?apiJson('/api/coach/schedule?days=14').catch(() => []):[],
@@ -370,7 +373,7 @@ function Schedule() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated, navigate, todayKey, selection.allowLegacy, selection.data, activePlan,authored.loading,authoredToday, recommendationRevision]);
+  }, [isAuthenticated, navigate, todayKey, selection.allowLegacy, selection.data, activePlan,authored.loading,authoredToday, recommendationRevision,showingPlanTools]);
 
   const recommendationBundle = useMemo(
     () => getTodayRunRecommendation({ runs, t, lang, unit, coachPayload: coachToday, timeZone: profile?.timeZone, todayKey }),
@@ -984,7 +987,7 @@ function Schedule() {
           </section></AuthoredWeekProvider>
           </section>
 
-          <details className="schedule-plan-management" open={Boolean(new URLSearchParams(window.location.search).get('planView')) || undefined}>
+          <details className="schedule-plan-management" open={Boolean(planView) || undefined}>
             <summary>{t('training_plan.title')}</summary>
             <SchedulePlanTools />
           </details>

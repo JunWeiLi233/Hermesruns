@@ -43,13 +43,16 @@ public final class ActivityLocalDates {
     /** Additive read contract. Legacy Strava wall times lack the source zone/UTC instant;
      * do not manufacture an instant from the account's current zone. */
     public static Map<String, Object> responseFields(LocalDateTime start, boolean stravaApiSourced, Runner runner) {
+        return responseFields(start, stravaApiSourced, zoneOf(runner));
+    }
+
+    public static Map<String, Object> responseFields(LocalDateTime start, boolean stravaApiSourced, ZoneId zone) {
         Map<String, Object> fields = new LinkedHashMap<>();
-        LocalDateTime local = start == null || stravaApiSourced ? start
-                : start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zoneOf(runner)).toLocalDateTime();
+        LocalDateTime local = localStart(start, stravaApiSourced, zone);
         fields.put("activityInstant", start == null || stravaApiSourced ? null : start.toInstant(ZoneOffset.UTC).toString());
         fields.put("accountLocalDate", local == null ? null : local.toLocalDate().toString());
         fields.put("accountLocalTime", local == null ? null : local.toLocalTime().toString());
-        fields.put("accountTimeZone", zoneOf(runner).getId());
+        fields.put("accountTimeZone", zone.getId());
         fields.put("timeRepresentation", start == null ? "UNKNOWN" : stravaApiSourced ? "STRAVA_LOCAL_WALL_TIME" : "UTC_INSTANT");
         return fields;
     }
@@ -62,6 +65,10 @@ public final class ActivityLocalDates {
                 : start.atOffset(ZoneOffset.UTC).atZoneSameInstant(zoneOf(runner)).toLocalDateTime();
     }
 
+    /**
+     * The same day worked out from what a query returns rather than from the entity: the day the run's effort row files it
+     * under when it has one, else as {@link #of} does (a run with no start time at all is on the day it was added).
+     */
     public static LocalDate placed(LocalDate filedUnder, LocalDateTime start, LocalDateTime createdAt, Boolean stravaApiSourced, ZoneId zone) {
         if (filedUnder != null) {
             return filedUnder;

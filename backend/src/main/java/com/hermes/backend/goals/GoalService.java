@@ -110,7 +110,7 @@ public class GoalService {
         return respond(runner, runId);
     }
 
-    /** Goal suggestions are a view of the selected coach plan; see {@link GoalSuggestions}. */
+    /** Weekly suggestions follow the selected plan; longer tracking periods retain their historical basis. */
     @Transactional
     public SuggestionsResponse suggest(Runner runner) {
         var prescription = coach != null ? coach.getTodayWithReadiness(runner) : null;
@@ -143,7 +143,9 @@ public class GoalService {
         boolean enough = GoalSuggestions.enoughRunning(days, today);
         boolean published = prescription != null && prescription.plan() != null
                 && prescription.plan().reasonCodes() != null && prescription.plan().reasonCodes().contains("VERSIONED_PLAN");
-        return new SuggestionsResponse(today, zone.getId(), enough || published,
+        boolean planReady = prescription != null && GoalSuggestions.hasUsablePlan(prescription.plan())
+                && (published || GoalSuggestions.enoughRunningForPlan(days, today));
+        return new SuggestionsResponse(today, zone.getId(), enough || planReady,
                 GoalSuggestions.suggest(days, today, existing, prescription == null ? null : prescription.plan()), prescription);
     }
 

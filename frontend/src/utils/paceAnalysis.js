@@ -1,4 +1,6 @@
-import { vdotToPaceSecondsPerKm } from './vdot';
+import { runDayKey } from './calendarDays';
+import { raceVdot } from './paceZoneRace';
+import { estimateCurrentVdot, vdotToPaceSecondsPerKm } from './vdot';
 
 /** Everything here works in seconds per kilometre, as the pace-profile endpoint sends it. */
 
@@ -21,6 +23,50 @@ export function paceZoneBands(vdot) {
     slowest: index === 0 ? null : edges[index - 1],
     fastest: index === PACE_ZONE_KEYS.length - 1 ? null : edges[index],
   }));
+}
+
+/** When a run in the runner's list started, in milliseconds; NaN when it has no usable date. */
+function startedAt(run) {
+  return new Date(run?.startTime || run?.startDate || 0).getTime();
+}
+
+/**
+ * The VDOT the pace zones of one run are cut from, and where it comes from. First the zones the runner had going into
+ * the run (`basis` 'before'): the VDOT of their best runs in the 90 days before it, the run itself left out, so a
+ * personal best does not pull its own pace into a harder zone. A run with nothing to go on before it gets the runner's
+ * zones now (`basis` 'today'). A runner with no VDOT at all gets none.
+ *
+ * A race the runner entered in Settings (`race`) sets the zones instead, for runs on or after its date (`basis` 'race'), and for
+ * a run with no date to place it by; earlier runs keep the zones they had going into them. The race is not a replacement for
+ * the runner's runs elsewhere: only the pace zones follow it.
+ *
+ * @param runs      the runner's runs as /api/activities/analysis lists them
+ * @param startTime when the run started: its start time, or its date for a run that has no exact time (as the list
+ *                  itself reads a run)
+ * @param race      `{ distanceMeters, seconds, date }` as /api/training/pace-zones sends it, or null
+ */
+export function zonesVdot(runs, startTime, now = Date.now(), race = null) {
+  const list = Array.isArray(runs) ? runs : [];
+  const runStart = startTime ? new Date(startTime).getTime() : Number.NaN;
+  const fromRace = raceVdot(race);
+  if (fromRace != null && race?.date) {
+    const runDay = Number.isFinite(runStart) ? runDayKey({ startTime }) : null;
+    if (runDay == null || runDay >= race.date) return { vdot: fromRace, basis: 'race' };
+  }
+  if (Number.isFinite(runStart)) {
+    const earlier = list.filter((run) => startedAt(run) < runStart);
+    const vdot = Number(estimateCurrentVdot(earlier, runStart).representativeVdot);
+    if (vdot > 0) return { vdot, basis: 'before' };
+  }
+  const vdot = Number(estimateCurrentVdot(list, now).representativeVdot);
+  return vdot > 0 ? { vdot, basis: 'today' } : { vdot: null, basis: null };
+}
+
+/** The pace over the whole stream with the time standing still counted: elapsed seconds per kilometre. */
+export function elapsedPaceSecPerKm(summary) {
+  const kilometres = Number(summary?.distanceMeters) / 1000;
+  const seconds = Number(summary?.elapsedSeconds);
+  return kilometres > 0 && seconds > 0 ? seconds / kilometres : null;
 }
 
 /** The index of the band a pace falls in (a pace exactly on an edge belongs to the slower band). */

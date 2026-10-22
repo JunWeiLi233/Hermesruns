@@ -11,11 +11,13 @@ test('EXT-F01-E4 mile caps normalize, survive review and clear without changing 
   await page.getByRole('spinbutton',{name:'Easy-session limit (mi)',exact:true}).fill('1.25');
   await scan(page,'mile-session-caps',info);
   await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Review',level:2,exact:true})).toBeVisible();
   expect((await get(request,auth,`/api/run-plans/${p.id}`)).inputs.sessionCaps.easyM).toBe(2000);
   await page.getByRole('button',{name:'Back',exact:true}).click();
   await expect(page.getByRole('spinbutton',{name:'Easy-session limit (mi)',exact:true})).toHaveValue('1.2427');
   await page.getByRole('button',{name:'Clear session limits',exact:true}).click();
   await page.getByRole('button',{name:'Continue',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Review',level:2,exact:true})).toBeVisible();
   const saved=await get(request,auth,`/api/run-plans/${p.id}`);
   expect(saved.inputs.sessionCaps).toBeNull();expect(saved.inputs.goalDistanceM).toBe(5000);
   await scan(page,'cleared-caps-review',info);
@@ -70,14 +72,14 @@ test('EXT-F03-N2 capped and moved candidates preserve the empty-approval gate',a
 test('EXT-F05-E2 lost extra-run response recovers once after reload without a workout link',async({page,request},info)=>{
   info.annotations.push({type:'expected-network-fault',description:'Drop the first committed extra-run response'});
   const auth=await browserLogin(page,request,60);const c=await active(request,auth);const before=await get(request,auth,`/api/run-plans/${c.p.id}`);const keys=[];
-  await page.goto('/training-plan');await page.getByRole('button',{name:'Log an extra run',exact:true}).click();
+  await page.goto('/runs');await page.getByRole('button',{name:'Log a completed run',exact:true}).click();
   await page.route('**/api/manual-runs',async route=>{keys.push(route.request().postDataJSON().clientKey);if(keys.length===1){const committed=await route.fetch();expect(committed.status()).toBe(201);await route.abort('connectionreset');}else await route.continue();});
   const dialog=page.getByRole('dialog');
   await dialog.getByRole('textbox',{name:'Run name',exact:true}).fill('Extra Élan 🏃 lost response');
   await dialog.getByRole('spinbutton',{name:'Actual distance (km)',exact:true}).fill('2.3');
   await dialog.getByRole('spinbutton',{name:'Duration (minutes)',exact:true}).fill('18');
   await dialog.getByRole('button',{name:'Save run',exact:true}).click();await expect(dialog.getByRole('button',{name:'Review / retry this save'})).toBeVisible();
-  await page.reload();await page.getByRole('link',{name:'Review / retry this save',exact:true}).click();
+  await page.reload();await expect(page).toHaveURL(/\/runs\?manual=1$/);
   await page.getByRole('dialog').getByRole('button',{name:'Review / retry this save',exact:true}).click();
   const link=page.getByRole('dialog').getByRole('link',{name:'View actual run',exact:true});await expect(link).toBeVisible();const id=(await link.getAttribute('href')).split('/').at(-1);
   expect(keys).toHaveLength(2);expect(keys[0]).toBe(keys[1]);expect((await get(request,auth,`/api/run-plans/activity-links/${id}`)).link).toBeNull();

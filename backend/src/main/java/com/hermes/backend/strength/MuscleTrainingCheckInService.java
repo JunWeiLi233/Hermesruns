@@ -1,19 +1,29 @@
 package com.hermes.backend.strength;
 
 import com.hermes.backend.runner.Runner;
+import com.hermes.backend.activity.ActivityLocalDates;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MuscleTrainingCheckInService {
 
     private final MuscleTrainingCheckInRepository checkInRepository;
+    private final Clock clock;
 
     public MuscleTrainingCheckInService(MuscleTrainingCheckInRepository checkInRepository) {
+        this(checkInRepository, Clock.systemDefaultZone());
+    }
+
+    @Autowired
+    public MuscleTrainingCheckInService(MuscleTrainingCheckInRepository checkInRepository, Clock clock) {
         this.checkInRepository = checkInRepository;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -43,7 +53,7 @@ public class MuscleTrainingCheckInService {
         MuscleTrainingCheckIn checkIn = findTodayCheckIn(runner).orElseGet(() -> {
             MuscleTrainingCheckIn created = new MuscleTrainingCheckIn();
             created.setRunner(runner);
-            created.setTrainingDate(LocalDate.now());
+            created.setTrainingDate(today(runner));
             return created;
         });
 
@@ -76,7 +86,11 @@ public class MuscleTrainingCheckInService {
     }
 
     public Optional<MuscleTrainingCheckIn> findTodayCheckIn(Runner runner) {
-        return checkInRepository.findByRunnerAndTrainingDate(runner, LocalDate.now());
+        return checkInRepository.findByRunnerAndTrainingDate(runner, today(runner));
+    }
+
+    private LocalDate today(Runner runner) {
+        return LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)));
     }
 
     public TodayCheckInDto toTodayCheckInDto(MuscleTrainingCheckIn checkIn) {

@@ -80,6 +80,7 @@ const PAGE_TITLES = Object.freeze({
     schedule: 'Schedule',
     muscleTraining: 'Muscle training',
     admin: 'Admin',
+    team: 'Coaching & teams',
   }),
   'zh-CN': Object.freeze({
     login: '登录',
@@ -109,6 +110,7 @@ const PAGE_TITLES = Object.freeze({
     schedule: '计划',
     muscleTraining: '肌肉训练',
     admin: '管理',
+    team: '教练与团队',
   }),
 });
 
@@ -122,6 +124,7 @@ const PAGE_KEYS_BY_PATH = Object.freeze({
   '/signup': 'signup',
   '/forgot-password': 'forgotPassword',
   '/profile': 'home',
+  '/profile/team': 'team',
   '/runs': 'runs',
   '/analysis': 'analysis',
   '/heatmap': 'heatmap',
@@ -149,6 +152,7 @@ const PAGE_KEYS_BY_PATH = Object.freeze({
 
 function pageKeyForPath(pathname) {
   if (Object.hasOwn(PAGE_KEYS_BY_PATH, pathname)) return PAGE_KEYS_BY_PATH[pathname];
+  if (/^\/(?:training|training-plan)(?:\/|$)/.test(pathname)) return 'schedule';
   if (/^\/runs\/[^/]+$/.test(pathname)) return 'run';
   if (/^\/analysis\/[^/]+$/.test(pathname)) return 'analysis';
   if (/^\/races\/details\/[^/]+$/.test(pathname)) return 'raceDetails';
@@ -268,10 +272,12 @@ export function getSeoMetadata(pathname = '/', language = 'en') {
   const normalizedPath = normalizePathname(pathname);
   const route = routeForPath(normalizedPath);
   const copy = SEO_COPY[normalizedLanguage][route];
+  const pageTitle = route === 'private' ? getPageTitle(normalizedPath, normalizedLanguage) : null;
   const indexable = route !== 'private';
   const url = `${SITE_URL}${normalizedPath}`;
   const metadata = {
     ...copy,
+    title: pageTitle || copy.title,
     indexable,
     language: normalizedLanguage === 'zh-CN' ? 'zh-CN' : 'en',
     locale: normalizedLanguage === 'zh-CN' ? 'zh_CN' : 'en_US',

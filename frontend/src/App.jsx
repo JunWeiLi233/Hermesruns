@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useLayoutEffect, useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router';
+import { Routes, Route, Navigate, useLocation, useParams } from 'react-router';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import { I18nProvider } from './contexts/I18nContext';
@@ -240,6 +240,19 @@ function RouteStyleGate({ children }) {
   return children;
 }
 
+// Addresses such as /analysis/nonsense or /prediction/banana used to reach a page that has nothing to show for them: the first
+// threw while rendering, the second drew nothing at all (BUG-016, BUG-017). They go back to Analysis instead. The keys below are
+// the ones those pages know (VALID_INSIGHT_KEYS in pages/analysis/AnalysisInsightDetail.jsx, RACE_DISTANCES in pages/prediction/vdot.js);
+// utils/knownRouteKeys.smoke.test.js keeps the lists in step.
+export const ANALYSIS_INSIGHT_KEYS = ['load-balance', 'intensity', 'injury-risk', 'coach-insight'];
+export const PREDICTION_DISTANCE_KEYS = ['5k', '10k', 'half', 'marathon'];
+
+function KnownKeyRoute({ param, keys, children }) {
+  const params = useParams();
+  if (!keys.includes(params[param])) return <Navigate to="/analysis" replace />;
+  return children;
+}
+
 function UserOnlyRoute({ children }) {
   const { isAuthenticated, isAdmin, authHydrated } = useAuth();
   const location = useLocation();
@@ -295,8 +308,8 @@ function App() {
                   <Route path="/analysis/vo2max-estimates" element={<UserOnlyRoute><AnalysisFeatureRedirect pathname="/analysis" anchor="vo2max-estimates" /></UserOnlyRoute>} />
                   <Route path="/analysis/trends" element={<UserOnlyRoute><AnalysisFeatureRedirect pathname="/analysis" anchor="analysis-trends" /></UserOnlyRoute>} />
                   <Route path="/analysis/quality-sessions" element={<UserOnlyRoute><AnalysisFeatureRedirect pathname="/analysis/intensity" anchor="quality-sessions" /></UserOnlyRoute>} />
-                  <Route path="/analysis/:insightKey" element={<UserOnlyRoute><AnalysisInsightDetail /></UserOnlyRoute>} />
-                  <Route path="/prediction/:distKey" element={<UserOnlyRoute><PredictionDetail /></UserOnlyRoute>} />
+                  <Route path="/analysis/:insightKey" element={<UserOnlyRoute><KnownKeyRoute param="insightKey" keys={ANALYSIS_INSIGHT_KEYS}><AnalysisInsightDetail /></KnownKeyRoute></UserOnlyRoute>} />
+                  <Route path="/prediction/:distKey" element={<UserOnlyRoute><KnownKeyRoute param="distKey" keys={PREDICTION_DISTANCE_KEYS}><PredictionDetail /></KnownKeyRoute></UserOnlyRoute>} />
                   <Route path="/today-run" element={<UserOnlyRoute><LegacyCoachingRedirect><TodayRun /></LegacyCoachingRedirect></UserOnlyRoute>} />
                   <Route path="/training-plan/*" element={<UserOnlyRoute><LegacyFeatureRedirect plan /></UserOnlyRoute>} />
                   <Route path="/training/*" element={<UserOnlyRoute><LegacyFeatureRedirect /></UserOnlyRoute>} />

@@ -52,7 +52,7 @@ class AutomatedCoachServiceTests {
         var activities = mock(ActivityRepository.class);
         var coach = service(states, schedule, mock(CoachTrainingBlockRepository.class), mock(ReadinessService.class), mock(ShoeTrackerService.class), activities);
         var selection = mock(com.hermes.backend.coaching.plan.RunPlanSelection.class);
-        var session = new PersonalizedRunningPlanner.PlannedSession(TODAY.plusDays(1), CoachWorkoutType.THRESHOLD, 8.3, 47, false, "BUILD", "quality", "VERSIONED_PLAN", 300, 330, null, false);
+        var session = new PlannedSession(TODAY.plusDays(1), CoachWorkoutType.THRESHOLD, 8.3, 47, false, "BUILD", "quality", "VERSIONED_PLAN", 300, 330, null, false);
         when(selection.legacy(runner,14)).thenReturn(new PersonalizedRunningPlanner.PersonalizedPlan("BUILD", 30, 3, List.of(DayOfWeek.TUESDAY), 100, List.of("VERSIONED_PLAN"), List.of(session), session));
         when(selection.calendarZone(runner)).thenReturn("America/New_York");
         when(selection.librarySessions(runner)).thenReturn(java.util.Map.of(session.date(),

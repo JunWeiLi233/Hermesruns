@@ -22,7 +22,7 @@ export function buildInjuryTimelineRows(runs, bestVdot, unit, lang, timeZone, no
     if (calendarDayNumber(dateKey) == null || dateKey < startDate || dateKey > endDate) return [];
     // This is a rendering coordinate consumed by the legacy row builder, NOT an activity instant.
     // Never write it back to a run or use it to infer the instant of legacy Strava wall time.
-    return [{ ...run, startTime: `${dateKey}T00:00:00Z` }];
+    return [{ ...run, startTime: `${dateKey}T00:00:00Z`, accountLocalDate: dateKey, accountLocalTime: '00:00:00' }];
   });
   const formatter = new Intl.DateTimeFormat(lang === 'zh-CN' ? 'zh-CN' : 'en-US', {
     month: 'short', day: 'numeric', timeZone: 'UTC',

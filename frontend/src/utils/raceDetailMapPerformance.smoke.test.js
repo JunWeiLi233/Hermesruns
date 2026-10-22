@@ -43,7 +43,7 @@ assert.match(
 );
 
 const viewChangeHandler = racesDetailSource.match(
-  /const refreshCourseMapOverlayOnViewChange = \(\) => \{([\s\S]*?)\n\s*\};/,
+  /const refreshRouteOnViewChange = \(\) => \{([\s\S]*?)\n\s*\};/,
 );
 assert.ok(viewChangeHandler, 'RacesDetail should keep a dedicated view-change handler for route and overlay redraws.');
 assert.doesNotMatch(
@@ -72,7 +72,7 @@ assert.match(
 
 assert.match(
   racesDetailSource,
-  /const settleMapLayout = \(\) => \{[\s\S]*map\.invalidateSize\(\{ pan: false \}\);[\s\S]*refreshCourseMapOverlayOnViewChange\(\);/,
+  /const settleMapLayout = \(\) => \{[\s\S]*map\.invalidateSize\(\{ pan: false \}\);[\s\S]*refreshRouteOnViewChange\(\);/,
   'RacesDetail should synchronize the explicit route renderer after Leaflet recalculates the map viewport.',
 );
 

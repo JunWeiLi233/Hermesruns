@@ -33,6 +33,8 @@ class RunPlanMetadataLinkTests {
     @Autowired ActivityDataAccess data;
     @Autowired PlatformTransactionManager transactions;
     @Autowired ApplicationEventPublisher events;
+    @Autowired RunLabelService labels;
+    @Autowired ActivityEditService edits;
     @Autowired TrainingStore training;
     @Autowired TrainingAthletes athletes;
 
@@ -72,7 +74,7 @@ class RunPlanMetadataLinkTests {
         unchanged(fixture);
     }
     @Test void nativeEffortEditPreservesCompletionAndPlanRevisions() {
-        var fixture=linked();var controller=new ActivityEditController(auth(fixture),data,events);
+        var fixture=linked();var controller=new ActivityEditController(auth(fixture),data,labels,edits);
         assertEquals(200,controller.editActivity(fixture.activity.getId(),"Bearer metadata-test",Map.of("perceivedExertion",6)).getStatusCode().value());
         assertEquals(6,activities.findById(fixture.activity.getId()).orElseThrow().getPerceivedExertion());
         unchanged(fixture);

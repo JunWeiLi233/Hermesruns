@@ -2,6 +2,14 @@ import { getActivityDateKey } from './timeZone.js';
 
 export const PROGRESSION_TIMEFRAMES = ['day', 'week', 'month', 'year', 'total', '1m', '3m', '6m', '12m'];
 
+// The ranges that can be set beside the stretch of the same length just before them: this 3 months against the 3 months before.
+const COMPARE_MONTHS = Object.freeze({ '1m': 1, '3m': 3, '6m': 6, '12m': 12 });
+
+/** Whether a range has a stretch of the same length before it to be compared with ("all time" has nothing before it). */
+export function canCompareProgression(timeframe) {
+  return Object.hasOwn(COMPARE_MONTHS, timeframe);
+}
+
 function startOfNMonthsAgo(date, months) {
   const copy = new Date(date);
   copy.setHours(0, 0, 0, 0);
@@ -134,7 +142,71 @@ export function getNearestProgressionPointIndex(points, xPercent) {
   }, -1);
 }
 
-export function buildProgressionAtlas(runs, timeframe, lang, now = new Date()) {
+/**
+ * The previous stretch laid beside the current one: the same number of months, ending the instant before the current one begins.
+ * Its running total is drawn on the current stretch's days (day 1 of each, day 2 of each...), so the two lines can be read against
+ * each other; where the previous stretch is a day shorter or longer, the lines end where the shorter ends.
+ */
+function buildComparison({ sortedAsc, timeframe, lang, rangeStart, currentDayXs, timeToX, distanceToY, totalDistanceKm, totalMovingSeconds, totalElevationMeters, sessionCount, averagePaceSeconds }) {
+  const months = COMPARE_MONTHS[timeframe];
+  const previousStart = startOfNMonthsAgo(rangeStart, months);
+  const previousEnd = new Date(rangeStart.getTime() - 1);
+  const previousAsc = sortedAsc.filter((run) => {
+    const startedAt = getRunStartedAt(run);
+    return startedAt >= previousStart && startedAt <= previousEnd;
+  });
+  const distanceKm = previousAsc.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
+  const movingSeconds = previousAsc.reduce((sum, run) => sum + Number(run?.movingTimeSeconds || 0), 0);
+  const elevationMeters = previousAsc.reduce((sum, run) => sum + resolveRunElevationMeters(run), 0);
+  const pace = distanceKm > 0 ? movingSeconds / distanceKm : null;
+
+  const perDay = new Map();
+  for (const run of previousAsc) {
+    const key = startOfDay(getRunStartedAt(run)).toISOString().slice(0, 10);
+    perDay.set(key, (perDay.get(key) || 0) + resolveRunDistanceKm(run));
+  }
+  const series = [];
+  if (previousAsc.length > 0) {
+    series.push({ cumulativeDistance: 0, x: 0, y: distanceToY(0), date: previousStart });
+    let cumulative = 0;
+    let index = 0;
+    for (const date = new Date(previousStart); date <= previousEnd; date.setDate(date.getDate() + 1)) {
+      if (index >= currentDayXs.length) break;
+      cumulative += perDay.get(date.toISOString().slice(0, 10)) || 0;
+      series.push({ cumulativeDistance: cumulative, x: currentDayXs[index], y: distanceToY(cumulative), date: new Date(date) });
+      index += 1;
+    }
+  }
+  const delta = (current, before) => current - before;
+  return {
+    hasData: previousAsc.length > 0,
+    rangeLabel: formatProgressionWindowLabel(previousStart, previousEnd, timeframe, lang),
+    totalDistanceKm: distanceKm,
+    totalMovingSeconds: movingSeconds,
+    totalElevationMeters: elevationMeters,
+    sessionCount: previousAsc.length,
+    averagePaceSeconds: pace,
+    chartSeries: series,
+    chartLine: buildLinearPath(series),
+    timeToX,
+    deltas: {
+      distanceKm: delta(totalDistanceKm, distanceKm),
+      distancePercent: distanceKm > 0 ? Math.round((delta(totalDistanceKm, distanceKm) / distanceKm) * 100) : null,
+      movingSeconds: delta(totalMovingSeconds, movingSeconds),
+      // Climb is only compared when either stretch has some: a runner whose files carry no elevation has nothing to compare.
+      elevationMeters: totalElevationMeters > 0 || elevationMeters > 0 ? delta(totalElevationMeters, elevationMeters) : null,
+      sessions: delta(sessionCount, previousAsc.length),
+      // Seconds per kilometre: a negative change is a faster pace. Not given unless both stretches have a pace.
+      paceSeconds: averagePaceSeconds != null && pace != null ? delta(averagePaceSeconds, pace) : null,
+    },
+  };
+}
+
+/**
+ * @param options.compare  with a range that can be compared (see {@link canCompareProgression}), `comparison` holds the stretch of
+ *                         the same length before it: its totals, the change in each, and its running total on the current days
+ */
+export function buildProgressionAtlas(runs, timeframe, lang, now = new Date(), options = {}) {
   const locale = lang === 'zh-CN' ? 'zh-CN' : 'en-US';
   const sortedAsc = [...runs]
     .filter((run) => !Number.isNaN(getRunStartedAt(run).getTime()))
@@ -200,7 +272,16 @@ export function buildProgressionAtlas(runs, timeframe, lang, now = new Date()) {
   const chartHeight = 200;
   const rangeSpanMs = Math.max(1, rangeEnd.getTime() - rangeStart.getTime());
   const timeToX = (date) => 400 * Math.min(1, Math.max(0, (date.getTime() - rangeStart.getTime()) / rangeSpanMs));
-  const axisMaxKm = getDistanceAxisMax(totalDistanceKm);
+  const compare = options.compare === true && canCompareProgression(timeframe);
+  const previousWindowStart = compare ? startOfNMonthsAgo(rangeStart, COMPARE_MONTHS[timeframe]) : null;
+  const previousDistanceKm = compare
+    ? sortedAsc.reduce((sum, run) => {
+      const startedAt = getRunStartedAt(run);
+      return startedAt >= previousWindowStart && startedAt < rangeStart ? sum + resolveRunDistanceKm(run) : sum;
+    }, 0)
+    : 0;
+  // Both lines share one scale, so the longer one fits.
+  const axisMaxKm = getDistanceAxisMax(Math.max(totalDistanceKm, previousDistanceKm));
   const distanceToY = (distanceKm) => chartBaseLine - (distanceKm / axisMaxKm) * chartHeight;
   const yTicks = Array.from({ length: 5 }, (_, index) => {
     const valueKm = axisMaxKm * (1 - index / 4);
@@ -237,6 +318,21 @@ export function buildProgressionAtlas(runs, timeframe, lang, now = new Date()) {
   }
   const chartLine = buildLinearPath(chartSeries);
   const chartArea = buildLinearAreaPath(chartSeries, chartBaseLine);
+  // Where each day of the current stretch ends on the x axis: the days the previous stretch's line is laid on.
+  const currentDayXs = [];
+  if (compare) {
+    for (const date = new Date(rangeStart); date <= rangeEnd; date.setDate(date.getDate() + 1)) {
+      const nextDay = new Date(date);
+      nextDay.setDate(nextDay.getDate() + 1);
+      currentDayXs.push(timeToX(new Date(Math.min(nextDay.getTime(), rangeEnd.getTime()))));
+    }
+  }
+  const comparison = compare
+    ? buildComparison({
+      sortedAsc, timeframe, lang, rangeStart, currentDayXs, timeToX, distanceToY,
+      totalDistanceKm, totalMovingSeconds, totalElevationMeters, sessionCount, averagePaceSeconds,
+    })
+    : null;
 
   const weeklyTotals = new Map();
   for (const entry of grouped.values()) {
@@ -260,6 +356,7 @@ export function buildProgressionAtlas(runs, timeframe, lang, now = new Date()) {
 
   return {
     hasData: filteredAsc.length > 0,
+    comparison,
     rangeLabel: formatProgressionWindowLabel(rangeStart, rangeEnd, timeframe, lang),
     totalDistanceKm,
     totalMovingSeconds,

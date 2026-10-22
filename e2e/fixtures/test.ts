@@ -7,6 +7,7 @@ import AxeBuilder from '@axe-core/playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Api, freshClientAddress } from './api.ts';
+import { installSyntheticMapTiles } from './safety.mjs';
 
 export { expect, freshClientAddress };
 
@@ -50,6 +51,8 @@ export async function prepareContext(context: BrowserContext, baseURL: string): 
       return route.fulfill({ status: 204, body: '' });
     },
   );
+  // The same-origin proxy also reaches OSM; intercept it before it can leave the disposable app.
+  await installSyntheticMapTiles(context);
 }
 
 export const test = base.extend<{ guard: Guard; seed: Seed; api: Api }>({

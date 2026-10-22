@@ -186,7 +186,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .vo2max-estimates-v2 {
   #root .vo2max-estimates-v2__tiles span { flex: 0 1 auto; }
   #root .vo2max-estimates-v2__tiles strong { flex: 0 0 auto; margin-left: auto; font-size: 1.4rem; text-align: right; }
   #root .vo2max-estimates-v2__tiles small { flex: 1 1 100%; }
-  #root .vo2max-estimates-v2__history-reads { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #root .vo2max-estimates-v2__history-reads { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: 8px; }
   #root .vo2max-estimates-v2__history-reads > div { padding: 10px; }
   #root .vo2max-estimates-v2__history-reads strong { font-size: 1.25rem; }
   #root .vo2max-estimates-v2__card { padding: 16px; }

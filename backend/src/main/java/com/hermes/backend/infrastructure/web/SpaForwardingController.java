@@ -106,6 +106,13 @@ public class SpaForwardingController {
         }
     }
 
+    /** The running release's shell, or null when the frontend has not been packaged into this server. */
+    public static String readShell() throws IOException {
+        try (InputStream in = SpaForwardingController.class.getResourceAsStream("/static/index.html")) {
+            return in == null ? null : new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
     private boolean isIndexableRoute(String requestUri) {
         return "/".equals(requestUri) || "/terms".equals(requestUri) || "/privacy".equals(requestUri);
     }

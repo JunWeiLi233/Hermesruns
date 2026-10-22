@@ -6,73 +6,105 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
+import static org.assertj.core.api.Assertions.withinPercentage;
 
 class GradeAdjustedPaceTests {
 
-    /** Minetti et al. (2002), cost of running in J per kg per metre, for a slope as a fraction (0.1 is 10%). */
-    private static double minettiCost(double slope) {
-        return 155.4 * Math.pow(slope, 5) - 30.4 * Math.pow(slope, 4) - 43.3 * Math.pow(slope, 3)
-                + 46.3 * Math.pow(slope, 2) + 19.5 * slope + 3.6;
+    /** The quadratic, written out here so a change to the constants cannot make the table below agree by accident. */
+    private static double quadratic(double slope) {
+        return 1 + 2.896 * slope + 15.14 * slope * slope;
     }
 
     @Test
-    void theFlatCostsExactlyTheFlatCost() {
-        assertThat(GradeAdjustedPace.costRatio(0.0)).isEqualTo(1.0);
+    void aFlatMetreIsWorthExactlyAFlatMetre() {
+        assertThat(GradeAdjustedPace.effortRatio(0.0)).isEqualTo(1.0);
     }
 
-    @ParameterizedTest(name = "uphill {0} is {1} times the flat cost")
-    @CsvSource({"0.01,1.0554", "0.05,1.3014", "0.10,1.6578", "0.20,2.5019", "0.30,3.4942"})
-    void uphillFollowsTheMinettiCostOfRunning(double grade, double expected) {
-        assertThat(GradeAdjustedPace.costRatio(grade)).isCloseTo(expected, within(0.0005));
-        assertThat(GradeAdjustedPace.costRatio(grade)).isCloseTo(minettiCost(grade) / 3.6, within(1e-9));
+    @ParameterizedTest(name = "a {0} climb: a metre is worth {1} flat metres")
+    @CsvSource({"0.01,1.0305", "0.05,1.1826", "0.10,1.4410", "0.15,1.7750", "0.20,2.1848", "0.30,3.2314"})
+    void aClimbIsWorthMoreThanAFlatMetre(double grade, double expected) {
+        assertThat(GradeAdjustedPace.effortRatio(grade)).isCloseTo(expected, within(0.0005));
+        assertThat(GradeAdjustedPace.effortRatio(grade)).isCloseTo(quadratic(grade), within(1e-9));
     }
 
-    @ParameterizedTest(name = "downhill {0} is {1} times the flat cost")
-    @CsvSource({"-0.01,0.9736", "-0.05,0.8814", "-0.10,0.7988", "-0.20,0.7500", "-0.30,0.8420"})
-    void downhillGetsHalfOfTheMetabolicSavingMinettiMeasured(double grade, double expected) {
-        double minettiRatio = minettiCost(grade) / 3.6;
-        assertThat(GradeAdjustedPace.costRatio(grade)).isCloseTo(expected, within(0.0005));
-        // Half of the saving Minetti measured on a treadmill: a runner braking on a real descent does not keep all of it.
-        assertThat(1 - GradeAdjustedPace.costRatio(grade)).isCloseTo(0.5 * (1 - minettiRatio), within(1e-9));
+    @ParameterizedTest(name = "a {0} descent: a metre is worth {1} flat metres")
+    @CsvSource({"-0.01,0.9726", "-0.05,0.8931", "-0.10,0.8618", "-0.15,0.9062", "-0.20,1.0264"})
+    void aGentleDescentIsWorthLessAndASteepOneBringsItBackUp(double grade, double expected) {
+        assertThat(GradeAdjustedPace.effortRatio(grade)).isCloseTo(expected, within(0.0005));
+        assertThat(GradeAdjustedPace.effortRatio(grade)).isCloseTo(quadratic(grade), within(1e-9));
     }
 
     @Test
-    void aGradeBeyondThirtyPercentCountsAsThirtyPercent() {
-        assertThat(GradeAdjustedPace.costRatio(0.5)).isEqualTo(GradeAdjustedPace.costRatio(0.30));
-        assertThat(GradeAdjustedPace.costRatio(-0.5)).isEqualTo(GradeAdjustedPace.costRatio(-0.30));
-        assertThat(GradeAdjustedPace.costRatio(Double.POSITIVE_INFINITY)).isEqualTo(GradeAdjustedPace.costRatio(0.30));
-        assertThat(GradeAdjustedPace.costRatio(Double.NEGATIVE_INFINITY)).isEqualTo(GradeAdjustedPace.costRatio(-0.30));
+    void aClimbBeyondThirtyPercentCountsAsThirtyAndADescentBeyondTwentyAsTwenty() {
+        assertThat(GradeAdjustedPace.effortRatio(0.5)).isEqualTo(GradeAdjustedPace.effortRatio(0.30));
+        assertThat(GradeAdjustedPace.effortRatio(Double.POSITIVE_INFINITY)).isEqualTo(GradeAdjustedPace.effortRatio(0.30));
+        assertThat(GradeAdjustedPace.effortRatio(-0.30)).isEqualTo(GradeAdjustedPace.effortRatio(-0.20));
+        assertThat(GradeAdjustedPace.effortRatio(-0.5)).isEqualTo(GradeAdjustedPace.effortRatio(-0.20));
+        assertThat(GradeAdjustedPace.effortRatio(Double.NEGATIVE_INFINITY)).isEqualTo(GradeAdjustedPace.effortRatio(-0.20));
+        assertThat(GradeAdjustedPace.effortRatio(0.31)).isEqualTo(GradeAdjustedPace.effortRatio(0.30));
+        assertThat(GradeAdjustedPace.effortRatio(0.29)).isLessThan(GradeAdjustedPace.effortRatio(0.30));
     }
 
     @Test
     void anUnknownGradeIsTreatedAsFlat() {
-        assertThat(GradeAdjustedPace.costRatio(Double.NaN)).isEqualTo(1.0);
+        assertThat(GradeAdjustedPace.effortRatio(Double.NaN)).isEqualTo(1.0);
     }
 
     @Test
-    void climbingNeverGetsCheaperAndDescendingNeverCostsLessThanAboutThreeQuartersOfTheFlat() {
+    void climbingNeverGetsCheaperAsItGetsSteeper() {
         double previous = 1.0;
         for (double grade = 0.0; grade <= 0.30001; grade += 0.005) {
-            double ratio = GradeAdjustedPace.costRatio(grade);
+            double ratio = GradeAdjustedPace.effortRatio(grade);
             assertThat(ratio).as("grade %.3f", grade).isGreaterThanOrEqualTo(previous);
             previous = ratio;
         }
-        for (double grade = 0.0; grade >= -0.30001; grade -= 0.005) {
-            assertThat(GradeAdjustedPace.costRatio(grade)).as("grade %.3f", grade).isBetween(0.74, 1.0);
+    }
+
+    // What is public about Strava's grade adjusted pace, which the quadratic is held to (see the class comment).
+
+    @Test
+    void theEasiestDescentIsAboutMinusTenPercentAsStravasHelpCentreSays() {
+        double easiestGrade = 0.0;
+        double easiest = 1.0;
+        for (double grade = 0.0; grade >= -0.20001; grade -= 0.001) {
+            double ratio = GradeAdjustedPace.effortRatio(grade);
+            if (ratio < easiest) {
+                easiest = ratio;
+                easiestGrade = grade;
+            }
         }
+
+        assertThat(easiestGrade).isBetween(-0.105, -0.09);
+        assertThat(easiest).isBetween(0.85, 0.87);
     }
 
     @Test
-    void theBiggestDownhillBenefitIsAroundMinusTwentyPercentAndShrinksAfterThat() {
-        assertThat(GradeAdjustedPace.costRatio(-0.30)).isGreaterThan(GradeAdjustedPace.costRatio(-0.20));
-        assertThat(GradeAdjustedPace.costRatio(-0.10)).isGreaterThan(GradeAdjustedPace.costRatio(-0.20));
-        assertThat(GradeAdjustedPace.costRatio(-0.20)).isCloseTo(0.75, within(0.001));
+    void aDescentOfAboutEighteenPercentIsWhereTheAdjustedPaceStopsBeingSlowerThanThePaceRun() {
+        assertThat(GradeAdjustedPace.effortRatio(-0.16)).isLessThan(1.0);
+        assertThat(GradeAdjustedPace.effortRatio(-0.18)).isLessThan(1.0);
+        assertThat(GradeAdjustedPace.effortRatio(-0.20)).isGreaterThan(1.0);
+        assertThat(GradeAdjustedPace.adjust(300.0, -0.20)).isLessThan(300.0);
     }
 
     @Test
-    void aClimbMakesTheFlatEquivalentPaceFasterAndADescentMakesItSlower() {
-        assertThat(GradeAdjustedPace.adjust(300.0, 0.10)).isCloseTo(300.0 / 1.6578, within(0.05));
-        assertThat(GradeAdjustedPace.adjust(300.0, -0.10)).isCloseTo(300.0 / 0.7988, within(0.05));
+    void aTenPercentClimbIsWorthWhatStravasExampleSaysWithinThreePercent() {
+        // The pace that matches 3:30 /km on the flat is 5:08 /km on a 10% climb (Strava's 2017 post, as quoted).
+        double pacedUp = 210.0 * GradeAdjustedPace.effortRatio(0.10);
+
+        assertThat(pacedUp).isCloseTo(308.0, withinPercentage(3.0));
+        assertThat(GradeAdjustedPace.adjust(308.0, 0.10)).isCloseTo(210.0, withinPercentage(3.0));
+    }
+
+    @Test
+    void aClimbIsNotAsDearAsMinettisTreadmillCostWouldMakeIt() {
+        // Minetti's cost of running makes a 10% climb 1.66 times a flat metre, which Strava's own example contradicts.
+        assertThat(GradeAdjustedPace.effortRatio(0.10)).isLessThan(1.5);
+    }
+
+    @Test
+    void aClimbMakesTheFlatEquivalentPaceFasterAndAGentleDescentMakesItSlower() {
+        assertThat(GradeAdjustedPace.adjust(300.0, 0.10)).isCloseTo(300.0 / 1.4410, within(0.05));
+        assertThat(GradeAdjustedPace.adjust(300.0, -0.10)).isCloseTo(300.0 / 0.8618, within(0.05));
         assertThat(GradeAdjustedPace.adjust(300.0, 0.0)).isEqualTo(300.0);
         assertThat(GradeAdjustedPace.adjust(300.0, 0.10)).isLessThan(300.0);
         assertThat(GradeAdjustedPace.adjust(300.0, -0.10)).isGreaterThan(300.0);

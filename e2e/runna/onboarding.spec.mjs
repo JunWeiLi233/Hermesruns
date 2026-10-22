@@ -1,4 +1,5 @@
 import { test, expect, browserLogin, scan, get, candidate, inputs } from './helpers.mjs';
+import { expectNativeCalendar } from './native-plan.ui.mjs';
 
 test('F01-H1 F01-E1 F01-E2 F01-E6 complete setup, draft reload, full preview and keyboard activation review', async ({ page, request }, info) => {
   const auth = await browserLogin(page, request, 1);
@@ -45,11 +46,13 @@ test('F01-H1 F01-E1 F01-E2 F01-E6 complete setup, draft reload, full preview and
   await dialog.getByRole('checkbox', { name: 'I understand this note.' }).check();
   await dialog.getByRole('checkbox', { name: 'I have reviewed all weeks and the notes above.' }).check();
   await dialog.getByRole('button', { name: 'Activate this plan' }).click();
-  await expect(page.getByRole('heading', { name: 'Full calendar' })).toBeVisible();
+  await expectNativeCalendar(page,title);
   await scan(page, 'active-calendar', info);
-  for(const url of ['/today-run','/schedule']) {
-    await page.goto(url); await expect(page.getByRole('heading', { name: 'Full calendar' })).toBeVisible();
-  }
+  await page.goto('/today-run');await expect(page.getByRole('heading',{level:1})).toBeVisible();
+  await expect(page.getByText('This experimental plan has not been statistically validated for training outcomes.',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Session details',exact:true})).toBeVisible();
+  expect((await get(request,auth,'/api/run-plans/today')).plan.id).toBe(list.plans[0].id);
+  await page.goto('/schedule');await expectNativeCalendar(page,title);
 });
 
 test('F01-E3 slow double submit saves one draft', async ({ page, request }) => {

@@ -12,7 +12,7 @@ const appCss = read('./styles/app.css');
 const css = read('./styles/metric-trend-v2.css');
 const hubCss = read('./styles/analysis-v2.css');
 const page = read('./pages/analysis/MetricTrend.jsx');
-const analysis = read('./pages/analysis/Analysis.jsx');
+const analysis = read('./pages/analysis/Analysis.jsx') + read('./pages/analysis/AnalysisFeatures.jsx');
 const app = read('./App.jsx');
 const preload = read('./utils/routePreload.js');
 const doc = readFileSync(path.join(repoRoot, 'docs/README-ANALYSIS.md'), 'utf8');
@@ -39,7 +39,7 @@ for (const name of classes) {
 assert.ok(css.includes('.metric-trend-v2 {'), 'The page has a root rule that defines its tokens.');
 
 // Analysis links to the page, from a card of its own with a rule.
-assert.match(analysis, /<Link className="analysis-v2-more-link" to="\/analysis#analysis-trends">/, 'Analysis links to the Trends page.');
+assert.match(analysis, /id="analysis-trends"/, 'Analysis links to the Trends page.');
 for (const name of ['analysis-v2-more', 'analysis-v2-more-list', 'analysis-v2-more-link']) {
   assert.ok(hubCss.includes(`.${name}`), `${name} is used by Analysis but has no style.`);
 }

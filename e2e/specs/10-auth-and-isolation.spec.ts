@@ -319,7 +319,7 @@ test.describe('X01 one runner cannot reach another runner\'s data', () => {
 
 test.describe('X01 the public side of the app', () => {
   for (const [url, heading] of [
-    ['/', /Running analytics you can check/],
+    ['/', /Run the race you trained for\./],
     ['/login', /Welcome back/],
     ['/signup', /Create your account/],
     ['/forgot-password', /Recover your password/],
@@ -344,16 +344,25 @@ test.describe('X01 the public side of the app', () => {
   });
 
   test('X01-E6 every file the build puts in the static folder is served without signing in', async ({ seed }) => {
-    const root = path.resolve(import.meta.dirname, '..', '..', 'backend', 'target', 'classes', 'static');
-    test.skip(!fs.existsSync(root), 'no built frontend next to this suite');
+    const worktree = fs.realpathSync(path.resolve(import.meta.dirname, '..', '..'));
+    const configured = process.env.E2E_STATIC_DIR;
+    const candidate = path.resolve(worktree, configured || 'backend/target/classes/static');
+    test.skip(!configured && !fs.existsSync(candidate), 'no built frontend next to this suite');
+    const confinedDirectory = (directory: string) => {
+      const resolved = fs.realpathSync(directory);
+      const relative = path.relative(worktree, resolved);
+      expect(relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), 'static files must stay within this worktree').toBe(true);
+      return resolved;
+    };
+    const root = confinedDirectory(candidate);
     const files: string[] = [];
     for (const entry of fs.readdirSync(root, { withFileTypes: true })) {
       if (entry.isFile()) files.push(`/${entry.name}`);
       else if (entry.name === 'images') {
-        for (const image of fs.readdirSync(path.join(root, 'images'), { withFileTypes: true })) if (image.isFile()) files.push(`/images/${image.name}`);
+        for (const image of fs.readdirSync(confinedDirectory(path.join(root, 'images')), { withFileTypes: true })) if (image.isFile()) files.push(`/images/${image.name}`);
       }
     }
-    const assets = fs.existsSync(path.join(root, 'assets')) ? fs.readdirSync(path.join(root, 'assets')).slice(0, 25) : [];
+    const assets = fs.existsSync(path.join(root, 'assets')) ? fs.readdirSync(confinedDirectory(path.join(root, 'assets'))).slice(0, 25) : [];
     for (const asset of assets) files.push(`/assets/${asset}`);
     const anonymous = new Api(seed.baseUrl, null);
     expect(files.length).toBeGreaterThan(5);

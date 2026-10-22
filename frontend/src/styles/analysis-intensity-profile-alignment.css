@@ -62,7 +62,7 @@
 #root .is-intensity .intensity-quality-methods { color:var(--intensity-muted); font-size:12.5px; line-height:1.6; }
 #root .is-intensity .intensity-quality-methods summary { font-weight:700; }
 #root .is-intensity .intensity-quality-methods p { margin-top:8px; }
-#root .is-intensity .intensity-quality-methods a { color:var(--intensity-accent); }
+#root .is-intensity .intensity-quality-methods a { color:var(--intensity-accent); text-decoration:underline; text-underline-offset:3px; }
 #root .is-intensity .intensity-coach { padding:22px 24px; gap:14px; }
 #root .is-intensity .intensity-coach-identity { display:flex; align-items:center; gap:10px; }
 #root .is-intensity .intensity-coach-identity > span { display:grid; place-items:center; flex:none; width:32px; height:32px; border-radius:50%; background:var(--intensity-ink); color:var(--intensity-card); font-size:12px; font-weight:800; }

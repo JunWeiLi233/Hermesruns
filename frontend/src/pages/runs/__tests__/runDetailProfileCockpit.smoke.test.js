@@ -113,7 +113,7 @@ assert.ok(
 assert.match(telemetry, /className="run-detail-v2__card-head">\s*<h2>\{t\('run_detail\.telemetry_title'\)\}<\/h2>\s*<div className="run-detail-v2__tabs" role="tablist" aria-label=\{t\('run_detail\.telemetry_title'\)\}/, 'The localized telemetry heading and tablist should belong to one card.');
 assert.match(telemetry, /type="button"[\s\S]*onClick=\{\(\) => setActiveTelemetryKey\(definition\.key\)\}[\s\S]*role="tab"\s*aria-selected=\{isActive\}/, 'Telemetry controls should switch their stream and expose the selected state.');
 assert.match(telemetry, /telemetry_average[\s\S]*formatTelemetryValue\(selectedTelemetrySample\?\.value \?\? telemetryAverage,[\s\S]*<em>\{activeTelemetryDefinition\.unit\}<\/em>/, 'The telemetry readout should distinguish the sample average from a selected point and retain units.');
-assert.match(telemetry, /telemetryChartData \? \(\s*<Line data=\{telemetryChartData\} options=\{telemetryChartOptions\}[^>]*\/>[\s\S]*run-detail-chart-empty.*telemetry_no_stream/, 'Available streams should render the chart and missing streams should show a localized fallback.');
+assert.match(telemetry, /telemetryChartData \? \(\s*<Line\s+data=\{telemetryChartData\}\s+options=\{telemetryChartOptions\}[\s\S]*?\/>[\s\S]*run-detail-chart-empty.*telemetry_no_stream/, 'Available streams should render the chart and missing streams should show a localized fallback.');
 assert.match(telemetry, /telemetryBounds \? \([\s\S]*telemetryBounds\.min[\s\S]*telemetryBounds\.max/, 'Telemetry should retain minimum and maximum readouts.');
 
 assert.ok(

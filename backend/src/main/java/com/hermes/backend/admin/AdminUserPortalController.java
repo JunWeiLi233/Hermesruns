@@ -2,6 +2,7 @@ package com.hermes.backend.admin;
 
 import com.hermes.backend.infrastructure.web.RequestBodyValidator;
 import com.hermes.backend.runner.Runner;
+import com.hermes.backend.infrastructure.web.RequestIpResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
@@ -127,10 +128,7 @@ public class AdminUserPortalController {
         Optional<Runner> targetOptional = adminService.getRunnerRepository().findById(id);
         if (targetOptional.isEmpty() || targetOptional.get().isDeleted()) return AdminApiResponses.error(HttpStatus.NOT_FOUND, "Runner not found.", "runner_not_found");
 
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        String sourceIp = (xForwardedFor != null && !xForwardedFor.isBlank())
-                ? xForwardedFor.split(",")[0].trim()
-                : request.getRemoteAddr();
+        String sourceIp = RequestIpResolver.clientIp(request);
         String rawUa = request.getHeader("User-Agent");
         String userAgent = (rawUa != null && rawUa.length() > 200) ? rawUa.substring(0, 200) : (rawUa != null ? rawUa : "");
 

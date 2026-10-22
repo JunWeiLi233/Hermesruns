@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Api, eventually, newRunner, stackState } from './api.ts';
 import { daysAgo, gpxRun, rollingHills } from './gpx.ts';
+import { zip, type ZipEntry } from './zip.ts';
 
 export interface HistoryRun {
   id: number;
@@ -32,10 +33,10 @@ const PLAN = [
 ] as const;
 
 /** Waits until every run has an Effort score (the analysis runs off the request thread after an import). */
-export async function waitForEffort(api: Api, count: number, timeoutMs = 180_000): Promise<void> {
+export async function waitForEffort(api: Api, count: number, timeoutMs = 180_000, from?: string): Promise<void> {
   await eventually(
     async () => {
-      const series = await api.get('/api/training/series');
+      const series = await api.get(`/api/training/series${from ? `?from=${encodeURIComponent(from)}` : ''}`);
       return series.ok && series.json.runs >= count ? true : null;
     },
     `an Effort score for each of ${count} runs`,
@@ -43,8 +44,7 @@ export async function waitForEffort(api: Api, count: number, timeoutMs = 180_000
   );
 }
 
-/** Imports one run for a runner and returns it; `daysBack` counts from today (0 is today), and the run starts at `hourUtc`. */
-export async function importHistoryRun(api: Api, daysBack: number, kind: HistoryRun['kind'], km: number, pace: number, hr: number, name?: string, hourUtc = 11): Promise<HistoryRun> {
+function historyFile(daysBack: number, kind: HistoryRun['kind'], km: number, pace: number, hr: number, name?: string, hourUtc = 11) {
   const title = name ?? `E2E ${kind} ${daysBack} days ago`;
   const gpx = gpxRun({
     name: title,
@@ -55,8 +55,15 @@ export async function importHistoryRun(api: Api, daysBack: number, kind: History
     shape: 'line',
     elevation: kind === 'long' ? rollingHills(30, 3000) : null,
   });
-  const id = await api.importRun(`${title.replace(/\s+/g, '-')}.gpx`, gpx);
-  return { id, name: title, daysAgo: daysBack, km, kind };
+  return { entry: { name: `${title.replace(/\s+/g, '-')}.gpx`, data: gpx },
+    run: { name: title, daysAgo: daysBack, km, kind } };
+}
+
+/** Imports one run for a runner and returns it; `daysBack` counts from today (0 is today), and the run starts at `hourUtc`. */
+export async function importHistoryRun(api: Api, daysBack: number, kind: HistoryRun['kind'], km: number, pace: number, hr: number, name?: string, hourUtc = 11): Promise<HistoryRun> {
+  const file = historyFile(daysBack, kind, km, pace, hr, name, hourUtc);
+  const id = await api.importRun(file.entry.name, file.entry.data);
+  return { id, ...file.run };
 }
 
 export interface HistoryOptions {
@@ -70,13 +77,37 @@ export interface HistoryOptions {
 export async function runnerWithHistory(label: string, weeks = 14, options: HistoryOptions = {}): Promise<RunnerWithHistory> {
   const { api, email } = await newRunner(label);
   const runs: HistoryRun[] = [];
+  const entries: ZipEntry[] = [];
+  const append = (daysBack: number, kind: HistoryRun['kind'], km: number, pace: number, hr: number, name?: string, hourUtc = 11) => {
+    const file = historyFile(daysBack, kind, km, pace, hr, name, hourUtc);
+    entries.push(file.entry);
+    runs.push({ id: 0, ...file.run });
+  };
   for (let week = 0; week < weeks; week += 1) {
     for (const item of PLAN) {
-      runs.push(await importHistoryRun(api, week * 7 + item.offset, item.kind, item.km, item.pace, item.hr));
+      append(week * 7 + item.offset, item.kind, item.km, item.pace, item.hr);
     }
   }
-  if (options.todayRun) runs.push(await importHistoryRun(api, 0, 'easy', 5, 360, 140, 'E2E easy today', 0));
-  await waitForEffort(api, runs.length);
+  if (options.todayRun) append(0, 'easy', 5, 360, 140, 'E2E easy today', 0);
+  // Use the real archive importer in bounded batches rather than reading the entire growing
+  // history twice per file. Large fixtures must not exhaust the production IP read budget.
+  for (let offset = 0; offset < entries.length; offset += 20) {
+    const batch = entries.slice(offset, offset + 20);
+    const imported = await api.importFile(`history-${offset}.zip`, zip(batch));
+    if (!imported.ok || imported.json.importedActivities !== batch.length) {
+      throw new Error(`history batch import failed: ${imported.status} ${JSON.stringify(imported.json)}`);
+    }
+  }
+  const stored = await api.get('/api/activities');
+  if (!stored.ok || !Array.isArray(stored.json) || stored.json.length !== runs.length) {
+    throw new Error(`history fixture did not retain all ${runs.length} runs: ${stored.status}`);
+  }
+  for (const run of runs) {
+    const matches = stored.json.filter((item: { name: string }) => item.name === run.name);
+    if (matches.length !== 1 || !(matches[0].id > 0)) throw new Error(`history fixture has no unique run named ${run.name}`);
+    run.id = matches[0].id;
+  }
+  await waitForEffort(api, runs.length, 180_000, historyStart(runs));
   return { api, email, token: api.token as string, runs };
 }
 
@@ -88,6 +119,10 @@ interface SavedHistory {
   email: string;
   token: string;
   runs: HistoryRun[];
+}
+
+function historyStart(runs: HistoryRun[]): string {
+  return daysAgo(Math.max(0, ...runs.map(run => run.daysAgo))).toISOString().slice(0, 10);
 }
 
 /**
@@ -104,7 +139,7 @@ export async function sharedHistoryRunner(label: string, weeks: number, options:
     const saved = JSON.parse(fs.readFileSync(file, 'utf8')) as SavedHistory;
     if (saved.baseUrl === baseUrl && saved.day === today && saved.weeks === weeks && saved.todayRun === Boolean(options.todayRun)) {
       const api = new Api(baseUrl, saved.token);
-      const series = await api.get('/api/training/series');
+      const series = await api.get(`/api/training/series?from=${historyStart(saved.runs)}`);
       if (series.ok && series.json.runs >= saved.runs.length) return { api, email: saved.email, token: saved.token, runs: saved.runs };
     }
   } catch {

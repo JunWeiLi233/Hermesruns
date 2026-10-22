@@ -230,6 +230,12 @@ body:is(.theme-midnight, .theme-high-contrast) .import-v2-file-tag.is-huawei { c
 .import-v2-file-remove svg { width: 14px; height: 14px; }
 .import-v2-error { color: #d70015; font-size: 0.8rem; }
 .import-v2-error .import-v2-text-btn { display: block; margin-top: 0.5rem; }
+.import-v2 [hidden] { display: none !important; }
+.import-v2-report { display: grid; gap: 8px; padding: 14px 16px; border-radius: 14px; background: rgba(0, 0, 0, 0.04); font-size: 0.86rem; line-height: 1.45; }
+.import-v2-report strong { font-size: 0.95rem; }
+.import-v2-report ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.import-v2-report-files { margin-top: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.78rem; overflow-wrap: anywhere; }
+body:is(.theme-midnight, .theme-high-contrast) .import-v2-report { background: rgba(255, 255, 255, 0.06); }
 body:is(.theme-midnight, .theme-high-contrast) .import-v2-error { color: #ffb4a7; }
 
 .import-v2 :is(button, .import-v2-drop):focus-visible,

@@ -12,12 +12,12 @@ final class RecoveredCourseMapReference {
     private static final List<Entry> ENTRIES=load();
     private RecoveredCourseMapReference() { }
 
-    static Optional<VerifiedCourseMapReference.Course> match(String hash,String raceName,String city,String country,Double distanceKm) {
+    static Optional<VerifiedCourseMap> match(String hash,String raceName,String city,String country,Double distanceKm) {
         if(distanceKm==null || !Double.isFinite(distanceKm) || Math.abs(distanceKm-42.195)>=0.05) return Optional.empty();
         return ENTRIES.stream().filter(e -> e.hashes().contains(hash) && normalize(e.raceName()).equals(normalize(raceName))
                 && normalize(e.city()).equals(normalize(city)) && normalize(e.country()).equals(normalize(country))
                 && e.routePoints()!=null && e.routePoints().size()>1)
-            .findFirst().map(e -> new VerifiedCourseMapReference.Course(
+            .findFirst().map(e -> new VerifiedCourseMap(
                 ("source-reviewed".equals(e.alignmentMethod())?"reviewed-source-map:":"verified-official-map:")+e.raceId(),
                 ("source-reviewed".equals(e.alignmentMethod())
                     ? "Source-aligned review draft, edition "+e.edition()+". Geographic route checked against the exact official map and ordered landmarks; this is a derived or independently checked track requiring review, not organizer-authored GPS. "

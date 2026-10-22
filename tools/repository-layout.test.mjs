@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const root = new URL('../', import.meta.url);
 assert.equal(existsSync(new URL('tools/fixtures', root)), false, 'Removed sample fixture directory must not return.');
@@ -9,9 +10,16 @@ assert.ok(existsSync(new URL('tools/import-shoe-catalog.mjs', root)), 'The real 
 for (const directory of ['frontend', 'backend', 'docs', 'tools']) {
   assert.ok(existsSync(new URL(directory, root)), `Missing project directory: ${directory}`);
 }
-for (const directory of ['ios', '.tools', '.ai-sync', '.ai-codex', 'tmp', '.tmp']) {
+for (const directory of ['ios', '.tools', '.ai-sync', '.ai-codex', 'tmp']) {
   assert.equal(existsSync(new URL(directory, root)), false, `Retired root directory returned: ${directory}`);
 }
+// Ignored scratch output is intentionally allowed in a developer checkout; it
+// must not become part of the published repository layout.
+const trackedPaths = execFileSync('git', ['ls-files', '-z'], { cwd: fileURLToPath(root), encoding: 'utf8' }).split('\0');
+assert.equal(trackedPaths.some(path => path === '.tmp' || path.startsWith('.tmp/')), false,
+  'Ignored local scratch data must never be tracked in the repository.');
+assert.match(readFileSync(new URL('.gitignore', root), 'utf8'), /^\.tmp\/$/m,
+  'Local scratch output must remain ignored.');
 for (const file of ['stop_hermes.bat', 'start_hermes_local.ps1', 'CONTEXT.md']) {
   assert.equal(existsSync(new URL(file, root)), false, `Retired root file returned: ${file}`);
 }

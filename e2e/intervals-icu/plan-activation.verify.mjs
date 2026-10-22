@@ -1,20 +1,21 @@
-// Real localhost release check. Only identities from the protected QA fixture are used.
+// Optional experimental-plan release check against a recorded disposable H2 stack.
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
-import {resolve,sep} from 'node:path';
+import {writeFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
 import {chromium} from '@playwright/test';
-const run=resolve(process.env.HERMES_TRAINING_QA_RUN||'');
-assert.ok(run.toLowerCase().startsWith(resolve(import.meta.dirname,'../../.private-backups').toLowerCase()+sep));
-const fixture=JSON.parse(readFileSync(resolve(run,'actors.json'),'utf8').replace(/^\uFEFF/,''));
-assert.equal(fixture.baseURL,'http://localhost:8080');
+import {loadIsolatedActors,fetchForFixture} from './fixture-lifecycle.mjs';
+import {installSyntheticMapTiles,setBrowserActor,freshSyntheticClientAddress} from '../fixtures/safety.mjs';
+const isolated=loadIsolatedActors(process.env.HERMES_TRAINING_QA_RUN);
+const {fixture}=isolated;
 const actor=fixture.actors.athlete,base=fixture.baseURL;
 const output=resolve(import.meta.dirname,'../../output/plan-activation-review');mkdirSync(output,{recursive:true});
 const results=[];
 async function api(path,body,expected=200,role='athlete'){
- const response=await fetch(base+path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${fixture.actors[role].token}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+ const response=await fetchForFixture(isolated,path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${fixture.actors[role].token}`,'X-Forwarded-For':clientIp,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
  const data=await response.json();assert.equal(response.status,expected,`${path}: ${data.code||'unexpected status'}`);return data;
 }
 const cmd=body=>({clientKey:crypto.randomUUID(),...body});
+const clientIp=freshSyntheticClientAddress();
 const today=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(new Date());
 const add=(date,n)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
 const dow=new Date(today+'T12:00:00Z').getUTCDay();const start=add(today,(8-dow)%7);
@@ -32,11 +33,12 @@ for(const consent of [undefined,false,'true']){
 assert.equal((await api(prefix+'/activate',cmd({...activation,acknowledgedExperimental:true,contentHash:'changed'}),409)).code,'STALE_PREVIEW');
 await api(prefix+'/activate',cmd({...activation,acknowledgedExperimental:true}),404,'outsider');
 assert.equal((await api(prefix)).state,'DRAFT');results.push('server consent, stale-hash and ownership denials preserve draft');
-const browser=await chromium.launch();
+const browser=await chromium.launch({...(process.env.E2E_CHROMIUM_PATH?{executablePath:process.env.E2E_CHROMIUM_PATH}:{})});
 try{
- const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'en-US',timezoneId:'America/New_York'});
- await context.addInitScript(a=>{localStorage.setItem('hermes_jwt',a.token);localStorage.setItem('hermes_email',a.email);localStorage.setItem('hermes_lang','en');localStorage.setItem('hermes_unit','km')},actor);
+ const context=await browser.newContext({viewport:{width:1440,height:1000},locale:'en-US',timezoneId:'America/New_York',extraHTTPHeaders:{'X-Forwarded-For':clientIp}});
+ await installSyntheticMapTiles(context);
  const page=await context.newPage();const errors=[];
+ await setBrowserActor(page,actor,base);
  page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=500)errors.push(`${r.status()} ${new URL(r.url()).pathname}`)});
  const {expect}=await import('@playwright/test');
  await page.goto(base+`/schedule?planView=preview&planId=${plan.id}&versionId=${version.id}`);
@@ -67,7 +69,7 @@ try{
  const after=await api('/api/run-plans');assert.equal(after.rulesApproved,false);assert.equal(after.plans.find(p=>p.id===plan.id).state,'ACTIVE');
  const member=fixture.actors.member;
  async function authored(path,method='GET',body,revision){
-  const r=await fetch(base+'/api/training'+path,{method,headers:{Authorization:`Bearer ${member.token}`,'Idempotency-Key':crypto.randomUUID(),'Content-Type':'application/json',...(revision==null?{}:{'If-Match':String(revision)})},...(body?{body:JSON.stringify(body)}:{})});
+  const r=await fetchForFixture(isolated,'/api/training'+path,{method,headers:{Authorization:`Bearer ${member.token}`,'Idempotency-Key':crypto.randomUUID(),'X-Forwarded-For':clientIp,'Content-Type':'application/json',...(revision==null?{}:{'If-Match':String(revision)})},...(body?{body:JSON.stringify(body)}:{})});
   const value=await r.json();assert.equal(r.status,200,`authored ${method} ${path}: ${value.code||'unexpected status'}`);return value;
  }
  const memberProfile=await authored('/me');let first;

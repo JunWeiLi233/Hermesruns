@@ -12,6 +12,8 @@ const SECTION_ITEMS = [
   { id: 'run-detail-effort', labelKey: 'run_detail.subnav_effort', icon: 'zones' },
   { id: 'run-detail-intervals', labelKey: 'interval_analytics.title', icon: 'splits' },
   { id: 'run-detail-condition-comparison', labelKey: 'condition_comparison.title', icon: 'trending_up' },
+  { id: 'run-detail-efforts', labelKey: 'run_detail.subnav_best_efforts', icon: 'trophy' },
+  { id: 'run-detail-matches', labelKey: 'run_detail.subnav_same_route', icon: 'map' },
   { id: 'run-detail-splits', labelKey: 'run_detail.subnav_splits', icon: 'splits' },
 ];
 

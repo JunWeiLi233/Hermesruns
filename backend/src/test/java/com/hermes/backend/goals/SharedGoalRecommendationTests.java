@@ -46,11 +46,33 @@ class SharedGoalRecommendationTests {
         assertThat(suggestions).filteredOn(s -> s.period().equals("WEEK") && s.metric().equals("DISTANCE"))
                 .singleElement().satisfies(s -> { assertThat(s.target()).isEqualTo(9); assertThat(s.basis().kind()).isEqualTo("coach-plan"); });
         assertThat(suggestions).filteredOn(s -> s.metric().equals("COUNT")).singleElement().satisfies(s -> assertThat(s.target()).isEqualTo(2));
-        assertThat(suggestions).allMatch(s -> s.period().equals("WEEK"));
+        assertThat(suggestions).filteredOn(s -> s.period().equals("WEEK"))
+                .allSatisfy(s -> assertThat(s.basis().kind()).isEqualTo("coach-plan"));
+        assertThat(suggestions).anyMatch(s -> s.period().equals("MONTH") && s.basis().kind().equals("monthly-average"));
         verify(coach).getTodayWithReadiness(runner);
     }
-    @Test void unavailableCoachDoesNotRecreateIndependentGrowthSuggestions() {
-        assertThat(service.suggest(runner).suggestions()).isEmpty();
+    @Test void aRecentRunCanSupportAPrescribedGoalBeforeThereAreFourCompleteWeeks() {
+        prescribe(9, 2);
+        var recent = mock(TrainingLogRepository.LogRunRow.class);
+        when(recent.getLocalDate()).thenReturn(today.minusDays(1));
+        when(recent.getDistanceKm()).thenReturn(5d);
+        when(runs.findRows(eq(7L), any(), any(), any())).thenReturn(List.of(recent));
+
+        var response = service.suggest(runner);
+        assertThat(response.enough()).isTrue();
+        assertThat(response.suggestions()).filteredOn(s -> s.period().equals("WEEK") && s.metric().equals("DISTANCE"))
+                .singleElement().satisfies(s -> assertThat(s.target()).isEqualTo(9));
+    }
+
+    @Test void unavailableCoachRetainsHistoricalTrackingSuggestions() {
+        var response = service.suggest(runner);
+        assertThat(response.enough()).isTrue();
+        assertThat(response.suggestions()).filteredOn(s -> s.period().equals("WEEK") && s.metric().equals("DISTANCE"))
+                .singleElement().satisfies(s -> {
+                    assertThat(s.target()).isEqualTo(40);
+                    assertThat(s.basis().kind()).isEqualTo("weekly-average");
+                });
+        assertThat(response.suggestions()).anyMatch(s -> s.period().equals("MONTH"));
     }
     @Test void publishedTargetsUseThePublishedCalendarWhileTrackingGoalsKeepTheAccountCalendar() {
         var plan = new AutomatedCoachService.CoachPlanDto("ADAPT", 10.5, 2, List.of("TUESDAY", "SATURDAY"),
@@ -60,7 +82,7 @@ class SharedGoalRecommendationTests {
         var response = service.suggest(runner);
         assertThat(response.today()).isEqualTo(today.plusDays(1));
         assertThat(response.timeZone()).isEqualTo("Pacific/Kiritimati");
-        assertThat(response.suggestions()).filteredOn(s -> s.metric().equals("DISTANCE"))
+        assertThat(response.suggestions()).filteredOn(s -> s.period().equals("WEEK") && s.metric().equals("DISTANCE"))
                 .singleElement().satisfies(s -> assertThat(s.target()).isEqualTo(10.5));
         assertThat(service.list(runner, null).today()).isEqualTo(today);
     }
@@ -71,10 +93,12 @@ class SharedGoalRecommendationTests {
     }
     @Test void invalidTargetsAreNotOfferedAndExistingGoalsArePreserved() {
         prescribe(Double.POSITIVE_INFINITY,0);
-        assertThat(service.suggest(runner).suggestions()).isEmpty();
+        assertThat(service.suggest(runner).suggestions()).isNotEmpty()
+                .allSatisfy(s -> assertThat(s.target()).isFinite().isPositive())
+                .noneMatch(s -> s.basis().kind().equals("coach-plan"));
         prescribe(9,2);
         when(goals.findByRunnerIdOrderByIdAsc(7L)).thenReturn(List.of(new Goal(runner,"WEEK","DISTANCE",40)));
-        assertThat(service.suggest(runner).suggestions()).noneMatch(s -> s.metric().equals("DISTANCE"));
+        assertThat(service.suggest(runner).suggestions()).noneMatch(s -> s.period().equals("WEEK") && s.metric().equals("DISTANCE"));
     }
 
     @Test void anExhaustedWeekDoesNotOfferAnAlreadyCompletedDistanceGoalAndCarriesTheSameEvidence() {
@@ -85,7 +109,7 @@ class SharedGoalRecommendationTests {
         var prescription = new AutomatedCoachService.CoachTodayDto(null, null, null, null, "", "", plan);
         when(coach.getTodayWithReadiness(runner)).thenReturn(prescription);
         var response = service.suggest(runner);
-        assertThat(response.suggestions()).noneMatch(s -> s.metric().equals("DISTANCE"));
+        assertThat(response.suggestions()).noneMatch(s -> s.period().equals("WEEK") && s.metric().equals("DISTANCE"));
         assertThat(response.recommendation()).isSameAs(prescription);
         verify(goals, never()).save(any());
     }

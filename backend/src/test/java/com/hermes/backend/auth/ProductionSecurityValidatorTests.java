@@ -1,5 +1,6 @@
 package com.hermes.backend.auth;
 
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.mock.env.MockEnvironment;
@@ -7,6 +8,10 @@ import org.springframework.mock.env.MockEnvironment;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ProductionSecurityValidatorTests {
+
+    // The validator checks paths in the serving OS. Use host-native absolute paths here so Windows tests
+    // exercise the same containment rules as Linux Railway; the deployment test retains its /data contract.
+    private static final Path COURSE_VOLUME = Path.of("railway-test-volume").toAbsolutePath().normalize();
 
     @Test
     void productionProfileEnforcesSecurityWithoutHermesEnvironmentFlag() {
@@ -57,11 +62,13 @@ class ProductionSecurityValidatorTests {
 
     @Test
     void railwayProductionRejectsCourseStorageOutsideMountedVolume() {
-        for (String directory : new String[] {"course-map-images", "/tmp/course-map-images",
-                "/data/../tmp/course-map-images", "/data-other/course-map-images"}) {
+        for (String directory : new String[] {"course-map-images",
+                COURSE_VOLUME.resolveSibling("outside-course-map-images").toString(),
+                COURSE_VOLUME.resolve("../outside-course-map-images").toString(),
+                COURSE_VOLUME.resolveSibling(COURSE_VOLUME.getFileName() + "-other").resolve("course-map-images").toString()}) {
             ProductionSecurityValidator validator = secureProductionValidator();
             ReflectionTestUtils.setField(validator, "railwayEnvironmentId", "production-environment");
-            ReflectionTestUtils.setField(validator, "railwayVolumeMountPath", "/data");
+            ReflectionTestUtils.setField(validator, "railwayVolumeMountPath", COURSE_VOLUME.toString());
             ReflectionTestUtils.setField(validator, "courseMapUploadDirectory", directory);
             assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_COURSE_MAP_UPLOAD_DIR");
         }
@@ -71,9 +78,28 @@ class ProductionSecurityValidatorTests {
     void railwayProductionAllowsCourseStorageWithinMountedVolume() {
         ProductionSecurityValidator validator = secureProductionValidator();
         ReflectionTestUtils.setField(validator, "railwayEnvironmentId", "production-environment");
-        ReflectionTestUtils.setField(validator, "railwayVolumeMountPath", "/data");
-        ReflectionTestUtils.setField(validator, "courseMapUploadDirectory", "/data/course-map-images");
+        ReflectionTestUtils.setField(validator, "railwayVolumeMountPath", COURSE_VOLUME.toString());
+        ReflectionTestUtils.setField(validator, "courseMapUploadDirectory", COURSE_VOLUME.resolve("course-map-images").toString());
         validator.validate();
+    }
+
+    @Test
+    void railwayProductionRejectsRootOrRelativeVolumeMounts() {
+        for (String mount : new String[] {COURSE_VOLUME.getRoot().toString(), "railway-test-volume", ""}) {
+            ProductionSecurityValidator validator = secureProductionValidator();
+            ReflectionTestUtils.setField(validator, "railwayEnvironmentId", "production-environment");
+            ReflectionTestUtils.setField(validator, "railwayVolumeMountPath", mount);
+            assertThatThrownBy(validator::validate).hasMessageContaining("RAILWAY_VOLUME_MOUNT_PATH");
+        }
+    }
+
+    @Test
+    void railwayProductionRejectsInvalidCourseStoragePaths() {
+        ProductionSecurityValidator validator = secureProductionValidator();
+        ReflectionTestUtils.setField(validator, "railwayEnvironmentId", "production-environment");
+        ReflectionTestUtils.setField(validator, "railwayVolumeMountPath", COURSE_VOLUME.toString());
+        ReflectionTestUtils.setField(validator, "courseMapUploadDirectory", "invalid\u0000path");
+        assertThatThrownBy(validator::validate).hasMessageContaining("HERMES_COURSE_MAP_UPLOAD_DIR");
     }
 
     @Test

@@ -86,6 +86,24 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+it('retains the compact latest-session summary and exposes comparison arithmetic and all session facts in its evidence disclosure', async () => {
+  const user = userEvent.setup();
+  const { container } = renderPage('/analysis/intensity', { compact: true });
+  await screen.findByRole('heading', { level: 2, name: t('quality_sessions.title') });
+  expect(container.querySelector('.intensity-quality-latest')).toHaveTextContent('Run 1');
+  expect(screen.queryByRole('table', { name: t('quality_sessions.table_label') })).not.toBeInTheDocument();
+  await user.click(container.querySelector('.intensity-quality-methods > summary'));
+  await screen.findByRole('table', { name: t('quality_sessions.table_label') });
+  const evidence = container.querySelector('.quality-sessions-v2__full-details');
+  expect(within(evidence).getByText('2 more')).toBeVisible();
+  const table = within(evidence).getByRole('table', { name: t('quality_sessions.table_label') });
+  expect(within(table).getAllByRole('row')).toHaveLength(4);
+  const first = within(table).getAllByRole('row')[1];
+  expect(first).toHaveTextContent('Run 1');
+  expect(first).toHaveTextContent('38:40');
+  expect(first).toHaveTextContent('165 / 178 bpm');
+});
+
 describe('loading and failing', () => {
   it('is busy with a skeleton until the runs are there, asks for the runs Analysis uses, and sits under Analysis', async () => {
     const { container } = renderPage();

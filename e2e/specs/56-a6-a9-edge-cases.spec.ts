@@ -27,12 +27,18 @@ interface Row {
   distanceKm: number;
   movingTimeSeconds: number;
   startTime: string;
+  activityInstant?: string;
   averageHeartRate: number | null;
   maxHeartRate: number | null;
   runType: string | null;
 }
 
-const rowsOf = async (api: Api): Promise<Row[]> => (await api.get('/api/activities/analysis')).json;
+const rowsOf = async (api: Api): Promise<Row[]> => {
+  const response = await api.get('/api/activities/analysis');
+  expect(response.status, 'analysis activity list status').toBe(200);
+  expect(Array.isArray(response.json), 'analysis returns the owner activity list').toBe(true);
+  return response.json;
+};
 const dayOf = (row: Row): string => row.startTime.slice(0, 10);
 const whoOf = (made: { api: Api; email: string }): { token: string; email: string } => ({ token: made.api.token as string, email: made.email });
 
@@ -86,11 +92,14 @@ test.describe('X time zones: a run that is ahead of the date on the device', () 
     test.setTimeout(240_000);
     const { made, rows } = await runnerAhead('x-tz2');
     const page = await pages.open(browser, baseURL, guard, whoOf(made), VO2_ROUTE, { timezoneId: DEVICE_ZONE });
+    await openVo2Evidence(page);
     await expect(historySection(page)).toBeVisible();
 
-    // The latest run is later than the device's clock says it is now, so the line ends at it and has no point of its own for today.
-    await expect(historyDots(page)).toHaveCount(rows.length);
-    await expect(historyChart(page).locator('circle.is-now')).toHaveCount(0);
+    // The account's calendar is ahead, but the run's activityInstant is still 25 minutes ago. Keep its point and today's point;
+    // reading the account-local timestamp as device time would incorrectly drop that final, current estimate.
+    await expect(historyDots(page)).toHaveCount(rows.length + 1);
+    await expect(historyChart(page).locator('circle.is-now')).toHaveCount(1);
+    await expect(historyChart(page)).toHaveAttribute('aria-valuetext', /^Now: /);
     const top = await page.getByRole('region', { name: 'How the number is made' }).locator('article').first().locator('strong').textContent();
     expect(top).toMatch(/^\d+\.\d$/);
     await expect(nowReading(page)).toHaveText(top as string);
@@ -284,7 +293,23 @@ test.describe('A7 daily effort bars: every range, a race day, a day far bigger t
   });
 });
 
-const VO2_ROUTE = '/analysis/vo2max-estimates';
+const VO2_ROUTE = '/analysis#vo2max-estimates';
+
+async function openVo2Evidence(page: Page): Promise<void> {
+  await expect(page.locator('#vo2max-estimates')).toBeVisible();
+  await expect(page.locator('.vo2max-estimates-v2')).toBeVisible();
+  for (const name of ['race-evidence', 'calculation-details', 'history-disclosure']) {
+    const disclosure = page.locator(`.vo2max-estimates-v2__${name}`);
+    // With no current estimate the race table and working are already expanded; only history remains a disclosure.
+    if (name !== 'history-disclosure' && await disclosure.count() === 0) continue;
+    await expect(disclosure).toBeVisible();
+    if (!(await disclosure.evaluate(node => (node as HTMLDetailsElement).open))) {
+      await disclosure.locator(':scope > summary').click();
+    }
+  }
+}
+
+
 const racesTable = (page: Page): Locator => page.getByRole('table', { name: /^Your races, newest first/ });
 const historySection = (page: Page): Locator => page.locator('.vo2max-estimates-v2__history');
 const historyChart = (page: Page): Locator => historySection(page).getByRole('slider', { name: /^Your VO2max after/ });
@@ -324,9 +349,11 @@ test.describe('A8 and A9: a later run with a higher heart rate changes nothing b
 
   test('A9-E4 the points of the line up to the later run are the same for both runners, and the number now is not', async ({ browser, baseURL, guard }) => {
     const first = await pages.open(browser, baseURL, guard, whoOf(plain), VO2_ROUTE);
+    await openVo2Evidence(first);
     await expect(historySection(first)).toBeVisible();
     await rangeChip(first, 'All').click();
     const second = await pages.open(browser, baseURL, guard, whoOf(later), VO2_ROUTE);
+    await openVo2Evidence(second);
     await expect(historySection(second)).toBeVisible();
     await rangeChip(second, 'All').click();
 
@@ -341,7 +368,9 @@ test.describe('A8 and A9: a later run with a higher heart rate changes nothing b
 
   test('A8-E3 the number before the race and the number its time gives are the same for both runners', async ({ browser, baseURL, guard }) => {
     const first = await pages.open(browser, baseURL, guard, whoOf(plain), VO2_ROUTE);
+    await openVo2Evidence(first);
     const second = await pages.open(browser, baseURL, guard, whoOf(later), VO2_ROUTE);
+    await openVo2Evidence(second);
     for (const page of [first, second]) await expect(racesTable(page).locator('tbody tr')).toHaveCount(1);
     const cells = async (page: Page): Promise<string[]> => racesTable(page).locator('tbody tr').first().locator('td').allTextContents();
 
@@ -372,6 +401,7 @@ test.describe('A8 races against the number: after the runner has changed a race'
 
   test('A8-F3 a race the runner renames on its page has the new name on the VO2max page when they go back', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, whoOf(made), VO2_ROUTE);
+    await openVo2Evidence(page);
     await expect(racesTable(page).locator('tbody tr')).toHaveCount(2);
     await nameCell(page, 'E2E a8f spring ten').getByRole('link').click();
     await expect(page).toHaveURL(new RegExp(`/runs/${ids[2]}$`));
@@ -382,6 +412,7 @@ test.describe('A8 races against the number: after the runner has changed a race'
     await drawer.getByRole('button', { name: 'Save changes' }).click();
     await expect(page.getByText('Run saved.')).toBeVisible();
     await page.goBack();
+    await openVo2Evidence(page);
 
     await expect(racesTable(page).locator('tbody tr')).toHaveCount(2);
     await expect(nameCell(page, 'E2E a8f spring ten renamed')).toHaveCount(1);
@@ -390,6 +421,7 @@ test.describe('A8 races against the number: after the runner has changed a race'
 
   test('A8-F4 a race the runner deletes from the list of runs is not on the VO2max page when they go back, and nor is its point', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, whoOf(made), VO2_ROUTE);
+    await openVo2Evidence(page);
     await expect(racesTable(page).locator('tbody tr')).toHaveCount(2);
     await rangeChip(page, 'All').click();
     const points = await historyDots(page).count();
@@ -405,6 +437,7 @@ test.describe('A8 races against the number: after the runner has changed a race'
     await page.goBack();
 
     await expect(page).toHaveURL(new RegExp(`${VO2_ROUTE}$`));
+    await openVo2Evidence(page);
     await expect(racesTable(page).locator('tbody tr')).toHaveCount(1);
     await expect(nameCell(page, 'E2E a8f club five')).toHaveCount(0);
     await rangeChip(page, 'All').click();
@@ -430,6 +463,7 @@ test.describe('A9 the average of the number', () => {
     expect(Math.abs((expected?.value as number) - meanOfPoints(points)), 'the case tells days from points').toBeGreaterThan(0.5);
 
     const page = await pages.open(browser, baseURL, guard, whoOf(made), VO2_ROUTE);
+    await openVo2Evidence(page);
     await expect(historySection(page)).toBeVisible();
     await expectAverage(readingOf(page, 'Average'), expected);
     // It lies between the lowest and the highest firm numbers, and the table of the years says the same of the year.
@@ -464,6 +498,7 @@ test.describe('A9 the average of a year', () => {
     expect(expected?.days).toBeLessThan(9);
 
     const page = await pages.open(browser, baseURL, guard, whoOf(made), VO2_ROUTE);
+    await openVo2Evidence(page);
     await expect(historySection(page)).toBeVisible();
     const line = yearsTable(page).locator('tbody tr').filter({ has: page.locator('th', { hasText: /^2025$/ }) });
     await expectAverage(line.locator('td').nth(1), expected);
@@ -491,6 +526,7 @@ test.describe('A8 and A9: names, years and size', () => {
       const page = await pages.open(browser, baseURL, guard, whoOf(made), null);
       await page.setViewportSize({ width, height: 900 });
       await page.goto(VO2_ROUTE);
+      await openVo2Evidence(page);
       await expect(racesTable(page).locator('tbody tr')).toHaveCount(2);
       await expect(racesTable(page).locator('tbody tr').filter({ hasText: 'Münchner' }).locator('td').first()).toContainText('🏃‍♂️');
       await expect(racesTable(page).locator('tbody tr').filter({ hasText: 'quotes' }).locator('td').first()).toHaveText(markup);
@@ -532,6 +568,7 @@ test.describe('A8 and A9: names, years and size', () => {
     expect(rows.map(dayOf).filter((day) => day <= '2026-01-01').sort()).toEqual(['2025-12-31', '2026-01-01']);
 
     const page = await pages.open(browser, baseURL, guard, whoOf(made), VO2_ROUTE);
+    await openVo2Evidence(page);
     await expect(historySection(page)).toBeVisible();
     await expect(yearsTable(page).locator('tbody tr')).toHaveCount(2);
     const line = (year: number): Locator => yearsTable(page).locator('tbody tr').filter({ has: page.locator('th', { hasText: new RegExp(`^${year}$`) }) });
@@ -544,9 +581,16 @@ test.describe('A8 and A9: names, years and size', () => {
   test('A9-E10 a line of one point can be read: the arrows, Home and End stay on it, and the readout is inside the chart', async ({ browser, baseURL, guard }) => {
     test.setTimeout(240_000);
     const made = await newRunner('a9-onepoint');
-    // A run that began a minute ahead of the clock is the last thing there is: no point for today after it, so the line has this one point and no more.
-    await made.api.importRun('a9-only.gpx', gpxRun({ name: 'E2E a9 only run', start: new Date(Date.now() + 60_000), distanceM: 5000, pace: 330, hr: null, shape: 'line' }));
-    const page = await pages.open(browser, baseURL, guard, whoOf(made), VO2_ROUTE);
+    // Keep a real historical run, and pin the browser's Date to its recorded instant. No extra Now point exists at that exact instant;
+    // future runs are intentionally excluded from current fitness and cannot be used to manufacture this geometry.
+    await made.api.importRun('a9-only.gpx', gpxRun({ name: 'E2E a9 only run', start: new Date(Date.now() - 3_600_000), distanceM: 5000, pace: 330, hr: null, shape: 'line' }));
+    const rows = await rowsOf(made.api);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].activityInstant).toMatch(/Z$/);
+    const page = await pages.open(browser, baseURL, guard, whoOf(made), null);
+    await page.clock.setFixedTime(new Date(rows[0].activityInstant as string));
+    await page.goto(VO2_ROUTE);
+    await openVo2Evidence(page);
     const line = historySection(page).getByRole('slider', { name: /^Your VO2max after your run on / });
     await expect(line).toBeVisible();
     await expect(line).toHaveAttribute('aria-valuemax', '0');
@@ -591,6 +635,7 @@ test.describe('A8 and A9: names, years and size', () => {
     await page.route('**/api/activities/analysis', (route) => route.fulfill({ json: runs }));
     const began = Date.now();
     await page.goto(VO2_ROUTE);
+    await openVo2Evidence(page);
     await expect(historySection(page)).toBeVisible({ timeout: 30_000 });
     await expect(historyChart(page)).toBeVisible();
     const opened = Date.now() - began;
@@ -624,6 +669,7 @@ test.describe('A8 and A9: names, years and size', () => {
     const made = await newRunner('a9-keys');
     await importRunSpecs(made.api, [60, 45, 30, 15, 5].map((daysBack): RunSpec => ({ name: `E2E a9k ${daysBack}`, daysBack, km: 5, pace: 300 - daysBack / 5, hr: null })), { wait: false });
     const page = await pages.open(browser, baseURL, guard, whoOf(made), VO2_ROUTE);
+    await openVo2Evidence(page);
     await expect(historyChart(page)).toBeVisible();
     await expect(rangeChip(page, '1 yr')).toHaveAttribute('aria-pressed', 'true');
 
@@ -644,8 +690,6 @@ test.describe('A8 and A9: names, years and size', () => {
 });
 
 test.describe('X the network and the session: slow, gone, expired', () => {
-  const VO2_LOADING = 'Loading your runs...';
-
   test('X-NET1 on a slow network both pages say they are loading, show no error, and then show the numbers', async ({ browser, baseURL, guard }) => {
     test.setTimeout(240_000);
     const made = await newRunner('x-slow');
@@ -656,16 +700,20 @@ test.describe('X the network and the session: slow, gone, expired', () => {
       await route.continue();
     };
     await page.route('**/api/activities/analysis', slow);
-    await page.route('**/api/activities', slow);
 
     await page.goto(VO2_ROUTE);
-    await expect(page.getByRole('status').filter({ hasText: VO2_LOADING })).toHaveCount(1);
-    await expect(page.locator('.vo2max-estimates-v2')).toHaveAttribute('aria-busy', 'true');
+    const analysisLoading = page.locator('[data-loading-state="analysis"]');
+    await expect(analysisLoading.getByRole('status')).toContainText('Loading your analysis');
+    await expect(analysisLoading.locator('[aria-busy="true"]')).toHaveCount(1);
     await expect(page.getByRole('alert')).toHaveCount(0);
+    await openVo2Evidence(page);
     await expect(page.getByRole('heading', { level: 2, name: 'Your VO2max over time' })).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator('.vo2max-estimates-v2')).not.toHaveAttribute('aria-busy', 'true');
+    await expect(analysisLoading).toHaveCount(0);
 
     await page.goto(LOAD_ROUTE);
+    const loadLoading = page.locator('[data-loading-state="analysis-load"]');
+    await expect(loadLoading.getByRole('status')).toContainText('Loading load balance');
+    await expect(loadLoading.locator('[aria-busy="true"]')).toHaveCount(1);
     await expect(page.getByRole('heading', { level: 2, name: 'Acute vs. chronic load' })).toHaveCount(0);
     await expect(page.getByRole('alert')).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 2, name: 'Acute vs. chronic load' })).toBeVisible({ timeout: 20_000 });
@@ -681,17 +729,18 @@ test.describe('X the network and the session: slow, gone, expired', () => {
 
     await page.route('**/api/activities/analysis', (route) => route.abort());
     await page.goto(VO2_ROUTE);
-    await expect(page.getByRole('alert')).toHaveText('Your runs could not be loaded.');
+    await expect(page.getByRole('alert')).toContainText('Unable to load analysis right now.');
     await expect(page.getByRole('heading', { level: 2, name: 'Your VO2max over time' })).toHaveCount(0);
     await page.unroute('**/api/activities/analysis');
     await page.getByRole('button', { name: 'Try again' }).click();
+    await openVo2Evidence(page);
     await expect(page.getByRole('heading', { level: 2, name: 'Your VO2max over time' })).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
 
-    await page.route('**/api/activities', (route) => route.abort());
+    await page.route('**/api/activities/analysis', (route) => route.abort());
     await page.goto(LOAD_ROUTE);
-    await expect(page.getByRole('alert')).toHaveText(/Unable to load analysis right now\./);
-    await page.unroute('**/api/activities');
+    await expect(page.getByRole('alert')).toContainText('Unable to load analysis right now.');
+    await page.unroute('**/api/activities/analysis');
     await page.getByRole('button', { name: 'Try again' }).click();
     await expect(page.getByRole('heading', { level: 2, name: 'Acute vs. chronic load' })).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
@@ -734,7 +783,9 @@ test.describe('A8 and A9: whose runs they are', () => {
     }
     expect(listed.filter((row) => row.runType === 'RACE').map((row) => row.name), `the list the page loads has the race (the run is ${ids[1]}, the patch said ${JSON.stringify(flagged.json)}, the list: ${JSON.stringify(listed.map((row) => [row.id, row.name, row.runType]))})`).toEqual(['E2E mine race']);
     const mine = await pages.open(browser, baseURL, guard, whoOf(racer), VO2_ROUTE);
+    await openVo2Evidence(mine);
     const theirs = await pages.open(browser, baseURL, guard, whoOf(other), VO2_ROUTE);
+    await openVo2Evidence(theirs);
     await expect(racesTable(mine).locator('tbody tr')).toHaveCount(1);
     await expect(racesTable(mine)).toContainText('E2E mine race');
     await expect(mine.locator('body')).not.toContainText('E2E theirs');
@@ -772,6 +823,7 @@ test.describe('X the marks of the charts are visible in every theme', () => {
       const page = await pages.open(browser, baseURL, guard, whoOf(made), null);
       await page.addInitScript((value) => localStorage.setItem('hermes_theme', value), theme);
       await page.goto(VO2_ROUTE);
+      await openVo2Evidence(page);
       await expect(historyChart(page)).toBeVisible();
       await expect(historyChart(page).locator('circle.is-thin')).not.toHaveCount(0);
       await historyChart(page).focus();
@@ -926,7 +978,7 @@ test.describe('X the parts of Load balance: a list at the top that takes the rea
     await expect.poll(() => topOf(page, 'load-fitness')).toBeLessThan(300);
 
     await page.goBack();
-    await expect(page).toHaveURL(/\/training-log$/);
+    await expect(page).toHaveURL(/\/runs#training-log$/);
     await page.goForward();
     await settled(page);
     await expect.poll(() => topOf(page, 'load-fitness'), { message: 'Forward lands on the card again' }).toBeLessThan(300);

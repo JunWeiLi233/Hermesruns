@@ -7,7 +7,7 @@
 // highest from the wrong runs fails. The runs are a week apart (so a run is never exactly 90 days from another, which a change of clocks would
 // move either way) and a few days from where a range begins.
 import type { Locator, Page } from '@playwright/test';
-import { Api, newRunner } from '../fixtures/api.ts';
+import { Api, freshClientAddress, newRunner } from '../fixtures/api.ts';
 import { importRunSpecs, sharedRunner, type RunSpec } from '../fixtures/analysis.ts';
 import { shortDate, utcDay } from '../fixtures/format.ts';
 import { pageOpener } from '../fixtures/pages.ts';
@@ -15,11 +15,31 @@ import { enlargeText, readoutSticksOut } from '../fixtures/reflow.ts';
 import { DAY, averageOver, expectAverage, pointsOf, timeOf, type Point, type Row } from '../fixtures/vo2max.ts';
 import { a11yViolations, contrastProblems, expect, expectNoHorizontalOverflow, expectNoRawKeys, test } from '../fixtures/test.ts';
 
-const ROUTE = '/analysis/vo2max-estimates';
+const ROUTE = '/analysis#vo2max-estimates';
 const pages = pageOpener();
 test.afterEach(() => pages.closeAll());
 
-const rowsOf = async (api: Api): Promise<Row[]> => (await api.get('/api/activities/analysis')).json;
+async function setProfileUnits(api: Api, units: 'metric' | 'imperial' = 'metric'): Promise<void> {
+  const profile = (await api.get('/api/training/me')).json;
+  if (profile.units === units) return;
+  const saved = await api.request('PATCH', '/api/training/me', {
+    body: { units }, headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  });
+  expect(saved.status).toBe(200);
+}
+
+test.beforeEach(async () => {
+  // Fixture imports use their own budget; each independent case starts with a fresh synthetic client.
+  runner.api.clientIp = freshClientAddress();
+  await setProfileUnits(runner.api);
+});
+
+const rowsOf = async (api: Api): Promise<Row[]> => {
+  const response = await api.get('/api/activities/analysis');
+  expect(response.status, 'analysis activity list status').toBe(200);
+  expect(Array.isArray(response.json), 'analysis returns the owner activity list').toBe(true);
+  return response.json;
+};
 
 const section = (page: Page): Locator => page.locator('.vo2max-estimates-v2__history');
 const chart = (page: Page): Locator => section(page).getByRole('slider', { name: /^Your VO2max after/ });
@@ -54,8 +74,17 @@ test.beforeAll(async () => {
   });
 });
 
+async function openEvidence(page: Page): Promise<void> {
+  const disclosure = page.locator('.vo2max-estimates-v2__history-disclosure');
+  await expect(disclosure).toBeVisible();
+  if (!(await disclosure.evaluate(node => (node as HTMLDetailsElement).open))) {
+    await disclosure.locator(':scope > summary').click();
+  }
+}
+
 async function openPage(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1, name: 'VO2max estimates' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'VO2max estimates', exact: true })).toBeVisible();
+  await openEvidence(page);
   await expect(page.getByRole('heading', { level: 2, name: 'Your VO2max over time' })).toBeVisible();
 }
 
@@ -211,7 +240,7 @@ test.describe('A9 your VO2max over time: runners it has little to say to', () =>
   test('A9-E2 a runner with no run has no such section, and the page says what it said before', async ({ browser, baseURL, guard }) => {
     const none = await newRunner('a9-none');
     const page = await pages.open(browser, baseURL, guard, { token: none.api.token as string, email: none.email }, ROUTE);
-    await expect(page.getByRole('heading', { level: 2, name: 'No run gives an estimate yet' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Import a few runs before this page can act like a coach' })).toBeVisible();
     await expect(page.getByRole('heading', { level: 2, name: 'Your VO2max over time' })).toHaveCount(0);
   });
 
@@ -237,6 +266,7 @@ test.describe('A9 your VO2max over time: runners it has little to say to', () =>
 test.describe('A9 your VO2max over time: in other conditions', () => {
   test('A9-U1 in miles the distance of a year is in miles', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
+    await setProfileUnits(runner.api, 'imperial');
     await page.addInitScript(() => localStorage.setItem('hermes_unit', 'mile'));
     await page.goto(ROUTE);
     await openPage(page);
@@ -251,6 +281,7 @@ test.describe('A9 your VO2max over time: in other conditions', () => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(ROUTE);
+    await openEvidence(page);
     await expect(page.getByRole('heading', { level: 2, name: '你的 VO2max 随时间的变化' })).toBeVisible();
     const today = pointsOf(await rowsOf(runner.api)).at(-1) as Point;
 
@@ -427,7 +458,7 @@ test.describe('A9 your VO2max over time: reading one point of the line', () => {
       await expect(ring).toHaveAttribute('cy', (await dots(page).nth(nearest).getAttribute('cy')) as string);
       await expect(chart(page).locator('line.vo2max-estimates-v2__history-cross')).toHaveAttribute('x1', (await dots(page).nth(nearest).getAttribute('cx')) as string);
     }
-    await page.getByRole('heading', { level: 1, name: 'VO2max estimates' }).hover();
+    await page.getByRole('heading', { level: 2, name: 'VO2max estimates', exact: true }).hover();
     await expect(readout(page)).toHaveCount(0);
   });
 
@@ -435,6 +466,7 @@ test.describe('A9 your VO2max over time: reading one point of the line', () => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(ROUTE);
+    await openEvidence(page);
     await expect(page.getByRole('heading', { level: 2, name: '你的 VO2max 随时间的变化' })).toBeVisible();
     await section(page).getByRole('group', { name: '时间范围' }).getByRole('button', { name: '全部', exact: true }).click();
     const line = section(page).getByRole('slider', { name: /^每次跑步之后的 VO2max/ });

@@ -62,6 +62,7 @@ class ExplorerBackendIntegrationTests {
     record Session(String cookie,String csrf) {}
     @BeforeAll void migrate() {
         assertThat(System.getenv("EXPLORER_TEST_JDBC_URL")).matches("jdbc:postgresql://127\\.0\\.0\\.1:[0-9]+/explorer_backend_test");
+        jdbc.execute("DROP SCHEMA IF EXISTS statshunters CASCADE");
         new ResourceDatabasePopulator(new ClassPathResource("explorer-migrations/V001__explorer_r0_r1.sql")).execute(dataSource);
     }
     @BeforeEach void setup() {

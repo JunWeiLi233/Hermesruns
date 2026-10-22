@@ -8,6 +8,7 @@ import zh from '../i18n/locales/zh-CN';
 import Runs from './runs/Runs';
 import Shoes from './shoes/Shoes';
 import Analysis from './analysis/Analysis';
+import { historyPageFixture } from './runs/__tests__/historyPageFixture';
 
 const state = vi.hoisted(() => ({ lang: 'en' }));
 const dictionary = () => state.lang === 'en' ? en : zh;
@@ -26,13 +27,13 @@ vi.mock('../utils/routePreload', () => ({ preloadRoute: vi.fn() }));
 vi.mock('../features/training/integrated/AthleteTools', () => ({ RunsTrainingTools: () => null, AnalysisTrainingTools: () => null }));
 
 const pages = [
-  { name: 'Runs', Component: Runs, path: '/runs', endpoint: '/api/activities', error: 'runs.load_error', empty: 'runs.awaiting_title_disconnected' },
+  { name: 'Runs', Component: Runs, path: '/runs', endpoint: '/api/activities/page?', error: 'runs.load_error', empty: 'runs.awaiting_title_disconnected' },
   { name: 'Shoes', Component: Shoes, path: '/shoes', endpoint: '/api/shoes?includeRetired=true', error: 'shoes.load_error', empty: 'shoes.stitch_inventory_empty' },
   { name: 'Analysis', Component: Analysis, path: '/analysis', endpoint: '/api/activities/analysis', error: 'analysis.stitch_load_error', empty: 'analysis.stitch_empty_title' },
 ];
 let served;
 let critical;
-const callsFor = endpoint => apiJson.mock.calls.filter(([url]) => url === endpoint);
+const callsFor = endpoint => apiJson.mock.calls.filter(([url]) => endpoint.endsWith('?') ? url.startsWith(endpoint) : url === endpoint);
 function open(page) {
   critical = page.endpoint;
   return render(<MemoryRouter initialEntries={[page.path]}><page.Component /></MemoryRouter>);
@@ -47,8 +48,9 @@ beforeEach(() => {
   clearResourceCache();
   apiJson.mockReset();
   apiJson.mockImplementation(async url => {
-    if (url === critical) {
+    if (url === critical || critical?.endsWith('?') && url.startsWith(critical)) {
       if (served instanceof Error) throw served;
+      if (critical.endsWith('?')) return served instanceof Promise ? served.then(historyPageFixture) : historyPageFixture(served);
       return served;
     }
     if (url === '/api/profile/me') return { displayName: 'Runner', timeZone: 'UTC' };

@@ -10,13 +10,14 @@ import { useI18n } from '../../contexts/I18nContext';
 import { apiFetch, apiJson, getBackendBaseUrl } from '../../api';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import { withRequestDeadline } from '../../api/requestDeadline';
+import { ACTIVITY_HISTORY_SEARCH_LIMIT, appendActivityHistoryRuns, fetchActivityHistoryPage } from '../../api/activityHistoryApi';
 import { waitWhileDocumentHidden } from '../../utils/pageVisibility';
 import AppIcon from '../../components/AppIcon';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
 import PageSkeleton from '../../components/PageSkeleton';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import { formatDistance, formatDuration, formatPace } from '../../utils/format';
-import { accountWeekStart, activityCalendarSortTime, activitySortTime, calendarDate, formatActivityTime, getAccountDate, getActivityCalendarDate, getActivityDateKey } from '../../utils/timeZone';
+import { accountWeekStart, activityCalendarSortTime, activitySortTime, calendarDate, formatActivityTime, getActivityCalendarDate, getActivityDateKey } from '../../utils/timeZone';
 import { useAccountDate } from '../../hooks/useAccountDate';
 import HermesLogo from '../../components/HermesLogo';
 import Modal from '../../components/Modal';
@@ -41,6 +42,7 @@ const sortRecentRuns = (runs) => {
   const sortTime = runs.some((run) => !run.activityInstant) ? activityCalendarSortTime : activitySortTime;
   return runs.sort((a, b) => sortTime(b) - sortTime(a));
 };
+const UNDATED_KEY = 'undated';
 
 function localizeStravaSyncMessage(message, t) {
   const raw = String(message || '').trim();
@@ -533,8 +535,9 @@ function RunRow({ run, t, lang, routePreviewFallbacks, routeBboxes, onOpen, onDe
   const distanceKm = Number(run.distanceKm || 0);
   const movingTimeSeconds = Number(run.movingTimeSeconds || 0);
   const distanceText = formatDistance(distanceKm, 1, lang);
-  const paceText = formatPace(distanceKm, movingTimeSeconds, lang);
-  const movingTimeText = formatDuration(movingTimeSeconds);
+  const hasTime = movingTimeSeconds > 0;
+  const paceText = hasTime && distanceKm > 0 ? formatPace(distanceKm, movingTimeSeconds, lang) : '--';
+  const movingTimeText = hasTime ? formatDuration(movingTimeSeconds) : '--';
 
   return (
     <div className="recent-runs-card-shell runs-ledger-row-shell">
@@ -578,20 +581,43 @@ const RUNS_WEEKLY_VOLUME_WEEKS = 12;
 const Runs = memo(function Runs() {
   const recommendationRevision = useRecommendationRevision();
   const { isAuthenticated, email } = useAuth();
+  const runsIdentity = canonicalizeRunsCacheEmail(email);
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
-  const [profile, setProfile] = useState(null);
+  const [accountMetadata, setAccountMetadata] = useState({ identity: null, profile: null, stravaStatus: null });
+  // Scope rendered metadata before effects run, so a new account's first Day
+  // query cannot inherit the previous account's timezone or linked state.
+  const profile = accountMetadata.identity === runsIdentity ? accountMetadata.profile : null;
+  const stravaStatus = accountMetadata.identity === runsIdentity ? accountMetadata.stravaStatus : null;
+  const setProfile = useCallback((value) => {
+    setAccountMetadata(current => ({
+      identity: runsIdentity,
+      profile: value,
+      stravaStatus: current.identity === runsIdentity ? current.stravaStatus : null,
+    }));
+  }, [runsIdentity]);
+  const setStravaStatus = useCallback((value) => {
+    setAccountMetadata(current => ({
+      identity: runsIdentity,
+      profile: current.identity === runsIdentity ? current.profile : null,
+      stravaStatus: typeof value === 'function' ? value(current.identity === runsIdentity ? current.stravaStatus : null) : value,
+    }));
+  }, [runsIdentity]);
   const accountToday = useAccountDate(profile?.timeZone);
   const [allRuns, setAllRuns] = useState([]);
+  const [historyPage, setHistoryPage] = useState(null);
+  const [historyFacets, setHistoryFacets] = useState(null);
+  const [historyPending, setHistoryPending] = useState(true);
+  const [moreState, setMoreState] = useState('idle');
+  const historyRequestRef = useRef({ rows: [], page: null, pending: false, cursors: new Set() });
   const [searchQuery, setSearchQuery] = useState('');
   const [loadState, setLoadState] = useState('loading');
   const [activeMode, setActiveMode] = useState('all');
   const [selectedYear, setSelectedYear] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [runsSort, setRunsSort] = useState('date');
-  const [stravaStatus, setStravaStatus] = useState(null);
   const [stravaLinking, setStravaLinking] = useState(false);
   const [integrationNotice, setIntegrationNotice] = useState('');
   const [integrationNoticeTone, setIntegrationNoticeTone] = useState('info');
@@ -618,9 +644,25 @@ const Runs = memo(function Runs() {
   if (runsLoadGenerationRef.current === null) {
     runsLoadGenerationRef.current = createRunsLoadGeneration();
   }
-  const runsIdentity = canonicalizeRunsCacheEmail(email);
   const runsMetadataRef = useRef({ identity: null, profile: null, stravaStatus: null });
+  const handledRecommendationRevisionRef = useRef(0);
   const loadMoreSentinelRef = useRef(null);
+  const effectiveYear = selectedYear ?? (activeMode === 'year' ? historyFacets?.years[0] : null) ?? Number(accountToday.slice(0, 4));
+  const availableMonths = historyFacets?.monthsByYear?.[effectiveYear] || [];
+  const effectiveMonth = selectedMonth ?? (availableMonths.length ? availableMonths[availableMonths.length - 1] - 1 : null);
+  const defaultRunName = t('runs.default_run_name');
+  const queryYear = activeMode === 'year' || activeMode === 'month' ? effectiveYear : null;
+  const queryMonth = activeMode === 'month' && effectiveMonth != null ? effectiveMonth + 1 : null;
+  const queryDay = activeMode === 'day' ? accountToday : null;
+  const historyQuery = useMemo(() => ({
+    sort: runsSort,
+    defaultName: defaultRunName,
+    ...(queryYear != null ? { year: queryYear } : {}),
+    ...(queryMonth != null ? { month: queryMonth } : {}),
+    ...(queryDay ? { day: queryDay } : {}),
+    search: searchQuery.trim(),
+  }), [defaultRunName, queryDay, queryMonth, queryYear, runsSort, searchQuery]);
+  const isWholeHistoryQuery = !historyQuery.year && !historyQuery.month && !historyQuery.day && !historyQuery.search;
 
   const toggleMonthFold = useCallback((monthKey) => {
     setCollapsedMonthKeys((current) => {
@@ -676,6 +718,11 @@ const Runs = memo(function Runs() {
     const controller = new AbortController();
     runsLoadControllerRef.current = controller;
     const isCurrentLoad = () => runsLoadGenerationRef.current.isCurrent(loadToken);
+    historyRequestRef.current = { rows: [], page: null, pending: true, cursors: new Set(), token: loadToken };
+    setHistoryPending(true);
+    setHistoryPage(null);
+    setMoreState('idle');
+    setVisibleRunsCount(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
     setLoadState((current) => current === 'error' ? 'loading' : current);
     const cachedHit = readRunsCache(localStorage, email, Date.now());
 
@@ -691,6 +738,8 @@ const Runs = memo(function Runs() {
       setLoadState('ready');
       // Route-previews are deferred to the post-paint idle effect so the
       // activities list can commit before the preview batch contends on wake.
+    } else {
+      setAllRuns([]);
     }
 
     if (!isCurrentLoad()) return;
@@ -707,16 +756,15 @@ const Runs = memo(function Runs() {
       : (cachedHit?.stravaStatus ?? null);
     let runsFailed = false;
 
-    const runsPromise = withRequestDeadline((signal) => cachedApiJson('/api/activities', { signal }), controller.signal)
+    const runsPromise = withRequestDeadline((signal) => fetchActivityHistoryPage(historyQuery, null, { signal }), controller.signal)
       .then((data) => {
         if (!isCurrentLoad()) return;
-        if (!Array.isArray(data) || data.some((run) => !run || typeof run !== 'object' || Array.isArray(run))) {
-          invalidateResourceCache('/api/activities');
-          throw new Error('Invalid activity list');
-        }
-        const list = data;
-        sortRecentRuns(list);
+        const list = appendActivityHistoryRuns([], data.items);
         latestRuns = list;
+        historyRequestRef.current = { rows: list, page: data, pending: false, cursors: new Set(data.nextCursor ? [data.nextCursor] : []), token: loadToken };
+        setHistoryPage(data);
+        setHistoryFacets(data);
+        setHistoryPending(false);
         setAllRuns(list);
         setLoadState('ready');
         // Route-previews deferred until after the activities list paints.
@@ -724,8 +772,10 @@ const Runs = memo(function Runs() {
       .catch((err) => {
         if (!isCurrentLoad()) return;
         runsFailed = true;
+        historyRequestRef.current.pending = false;
+        setHistoryPending(false);
         if (err && err.message !== 'Unauthorized') {
-          setLoadState((prev) => (prev === 'ready' ? prev : 'error'));
+          setLoadState('error');
         }
       });
 
@@ -748,25 +798,70 @@ const Runs = memo(function Runs() {
       .catch(() => {});
 
     await Promise.allSettled([runsPromise, profilePromise, stravaPromise]);
+    // Continuation can finish before optional metadata arrives. Cache the
+    // complete current generation rather than only its original first page.
+    if (isCurrentLoad() && latestRuns) latestRuns = historyRequestRef.current.rows;
     // The slim cache only needs the runs payload; profile/strava fall back to
     // the values seeded above (cache/metadata) when their endpoints fail, so
     // a flaky side endpoint no longer blocks cache refreshes.
-    if (isCurrentLoad() && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null) {
-      writeRunsCache(localStorage, email, latestRuns, latestProfile, latestStrava, Date.now());
+    if (isCurrentLoad() && !runsFailed && latestRuns && latestProfile !== null && latestStrava !== null
+      && isWholeHistoryQuery && !historyRequestRef.current.page?.hasMore
+      && latestRuns.length === historyRequestRef.current.page?.totalCount) {
+      writeRunsCache(localStorage, email, latestRuns, latestProfile, latestStrava, Date.now(), { complete: true, sourceCount: historyRequestRef.current.page.totalCount });
     }
-  }, [email, runsIdentity]);
+  }, [email, historyQuery, isWholeHistoryQuery, runsIdentity, setProfile, setStravaStatus]);
+
+  const loadNextHistoryPage = useCallback(async () => {
+    const request = historyRequestRef.current;
+    if (request.pending || !request.page?.hasMore || !request.page.nextCursor) return;
+    request.pending = true;
+    const cursor = request.page.nextCursor;
+    const token = request.token;
+    const controller = runsLoadControllerRef.current;
+    const isCurrentLoad = () => historyRequestRef.current === request && runsLoadGenerationRef.current.isCurrent(token) && !controller?.signal.aborted;
+    setMoreState('loading');
+    try {
+      const data = await withRequestDeadline((signal) => fetchActivityHistoryPage(historyQuery, cursor, { signal }), controller?.signal);
+      if (!isCurrentLoad()) return;
+      if (data.nextCursor && request.cursors.has(data.nextCursor)) throw new Error('Activity history cursor did not advance');
+      const list = appendActivityHistoryRuns(request.rows, data.items);
+      if (!data.hasMore && list.length !== data.summary.count) throw new Error('Incomplete terminal history page');
+      if (data.nextCursor) request.cursors.add(data.nextCursor);
+      request.rows = list;
+      request.page = data;
+      setAllRuns(list);
+      setHistoryPage(data);
+      setVisibleRunsCount((current) => Math.max(current, list.length));
+      setMoreState('idle');
+      const metadata = runsMetadataRef.current;
+      if (isWholeHistoryQuery && !data.hasMore && list.length === data.totalCount && metadata.profile !== null && metadata.stravaStatus !== null) {
+        writeRunsCache(localStorage, email, list, metadata.profile, metadata.stravaStatus, Date.now(), { complete: true, sourceCount: data.totalCount });
+      }
+    } catch (error) {
+      if (isCurrentLoad()) setMoreState(error?.status === 409 ? 'changed' : 'error');
+    } finally {
+      if (isCurrentLoad()) request.pending = false;
+    }
+  }, [email, historyQuery, isWholeHistoryQuery]);
 
   const refreshRuns = useCallback(() => {
     runsLoadGenerationRef.current.invalidate();
     resetRoutePreviewState();
     setRoutePreviewFallbacks({});
     setRouteBboxes({});
+    invalidateRunsCache(localStorage, email);
     return loadRuns();
-  }, [loadRuns, resetRoutePreviewState]);
+  }, [email, loadRuns, resetRoutePreviewState]);
 
   useEffect(() => {
     runsLoadGenerationRef.current.invalidate();
     runsMetadataRef.current = { identity: runsIdentity, profile: null, stravaStatus: null };
+    setAccountMetadata({ identity: runsIdentity, profile: null, stravaStatus: null });
+    setHistoryFacets(null);
+    setIntegrationNotice('');
+    setIntegrationNoticeTone('info');
+    setStravaLinking(false);
+    setDeleteTarget(null);
   }, [runsIdentity]);
 
   useEffect(() => {
@@ -783,6 +878,8 @@ const Runs = memo(function Runs() {
   }, [isAuthenticated, navigate, loadRuns]);
 
   useEffect(() => {
+    if (handledRecommendationRevisionRef.current === recommendationRevision) return;
+    handledRecommendationRevisionRef.current = recommendationRevision;
     if (isAuthenticated && recommendationRevision > 0) refreshRuns();
   }, [isAuthenticated, refreshRuns, recommendationRevision]);
 
@@ -834,7 +931,7 @@ const Runs = memo(function Runs() {
 
     await refreshRuns();
     return null;
-  }, [refreshRuns, runsIdentity, t]);
+  }, [refreshRuns, runsIdentity, setStravaStatus, t]);
 
   async function handleStravaConnect() {
     setStravaLinking(true);
@@ -861,6 +958,9 @@ const Runs = memo(function Runs() {
   }
 
   const filteredRuns = useMemo(() => {
+    // Browse pages already have the complete-history filter and ordering.
+    // Only a verified complete cache snapshot is filtered in the browser.
+    if (historyPage) return allRuns;
     const now = calendarDate(accountToday);
     let result = [...allRuns];
 
@@ -870,15 +970,15 @@ const Runs = memo(function Runs() {
     }
 
     if (activeMode === 'year') {
-      if (selectedYear != null) {
-        result = result.filter((run) => runDate(run).getUTCFullYear() === selectedYear);
+      if (effectiveYear != null) {
+        result = result.filter((run) => runDate(run).getUTCFullYear() === effectiveYear);
       }
     } else if (activeMode === 'month') {
-      const year = selectedYear || now.getUTCFullYear();
+      const year = effectiveYear || now.getUTCFullYear();
       result = result.filter((run) => {
         const date = runDate(run);
         if (date.getUTCFullYear() !== year) return false;
-        return selectedMonth == null ? true : date.getUTCMonth() === selectedMonth;
+        return effectiveMonth == null ? true : date.getUTCMonth() === effectiveMonth;
       });
     } else if (activeMode === 'day') {
       result = result.filter((run) => {
@@ -889,45 +989,45 @@ const Runs = memo(function Runs() {
     if (runsSort === 'distance') {
       result.sort((a, b) => Number(b.distanceKm || 0) - Number(a.distanceKm || 0));
     } else if (runsSort === 'pace') {
+      // Seconds per kilometre over the real distance. A run with no moving time has no pace and goes last, not first.
+      const paceOf = (run) => {
+        const km = Number(run.distanceKm || 0);
+        const seconds = Number(run.movingTimeSeconds || 0);
+        return km > 0 && seconds > 0 ? seconds / km : Number.POSITIVE_INFINITY;
+      };
       result.sort((a, b) => {
-        const paceA = Number(a.movingTimeSeconds || 0) / Math.max(0.1, Number(a.distanceKm || 0));
-        const paceB = Number(b.movingTimeSeconds || 0) / Math.max(0.1, Number(b.distanceKm || 0));
-        return paceA - paceB;
+        const paceA = paceOf(a);
+        const paceB = paceOf(b);
+        if (paceA === paceB) return 0;
+        return paceA < paceB ? -1 : 1;
       });
     } else {
       sortRecentRuns(result);
     }
 
     return result;
-  }, [activeMode, allRuns, selectedMonth, selectedYear, searchQuery, runsSort, t, profile?.timeZone, accountToday]);
+  }, [activeMode, allRuns, historyPage, effectiveMonth, effectiveYear, searchQuery, runsSort, t, profile?.timeZone, accountToday]);
 
   const distinctYears = useMemo(() => {
+    if (historyFacets) return historyFacets.years;
     const years = new Set();
     allRuns.forEach((run) => {
       const date = runDate(run);
       if (!Number.isNaN(date.getTime())) years.add(date.getUTCFullYear());
     });
     return [...years].sort((a, b) => b - a);
-  }, [allRuns]);
+  }, [allRuns, historyFacets]);
 
   const monthsWithData = useMemo(() => {
-    const year = selectedYear || Number(getAccountDate(profile?.timeZone).slice(0, 4));
+    if (historyFacets) return (historyFacets.monthsByYear[effectiveYear] || []).map(month => month - 1);
+    const year = effectiveYear;
     const months = new Set();
     allRuns.forEach((run) => {
       const date = runDate(run);
       if (!Number.isNaN(date.getTime()) && date.getUTCFullYear() === year) months.add(date.getUTCMonth());
     });
     return [...months].sort((a, b) => a - b);
-  }, [allRuns, selectedYear, profile?.timeZone]);
-
-  useEffect(() => {
-    if (activeMode === 'year' && selectedYear == null && distinctYears.length) setSelectedYear(distinctYears[0]);
-    if (activeMode === 'month' && selectedYear == null) setSelectedYear(Number(getAccountDate(profile?.timeZone).slice(0, 4)));
-  }, [activeMode, distinctYears, selectedYear, profile?.timeZone]);
-
-  useEffect(() => {
-    if (activeMode === 'month' && selectedMonth == null && monthsWithData.length) setSelectedMonth(monthsWithData[monthsWithData.length - 1]);
-  }, [activeMode, monthsWithData, selectedMonth]);
+  }, [allRuns, effectiveYear, historyFacets]);
 
   useEffect(() => {
     setVisibleRunsCount(RECENT_RUNS_INITIAL_VISIBLE_COUNT);
@@ -936,19 +1036,20 @@ const Runs = memo(function Runs() {
   const displayName = (profile?.displayName || profile?.email?.split('@')[0] || t('profile.default_name')).trim();
   const initials = displayName.slice(0, 1).toUpperCase();
   const monthNames = t('runs.months').split(',');
-  const isAwaitingData = loadState === 'ready' && allRuns.length === 0;
+  const isAwaitingData = loadState === 'ready' && !historyPending && (historyPage ? historyPage.totalCount === 0 : allRuns.length === 0);
   const stravaLinked = Boolean(stravaStatus?.linked);
   const awaitingTitle = t(stravaLinked ? 'runs.awaiting_title_linked' : 'runs.awaiting_title_disconnected');
   const awaitingCopy = t(stravaLinked ? 'runs.awaiting_copy_linked' : 'runs.awaiting_copy_disconnected');
   const awaitingStatus = integrationNotice || (stravaLinked || !isAwaitingData
     ? formatStravaSyncLabel(stravaStatus, t)
-    : t('runs.awaiting_status_disconnected'));
+    : t(allRuns.length > 0 ? 'runs.status_files_only' : 'runs.awaiting_status_disconnected'));
   const awaitingPrimaryAction = stravaLinking ? t('profile.strava_link_connecting') : t(stravaLinked ? 'runs.awaiting_retry_sync' : 'runs.awaiting_connect_strava');
-  const filteredDistanceKm = filteredRuns.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0);
-  const filteredTimeSeconds = filteredRuns.reduce((sum, run) => sum + Number(run.movingTimeSeconds || 0), 0);
+  const filteredCount = historyPage?.summary.count ?? filteredRuns.length;
+  const filteredDistanceKm = historyPage?.summary.distanceKm ?? filteredRuns.reduce((sum, run) => sum + Number(run.distanceKm || 0), 0);
+  const filteredTimeSeconds = historyPage?.summary.movingTimeSeconds ?? filteredRuns.reduce((sum, run) => sum + Number(run.movingTimeSeconds || 0), 0);
   const totalDistanceText = formatDistance(filteredDistanceKm, 1, lang);
   const totalTimeText = formatDuration(filteredTimeSeconds);
-  const avgPaceText = filteredRuns.length > 0
+  const avgPaceText = filteredCount > 0
     ? formatPace(filteredDistanceKm, filteredTimeSeconds, lang)
     : t('runs.pace_zero');
 
@@ -969,19 +1070,31 @@ const Runs = memo(function Runs() {
   // count and total distance so the header copy can summarize the month at
   // a glance.
   const runsByMonth = useMemo(() => {
+    // Regrouping a metric-sorted list by month would reorder it globally.
+    // One section keeps the complete server order across month/page edges.
+    if (runsSort !== 'date') return [{
+      key: `sort-${runsSort}`,
+      label: t(runsSort === 'distance' ? 'runs.sort_distance' : 'runs.sort_pace'),
+      runs: visibleRuns,
+      count: filteredCount,
+      totalKm: filteredDistanceKm,
+      totalSeconds: filteredTimeSeconds,
+    }];
     const groups = [];
     const groupByKey = new Map();
     const totalsByKey = new Map();
     filteredRuns.forEach((run) => {
       const started = runDate(run);
-      if (Number.isNaN(started.getTime())) return;
-      const key = getActivityDateKey(run).slice(0, 7);
+      const key = Number.isNaN(started.getTime()) ? UNDATED_KEY : getActivityDateKey(run).slice(0, 7);
       const totals = totalsByKey.get(key) || { count: 0, totalKm: 0, totalSeconds: 0 };
       totals.count += 1;
       totals.totalKm += Number(run.distanceKm || 0)
         || (Number(run.distanceMeters || 0) > 0 ? Number(run.distanceMeters) / 1000 : 0);
       totals.totalSeconds += Number(run.movingTimeSeconds || 0);
       totalsByKey.set(key, totals);
+    });
+    historyPage?.monthSummaries.forEach((month) => {
+      totalsByKey.set(month.month, { count: month.count, totalKm: month.distanceKm, totalSeconds: month.movingTimeSeconds });
     });
     const monthLabelFormatter = (() => {
       try {
@@ -992,15 +1105,17 @@ const Runs = memo(function Runs() {
     })();
     visibleRuns.forEach((run) => {
       const started = runDate(run);
-      if (Number.isNaN(started.getTime())) return;
-      const key = getActivityDateKey(run).slice(0, 7);
+      const dated = !Number.isNaN(started.getTime());
+      const key = dated ? getActivityDateKey(run).slice(0, 7) : UNDATED_KEY;
       let group = groupByKey.get(key);
       if (!group) {
         group = {
           key,
-          label: monthLabelFormatter
-            ? monthLabelFormatter.format(started)
-            : key,
+          label: !dated
+            ? t('runs.undated_group')
+            : monthLabelFormatter
+              ? monthLabelFormatter.format(started)
+              : key,
           runs: [],
           ...totalsByKey.get(key),
         };
@@ -1009,22 +1124,25 @@ const Runs = memo(function Runs() {
       }
       group.runs.push(run);
     });
+    // Runs with no date come after every month.
+    groups.sort((a, b) => Number(a.key === UNDATED_KEY) - Number(b.key === UNDATED_KEY));
     return groups;
-  }, [filteredRuns, visibleRuns, lang]);
+  }, [filteredCount, filteredDistanceKm, filteredRuns, filteredTimeSeconds, historyPage, runsSort, visibleRuns, lang, t]);
 
   const activeDaysCount = useMemo(() => {
+    if (historyPage) return historyPage.summary.activeDays;
     const uniqueDays = new Set();
     filteredRuns.forEach((run) => {
       const date = runDate(run);
       if (!Number.isNaN(date.getTime())) uniqueDays.add(date.toISOString().slice(0, 10));
     });
     return uniqueDays.size;
-  }, [filteredRuns]);
+  }, [filteredRuns, historyPage]);
   const longestRun = useMemo(() => (
-    filteredRuns.reduce((best, run) => (Number(run.distanceKm || 0) > Number(best?.distanceKm || 0) ? run : best), null)
-  ), [filteredRuns]);
+    historyPage ? historyPage.summary.longestRun : filteredRuns.reduce((best, run) => (Number(run.distanceKm || 0) > Number(best?.distanceKm || 0) ? run : best), null)
+  ), [filteredRuns, historyPage]);
   const fastestRun = useMemo(() => (
-    filteredRuns.reduce((best, run) => {
+    historyPage ? (historyPage.summary.fastestRun ? { run: historyPage.summary.fastestRun } : null) : filteredRuns.reduce((best, run) => {
       const distanceKm = Number(run.distanceKm || 0);
       const movingTimeSeconds = Number(run.movingTimeSeconds || 0);
       if (distanceKm <= 0 || movingTimeSeconds <= 0) return best;
@@ -1032,7 +1150,7 @@ const Runs = memo(function Runs() {
       if (!best || paceSeconds < best.paceSeconds) return { run, paceSeconds };
       return best;
     }, null)
-  ), [filteredRuns]);
+  ), [filteredRuns, historyPage]);
 
   const [runsView, setRunsView] = useState(() => {
     try { return localStorage.getItem(RUNS_VIEW_STORAGE_KEY) === 'grid' ? 'grid' : 'list'; } catch { return 'list'; }
@@ -1041,6 +1159,7 @@ const Runs = memo(function Runs() {
     try { localStorage.setItem(RUNS_VIEW_STORAGE_KEY, runsView); } catch { /* ignore */ }
   }, [runsView]);
   const weeklyVolume = useMemo(() => {
+    if (historyPage) return historyPage.weeklyDistance.map(week => week.distanceKm);
     const weekMs = 7 * 86400000;
     const todayKey = accountToday;
     const currentWeek = calendarDate(accountWeekStart(todayKey)).getTime();
@@ -1057,7 +1176,7 @@ const Runs = memo(function Runs() {
       }
     });
     return buckets;
-  }, [allRuns, profile?.timeZone, accountToday]);
+  }, [allRuns, historyPage, profile?.timeZone, accountToday]);
   const weeklyPeakKm = Math.max(0, ...weeklyVolume);
 
   const timeFilterOptions = [
@@ -1096,10 +1215,18 @@ const Runs = memo(function Runs() {
     const run = deleteTarget;
     if (!run || deleting) return;
     const deleteScrollPosition = captureRunsScrollPosition(window);
-    runsLoadGenerationRef.current.invalidate();
+    const token = runsLoadGenerationRef.current.begin();
+    runsLoadControllerRef.current?.abort();
+    const controller = new AbortController();
+    runsLoadControllerRef.current = controller;
+    historyRequestRef.current.token = token;
+    historyRequestRef.current.pending = false;
+    setHistoryPending(false);
+    setMoreState('idle');
     setDeleting(true);
     try {
       await apiJson(`/api/activities/${run.id}`, { method: 'DELETE' });
+      if (!runsLoadGenerationRef.current.isCurrent(token)) return;
       resetRoutePreviewState();
       invalidateResourceCache('/api/activities');
       // Optimistically remove from state + clear per-run caches.
@@ -1119,6 +1246,22 @@ const Runs = memo(function Runs() {
       try { localStorage.removeItem(`${ROUTE_BBOX_CACHE_PREFIX}${run.id}`); } catch { /* ignore */ }
       await invalidateHeatmapCache(email);
       invalidateRunsCache(localStorage, email);
+      // Refresh complete aggregates without collapsing the runner's expanded
+      // list. A cursor from before the deletion must be explicitly restarted.
+      try {
+        const data = await withRequestDeadline((signal) => fetchActivityHistoryPage(historyQuery, null, { signal }), controller.signal);
+        if (runsLoadGenerationRef.current.isCurrent(token)) {
+          const request = historyRequestRef.current;
+          request.rows = allRuns.filter(item => item.id !== run.id);
+          const updated = { ...data, hasMore: request.page?.hasMore ?? false, nextCursor: request.page?.nextCursor ?? null };
+          request.page = updated;
+          setHistoryPage(updated);
+          setHistoryFacets(data);
+          if (updated.hasMore) setMoreState('changed');
+        }
+      } catch {
+        if (runsLoadGenerationRef.current.isCurrent(token)) setMoreState('changed');
+      }
       setDeleteTarget(null);
       restoreRunsScrollPosition(window, deleteScrollPosition);
     } catch {
@@ -1203,17 +1346,19 @@ const Runs = memo(function Runs() {
   function renderSecondaryFilterRow() {
     if (activeMode === 'year') {
       return distinctYears.map((year) => (
-        <button key={year} type="button" className={`recent-runs-chip${year === selectedYear ? ' is-active' : ''}`} onClick={() => setSelectedYear(year)} aria-pressed={year === selectedYear}>
+        <button key={year} type="button" className={`recent-runs-chip${year === effectiveYear ? ' is-active' : ''}`} onClick={() => setSelectedYear(year)} aria-pressed={year === effectiveYear}>
           {year}
         </button>
       ));
     }
     if (activeMode === 'month') {
-      return monthsWithData.map((month) => (
-        <button key={month} type="button" className={`recent-runs-chip${month === selectedMonth ? ' is-active' : ''}`} onClick={() => setSelectedMonth(month)} aria-pressed={month === selectedMonth}>
+      return <>
+        {distinctYears.map(year => <button key={`year-${year}`} type="button" className={`recent-runs-chip${year === effectiveYear ? ' is-active' : ''}`} onClick={() => { setSelectedYear(year); setSelectedMonth(null); }} aria-pressed={year === effectiveYear}>{year}</button>)}
+        {monthsWithData.map((month) => (
+        <button key={month} type="button" className={`recent-runs-chip${month === effectiveMonth ? ' is-active' : ''}`} onClick={() => setSelectedMonth(month)} aria-pressed={month === effectiveMonth}>
           {monthNames[month]}
         </button>
-      ));
+      ))}</>;
     }
     return sortOptions.map((option) => (
       <button key={option.key} type="button" className={`recent-runs-chip${runsSort === option.key ? ' is-active' : ''}`} onClick={() => setRunsSort(option.key)} aria-pressed={runsSort === option.key}>
@@ -1490,17 +1635,17 @@ const Runs = memo(function Runs() {
               </div>
             </header>
 
-            <section className="runs-ledger-v2__summary" aria-label={t('runs.stitch_pattern_title')}>
+            <section className="runs-ledger-v2__summary" aria-label={t('runs.stitch_pattern_title')} aria-busy={historyPending}>
               <div className="runs-ledger-v2__figures">
                 <div className="runs-ledger-v2__figure">
                   <span>{t('runs.summary_runs')}</span>
-                  <strong>{filteredRuns.length}</strong>
+                  <strong>{historyPending && !allRuns.length ? '--' : filteredCount}</strong>
                   <small>{t('runs.insight_active_days', { count: activeDaysCount })}</small>
                 </div>
                 <div className="runs-ledger-v2__figure">
                   <span>{t('runs.total_distance')}</span>
                   <strong>{totalDistanceText}</strong>
-                  <small>{filteredRuns.length ? t('runs.summary_avg_distance', { value: formatDistance(filteredDistanceKm / filteredRuns.length, 1, lang) }) : '--'}</small>
+                  <small>{filteredCount ? t('runs.summary_avg_distance', { value: formatDistance(filteredDistanceKm / filteredCount, 1, lang) }) : '--'}</small>
                 </div>
                 <div className="runs-ledger-v2__figure">
                   <span>{t('runs.metric_moving_time')}</span>
@@ -1544,7 +1689,8 @@ const Runs = memo(function Runs() {
                   placeholder={t('runs.search_placeholder')}
                   aria-label={t('runs.search_placeholder')}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  maxLength={ACTIVITY_HISTORY_SEARCH_LIMIT}
+                  onChange={(e) => setSearchQuery(e.target.value.slice(0, ACTIVITY_HISTORY_SEARCH_LIMIT))}
                 />
                 {searchQuery && (
                   <button type="button" className="recent-runs-search-clear" onClick={() => setSearchQuery('')} aria-label={t('runs.clear_search')}>
@@ -1586,13 +1732,14 @@ const Runs = memo(function Runs() {
               </div>
             </section>
 
-            <section className={`recent-runs-card-list runs-ledger-v2__list is-${runsView}`} aria-label={t('runs.full_history')}>
+            <section className={`recent-runs-card-list runs-ledger-v2__list is-${runsView}`} aria-label={t('runs.full_history')} aria-busy={historyPending || moreState === 'loading'}>
               {loadState === 'error' ? <div className="recent-runs-status" role="alert">
                 <p>{t('runs.load_error')}</p>
                 <button type="button" className="runner-shell-inline-btn" onClick={refreshRuns}>{t('analysis.stitch_load_retry')}</button>
               </div> : null}
-              {loadState === 'ready' && filteredRuns.length === 0 ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
-              {loadState === 'ready' && filteredRuns.length > 0 ? (
+              {historyPending ? <p className="recent-runs-pagination-status" role="status">{t('runs.loading')}</p> : null}
+              {loadState === 'ready' && !historyPending && filteredRuns.length === 0 && moreState !== 'changed' ? <div className="recent-runs-status recent-runs-status--empty">{t('runs.empty')}</div> : null}
+              {loadState === 'ready' && (filteredRuns.length > 0 || moreState === 'changed') ? (
                 <>
                   <div className="recent-runs-page-list">
                     {runsByMonth.map((group) => {
@@ -1616,7 +1763,7 @@ const Runs = memo(function Runs() {
                             </span>
                             <span className="recent-runs-month-title">{group.label}</span>
                             <span className="recent-runs-month-meta">
-                              <span>{t('runs.count_label', { count: group.count })}</span>
+                              <span>{t(group.count === 1 ? 'runs.count_label_one' : 'runs.count_label', { count: group.count })}</span>
                               <span>{formatDistance(group.totalKm, 1, lang)}</span>
                               <span>{formatDuration(group.totalSeconds)}</span>
                             </span>
@@ -1634,8 +1781,8 @@ const Runs = memo(function Runs() {
                             ) : null}
                             {group.runs.map((run) => {
                               let badge = null;
-                              if (fastestRun && run === fastestRun.run) badge = t('runs.badge_fastest');
-                              else if (longestRun && run === longestRun) badge = t('runs.badge_longest');
+                              if (fastestRun && String(run.id) === String(fastestRun.run.id)) badge = t('runs.badge_fastest');
+                              else if (longestRun && String(run.id) === String(longestRun.id)) badge = t('runs.badge_longest');
                               return (
                                 <RunRow
                                   key={run.id || `${run.startTime || run.startDate}-${run.name || 'run'}`}
@@ -1646,7 +1793,7 @@ const Runs = memo(function Runs() {
                                   routeBboxes={routeBboxes}
                                   onOpen={openRun}
                                   onDelete={confirmDeleteRun}
-                                  badge={filteredRuns.length > 1 ? badge : null}
+                                  badge={filteredCount > 1 ? badge : null}
                                   groupedByDate={runsSort === 'date'}
                                 />
                               );
@@ -1656,17 +1803,24 @@ const Runs = memo(function Runs() {
                       );
                     })}
                   </div>
-                  {hasMoreRuns ? (
+                  {hasMoreRuns || historyPage ? (
                     <div ref={loadMoreSentinelRef} className="recent-runs-load-more-sentinel" aria-live="polite">
-                      {typeof IntersectionObserver === 'undefined' ? (
+                      {historyPage ? <p className="recent-runs-pagination-status">{t('runs.pagination_count', { shown: visibleRuns.length, total: filteredCount })}</p> : null}
+                      {moreState === 'error' || moreState === 'changed' ? <p className="recent-runs-pagination-error" role="alert">{t(moreState === 'changed' ? 'runs.history_changed' : 'runs.load_more_error')}</p> : null}
+                      {hasMoreRuns || historyPage?.hasMore || moreState === 'changed' ? (
                         <button
                           type="button"
                           className="recent-runs-load-more"
-                          onClick={() => setVisibleRunsCount((current) => Math.min(current + RUNS_RENDER_BATCH_SIZE, filteredRuns.length))}
+                          disabled={historyPending || moreState === 'loading'}
+                          onClick={() => {
+                            if (moreState === 'changed') { refreshRuns(); return; }
+                            if (hasMoreRuns) setVisibleRunsCount((current) => Math.min(current + RUNS_RENDER_BATCH_SIZE, filteredRuns.length));
+                            else loadNextHistoryPage();
+                          }}
                         >
-                          {t('runs.load_more')}
+                          {t(moreState === 'loading' ? 'runs.loading_more' : moreState === 'changed' ? 'runs.refresh_history' : moreState === 'error' ? 'runs.retry_load_more' : 'runs.load_more')}
                         </button>
-                      ) : <span>{t('runs.loading')}</span>}
+                      ) : !historyPending ? <span>{t('runs.history_end')}</span> : null}
                     </div>
                   ) : null}
                 </>

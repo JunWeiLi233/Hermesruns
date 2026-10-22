@@ -15,7 +15,7 @@ final class CoachPlanAdjustment {
         if(distance<=0)return plan;
         var easy=plan.sessions().stream().filter(s->s.workoutType()==CoachWorkoutType.EASY||s.workoutType()==CoachWorkoutType.RECOVERY)
                 .filter(s->s.targetPaceMinSecondsPerKm()!=null).findFirst().orElse(null);
-        var adjusted=new PersonalizedRunningPlanner.PlannedSession(today.date(),CoachWorkoutType.RECOVERY,distance,
+        var adjusted=new PlannedSession(today.date(),CoachWorkoutType.RECOVERY,distance,
                 today.durationMinutes()==null?null:Math.max(1,(int)Math.floor(today.durationMinutes()*0.75)),false,
                 today.phase(),"recovery","manual_ease",easy==null?null:easy.targetPaceMinSecondsPerKm(),
                 easy==null?null:easy.targetPaceMaxSecondsPerKm(),today.workoutType(),true);
@@ -31,7 +31,7 @@ final class CoachPlanAdjustment {
         var weeklySessions = plan.weeklySessions().stream().map(s -> {
             if (!s.date().equals(today.date()) || s.distanceKm() == null) return s;
             double km = Math.max(0, Math.round((s.distanceKm() - today.distanceKm() + distance) * 10) / 10d);
-            return new PersonalizedRunningPlanner.PlannedSession(s.date(), km > 0 ? CoachWorkoutType.RECOVERY : CoachWorkoutType.REST,
+            return new PlannedSession(s.date(), km > 0 ? CoachWorkoutType.RECOVERY : CoachWorkoutType.REST,
                     km > 0 ? km : null,
                     s.durationMinutes() == null || km <= 0 ? null : Math.max(1, (int) Math.floor(s.durationMinutes() * km / s.distanceKm())),
                     false, s.phase(), km > 0 ? "recovery" : "rest", "manual_ease", adjusted.targetPaceMinSecondsPerKm(),

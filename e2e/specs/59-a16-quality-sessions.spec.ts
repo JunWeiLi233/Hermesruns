@@ -6,16 +6,24 @@
 // middle pace of the sessions and of the other runs, and the order of the table. So a page that counted a run of the wrong type, took the wrong period, divided by the wrong
 // number of weeks or sorted the table by the wrong thing fails.
 import type { Locator, Page } from '@playwright/test';
-import { Api, newRunner } from '../fixtures/api.ts';
+import { Api, freshClientAddress, newRunner } from '../fixtures/api.ts';
 import { KM_PER_MILE, importRunSpecs, sharedRunner, type RunSpec } from '../fixtures/analysis.ts';
 import { addDays, addMonths, hms, mmss, shortDate } from '../fixtures/format.ts';
 import { pageOpener } from '../fixtures/pages.ts';
+import { expandRunLabels } from '../fixtures/run-labels.ts';
 import { elementsBeyondTheEdge, enlargeText, readingsThatCollide } from '../fixtures/reflow.ts';
 import { browserToday } from '../fixtures/strain.ts';
 import { a11yViolations, contrastProblems, expect, expectNoRawKeys, test } from '../fixtures/test.ts';
 
 const ROUTE = '/analysis/quality-sessions';
 const pages = pageOpener();
+async function setProfileUnits(api: Api, units: 'metric' | 'imperial' = 'metric'): Promise<void> {
+  const profile = (await api.get('/api/training/me')).json;
+  if (profile.units === units) return;
+  expect((await api.request('PATCH', '/api/training/me', {
+    body: { units }, headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  })).status).toBe(200);
+}
 test.afterEach(() => pages.closeAll());
 
 const KINDS = ['workout', 'race', 'long'] as const;
@@ -174,19 +182,22 @@ function tilesOf(found: Found, range: Range, unit: Unit = 'km'): string[][] {
 }
 
 // ---- the page
-const heading = (page: Page): Locator => page.getByRole('heading', { level: 1, name: 'Quality sessions' });
+const heading = (page: Page): Locator => page.getByRole('heading', { level: 2, name: 'Quality sessions', exact: true });
 const body = (page: Page): Locator => page.locator('.quality-sessions-v2');
-const reads = (page: Page): Locator => page.getByRole('group', { name: 'Readings for the period' });
+const reads = (page: Page): Locator => page.locator('.quality-sessions-v2__full-details').getByRole('group', { name: 'Readings for the period' });
 const table = (page: Page): Locator => page.getByRole('table', { name: 'The quality sessions of the period, newest first' });
 const bodyRows = (page: Page): Locator => table(page).locator('tbody tr');
 const chip = (page: Page, group: string, label: string): Locator => page.getByRole('group', { name: group, exact: true }).getByRole('button', { name: label, exact: true });
 const TYPES = 'Counts as a quality session';
 const emptyHeading = (page: Page): Locator => page.getByRole('heading', { level: 2, name: 'No quality session in this period' });
-const methodsLink = (page: Page): Locator => page.getByRole('link', { name: 'How it is worked out' });
+const methodsLink = (page: Page): Locator => body(page).getByRole('link', { name: 'How it is worked out' });
 
 /** The page has drawn what it has to say: its heading, and the link that says how it is worked out (which comes with the choices, whether or not there is a session to list). */
 async function openPage(page: Page): Promise<void> {
   await expect(heading(page)).toBeVisible();
+  await expect(page).toHaveURL(/\/analysis\/intensity(?:\?[^#]*)?#quality-sessions$/);
+  const disclosure = body(page).locator('.intensity-quality-methods');
+  if (await disclosure.getAttribute('open') === null) await disclosure.locator(':scope > summary').click();
   await expect(methodsLink(page)).toBeVisible();
 }
 
@@ -235,6 +246,7 @@ const FIXTURE: RunSpec[] = Array.from({ length: 45 }, (_, k): RunSpec => {
 });
 
 let runner: Awaited<ReturnType<typeof sharedRunner<null>>>;
+test.beforeEach(async () => { runner.api.clientIp = freshClientAddress(); await setProfileUnits(runner.api); });
 
 test.beforeAll(async () => {
   test.setTimeout(900_000);
@@ -264,7 +276,7 @@ test.describe('A16 quality sessions: what the page says', () => {
     await expect(reads(page)).toBeVisible();
     expect(await readTiles(page)).toEqual(tilesOf(found, '3m'));
     expect(await readRows(page)).toEqual(found.sessions.map((row) => rowCells(row)));
-    await expect(page.getByText('Open a run for its pace chart and the splits of each kilometre.')).toBeVisible();
+    await expect(bodyRows(page).locator('a[href^="/runs/"]')).toHaveCount(found.count);
     await expect(methodsLink(page)).toHaveAttribute('href', /README-ANALYSIS\.md#quality-sessions$/);
   });
 
@@ -280,6 +292,7 @@ test.describe('A16 quality sessions: what the page says', () => {
         const label = `${kinds.join(' and ')} over ${range}`;
         const found = qualityOf(rows, { kinds, range });
         await page.goto(viewOf({ kinds, range }));
+        await openPage(page);
         await expect(heading(page), label).toBeVisible();
         if (found.count === 0) {
           await expect(emptyHeading(page), label).toBeVisible();
@@ -326,7 +339,8 @@ test.describe('A16 quality sessions: what the page says', () => {
     const page = await pages.open(browser, baseURL, guard, runner, '/analysis');
     await page.getByRole('link', { name: /^Quality sessions/ }).click();
     await openPage(page);
-    expect(new URL(page.url()).pathname).toBe(ROUTE);
+    expect(new URL(page.url()).pathname).toBe('/analysis/intensity');
+    expect(new URL(page.url()).hash).toBe('#quality-sessions');
 
     await chip(page, TYPES, 'Long runs').click();
     await chip(page, 'Period', '1 year').click();
@@ -349,7 +363,7 @@ test.describe('A16 quality sessions: what the page says', () => {
 
     // The choices replace the entry of the address, so Back goes where the runner came from.
     await page.goBack();
-    await expect(page.getByRole('heading', { level: 2, name: 'More ways to look' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Go deeper' })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/analysis');
   });
 
@@ -384,16 +398,18 @@ test.describe('A16 quality sessions: what the page says', () => {
     for (const wanted of ['WORKOUT', 'RACE', 'LONG_RUN']) {
       const row = found.sessions.find((session) => session.runType === wanted) as Row;
       await page.goto(viewOf({ kinds: ['workout', 'race', 'long'], range: '1y' }));
+      await openPage(page);
       await table(page).getByRole('link', { name: row.name, exact: true }).click();
       await expect(page).toHaveURL(new RegExp(`/runs/${row.id}$`));
-      await expect(page.getByRole('region', { name: 'Type and tags', exact: true }).getByRole('group', { name: 'Run type' }).getByRole('radio', { name: TYPE_LABEL[wanted], exact: true })).toBeChecked();
+      await expandRunLabels(page);
+      await expect(page.getByRole('region', { name: 'Labels', exact: true }).getByRole('group', { name: 'Run type' }).getByRole('radio', { name: TYPE_LABEL[wanted], exact: true })).toBeChecked();
     }
   });
 
   test('A16-F1 a run given a type on its page is a session here when the runner comes back, and one set back to a plain run is not', async ({ browser, baseURL, guard }) => {
     test.setTimeout(300_000);
     const { made, ids } = await runnerOf('a16-flow', [3, 10, 17].map((daysBack): RunSpec => ({ name: `E2E a16 flow ${daysBack}`, daysBack, km: 8, pace: 300 + daysBack, hr: 150 })));
-    const labels = (page: Page): Locator => page.getByRole('region', { name: 'Type and tags', exact: true });
+    const labels = (page: Page): Locator => page.getByRole('region', { name: 'Labels', exact: true });
     const page = await pages.open(browser, baseURL, guard, whoOf(made), ROUTE);
     await openPage(page);
     await expect(emptyHeading(page)).toBeVisible();
@@ -402,6 +418,7 @@ test.describe('A16 quality sessions: what the page says', () => {
     await page.getByRole('link', { name: 'Open the training log' }).click();
     await page.getByRole('link', { name: 'E2E a16 flow 10', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/runs/${ids[1]}$`));
+    await expandRunLabels(page);
     let saved = page.waitForResponse((response) => response.request().method() === 'PATCH' && response.url().endsWith(`/api/activities/${ids[1]}`));
     await labels(page).getByRole('group', { name: 'Run type' }).getByRole('radio', { name: 'Workout', exact: true }).check();
     expect((await saved).status()).toBe(200);
@@ -410,7 +427,7 @@ test.describe('A16 quality sessions: what the page says', () => {
     // Back to the page: it asks for the runs again, with no wait for what it had to run out, and has the session.
     await page.goBack();
     await page.goBack();
-    await expect(page).toHaveURL(new RegExp(`${ROUTE}$`));
+    await expect(page).toHaveURL(/\/analysis\/intensity#quality-sessions$/);
     await openPage(page);
     const found = qualityOf(await rowsOf(made.api));
     expect(found.sessions.map((row) => row.id)).toEqual([ids[1]]);
@@ -420,6 +437,7 @@ test.describe('A16 quality sessions: what the page says', () => {
 
     // And the other way: the run is set back to a plain one from the table's link.
     await table(page).getByRole('link', { name: 'E2E a16 flow 10', exact: true }).click();
+    await expandRunLabels(page);
     saved = page.waitForResponse((response) => response.request().method() === 'PATCH' && response.url().endsWith(`/api/activities/${ids[1]}`));
     await labels(page).getByRole('group', { name: 'Run type' }).getByRole('radio', { name: 'Just a run', exact: true }).check();
     expect((await saved).status()).toBe(200);
@@ -437,9 +455,9 @@ test.describe('A16 quality sessions: runners it has little to say to, and other 
     const page = await pages.open(browser, baseURL, guard, whoOf(made), ROUTE);
     await openPage(page);
     await expect(emptyHeading(page)).toBeVisible();
-    await expect(page.getByText('None of your runs in this period has one of the types that count. Give a run the type Workout or Race on its page or in the training log, and it shows here.')).toBeVisible();
+    await expect(page.getByText("No run matches the selected types in this period. Detection uses session names, long-run distance or duration, and a faster pace than your recent comparable runs. You can also set a run's type on its page or in the training log.")).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open your runs' })).toHaveAttribute('href', '/runs');
-    await expect(page.getByRole('link', { name: 'Open the training log' })).toHaveAttribute('href', '/training-log');
+    await expect(page.getByRole('link', { name: 'Open the training log' })).toHaveAttribute('href', '/runs#training-log');
     await expect(table(page)).toHaveCount(0);
     await expect(reads(page)).toHaveCount(0);
     await expect(chip(page, TYPES, 'Workouts')).toHaveAttribute('aria-pressed', 'true');
@@ -480,25 +498,31 @@ test.describe('A16 quality sessions: runners it has little to say to, and other 
     test.setTimeout(240_000);
     guard.allow(/Failed to load resource|net::ERR_/);
     const page = await pages.open(browser, baseURL, guard, runner, null);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => { release = resolve; });
     await page.route('**/api/activities/analysis', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await pending;
       await route.continue();
     });
     await page.goto(ROUTE);
-    await expect(page.getByRole('status').filter({ hasText: 'Loading your runs...' })).toHaveCount(1);
-    await expect(body(page)).toHaveAttribute('aria-busy', 'true');
+    await expect(page.locator('[data-loading-state="analysis-intensity"] > [aria-busy="true"]')).toBeVisible();
+    await expect(page.locator('[data-loading-state="analysis-intensity"]').getByRole('status')).toContainText('Loading');
+    await expect(body(page)).toHaveCount(0);
     await expect(page.getByRole('alert')).toHaveCount(0);
+    release();
+    await openPage(page);
     await expect(reads(page)).toBeVisible({ timeout: 20_000 });
     await expect(body(page)).not.toHaveAttribute('aria-busy', 'true');
     await page.unroute('**/api/activities/analysis');
 
     await page.route('**/api/activities/analysis', (route) => route.abort());
     await page.goto(viewOf({ range: '1y' }));
-    await expect(page.getByRole('alert')).toHaveText('Your runs could not be loaded.');
+    await expect(page.getByRole('alert')).toContainText('Unable to load analysis right now.');
     await expect(reads(page)).toHaveCount(0);
     await expect(table(page)).toHaveCount(0);
     await page.unroute('**/api/activities/analysis');
     await page.getByRole('button', { name: 'Try again' }).click();
+    await openPage(page);
     await expect(reads(page)).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
   });
@@ -589,6 +613,7 @@ test.describe('A16 quality sessions: runners it has little to say to, and other 
 
 test.describe('A16 quality sessions: units, language, themes, keys and phones', () => {
   test('A16-U1 in miles the distances and the paces are in miles, the readings and the table', async ({ browser, baseURL, guard }) => {
+    await setProfileUnits(runner.api, 'imperial');
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_unit', 'mile'));
     await page.goto(ROUTE);
@@ -605,13 +630,14 @@ test.describe('A16 quality sessions: units, language, themes, keys and phones', 
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(ROUTE);
-    await expect(page.getByRole('heading', { level: 1, name: '质量训练课' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '质量训练课', exact: true })).toBeVisible();
+    await page.locator('.intensity-quality-methods > summary').click();
     const found = qualityOf(await rowsOf(runner.api));
     await expect(page.getByRole('group', { name: '计为质量训练课的类型', exact: true }).getByRole('button', { name: '训练课', exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByRole('group', { name: '计为质量训练课的类型', exact: true }).getByRole('button', { name: '长距离跑', exact: true })).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByRole('group', { name: '时间段', exact: true }).getByRole('button', { name: '3 个月', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
-    const tiles = await page.getByRole('group', { name: '这段时间的读数' }).locator('> div').evaluateAll((nodes) => nodes.map((node) => ['span', 'strong', 'small'].map((tag) => (node.querySelector(tag)?.textContent ?? '').trim())));
+    const tiles = await page.locator('.quality-sessions-v2__full-details').getByRole('group', { name: '这段时间的读数' }).locator('> div').evaluateAll((nodes) => nodes.map((node) => ['span', 'strong', 'small'].map((tag) => (node.querySelector(tag)?.textContent ?? '').trim())));
     const change = found.count - (found.before as { sessions: number }).sessions;
     expect(tiles[0].slice(0, 2)).toEqual(['训练课次数', String(found.count)]);
     expect(found.perWeek, 'the fixture has a rate that is written with a number').toBeGreaterThanOrEqual(0.05);
@@ -647,6 +673,7 @@ test.describe('A16 quality sessions: units, language, themes, keys and phones', 
       await page.goto(ROUTE);
       await openPage(page);
       await expect(table(page)).toBeVisible();
+      await expect(methodsLink(page), 'the explanatory link is identifiable before hover').toHaveCSS('text-decoration-line', 'underline');
       expect(await contrastProblems(page, { include: ['.quality-sessions-v2'] }), `${theme}, contrast`).toEqual([]);
       expect(await a11yViolations(page, { include: ['.quality-sessions-v2'] }), `${theme}, axe`).toEqual([]);
       await chip(page, TYPES, 'Long runs').click();
@@ -665,6 +692,7 @@ test.describe('A16 quality sessions: units, language, themes, keys and phones', 
       await page.goto(ROUTE);
       await openPage(page);
       await expect(emptyHeading(page)).toBeVisible();
+      await expect(methodsLink(page), 'the empty-state explanatory link is identifiable before hover').toHaveCSS('text-decoration-line', 'underline');
       expect(await contrastProblems(page, { include: ['.quality-sessions-v2'] }), `${theme}, contrast`).toEqual([]);
       expect(await a11yViolations(page, { include: ['.quality-sessions-v2'] }), `${theme}, axe`).toEqual([]);
       await page.goto(`${ROUTE}?types=none`);
@@ -678,10 +706,10 @@ test.describe('A16 quality sessions: units, language, themes, keys and phones', 
     const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
     await openPage(page);
     await expect(table(page)).toBeVisible();
-    await page.locator('body').click({ position: { x: 5, y: 5 } });
+    await page.locator('#quality-sessions').focus();
 
     // Every link and button of the page's own content is a stop; the loop ends when they have all been reached (and not later, or the focus wraps round).
-    const stops = await body(page).locator('a[href], button').count();
+    const stops = await body(page).locator('summary, a[href], button').count();
     const seen: string[] = [];
     for (let step = 0; step < 200 && seen.length < stops; step += 1) {
       await page.keyboard.press('Tab');
@@ -689,7 +717,10 @@ test.describe('A16 quality sessions: units, language, themes, keys and phones', 
         const el = document.activeElement as HTMLElement | null;
         if (!el || el === document.body || !el.closest('.quality-sessions-v2')) return null;
         const style = getComputedStyle(el);
-        return { name: (el.textContent || '').trim().slice(0, 40), outline: `${style.outlineStyle} ${style.outlineWidth}` };
+        const copy = el.cloneNode(true) as HTMLElement;
+        copy.querySelectorAll('[aria-hidden="true"]').forEach(node => node.remove());
+        const name = el.getAttribute('aria-label') || (el.matches('.intensity-quality-list a') ? el.querySelector('strong')?.textContent : copy.textContent) || '';
+        return { name: name.trim().slice(0, 40), outline: `${style.outlineStyle} ${style.outlineWidth}` };
       });
       if (info) {
         expect(info.outline, `${info.name} shows the keyboard focus`).toMatch(/solid 2px/);
@@ -697,8 +728,9 @@ test.describe('A16 quality sessions: units, language, themes, keys and phones', 
       }
     }
     const found = qualityOf(await rowsOf(runner.api));
-    // The page's order: the two links under the title, the three types, the four periods, the runs of the table, and the link that says how it is worked out.
-    expect(seen).toEqual(['Analysis', 'Trends', 'Workouts', 'Races', 'Long runs', '3 months', '6 months', '1 year', 'All time', ...found.sessions.map((row) => row.name.slice(0, 40)), 'How it is worked out']);
+    const names = found.sessions.map(row => row.name.slice(0, 40));
+    // Compact run links precede the independently expandable full numerical evidence.
+    expect(seen).toEqual(['3 months', '6 months', '1 year', 'All time', 'Workouts', 'Races', 'Long runs', ...names.slice(0, 5), 'How it is worked out', ...names, 'How it is worked out']);
 
     // Space turns a type on and off, Enter picks a period, and the focus stays on the chip that was used.
     await chip(page, TYPES, 'Long runs').focus();
@@ -771,28 +803,27 @@ test.describe('A16 quality sessions: units, language, themes, keys and phones', 
 });
 
 test.describe('A16 quality sessions: the way in from Analysis', () => {
-  test('A16-X1 Analysis has a link to the page in its card "More ways to look", which opens it with a title of its own', async ({ browser, baseURL, guard }) => {
+  test('A16-X1 Analysis opens the Quality sessions evidence within Intensity', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, '/analysis');
-    const card = page.getByRole('region', { name: 'More ways to look' });
-    await expect(card).toBeVisible();
-    const link = card.getByRole('link', { name: /^Quality sessions/ });
-    await expect(link).toHaveAttribute('href', ROUTE);
+    const link = page.getByRole('link', { name: /^Quality sessions/ });
+    await expect(link).toHaveAttribute('href', '/analysis/intensity#quality-sessions');
     await link.click();
-    await expect(heading(page)).toBeVisible();
-    await expect(page).toHaveTitle(/^Quality sessions \| HermesRuns/);
+    await openPage(page);
+    await expect(page).toHaveTitle('HermesRuns | Intensity distribution');
   });
 
-  test('A16-X2 the two links under the title lead to Analysis and to Trends', async ({ browser, baseURL, guard }) => {
+  test('A16-X2 Intensity returns to Analysis, whose Trends disclosure preserves browser history', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
     await openPage(page);
-    const links = page.getByRole('navigation', { name: 'Related pages' });
-    await expect(links.getByRole('link', { name: 'Analysis', exact: true })).toHaveAttribute('href', '/analysis');
-    await links.getByRole('link', { name: 'Trends', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Trends' })).toBeVisible();
-    expect(new URL(page.url()).pathname).toBe('/analysis/trends');
+    await page.getByRole('button', { name: 'Analysis', exact: true }).first().click();
+    await expect(page).toHaveURL(/\/analysis$/);
+    await page.locator('#analysis-trends > summary').click();
+    await expect(page.getByRole('heading', { level: 2, name: 'Trends', exact: true })).toBeVisible();
+    await expect(page.getByRole('group', { name: 'Readings for the period' })).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe('/analysis');
     await page.goBack();
     await openPage(page);
-    await links.getByRole('link', { name: 'Analysis', exact: true }).click();
+    await page.getByRole('button', { name: 'Analysis', exact: true }).first().click();
     await expect(page).toHaveURL(/\/analysis$/);
   });
 });

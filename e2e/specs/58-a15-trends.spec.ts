@@ -6,7 +6,7 @@
 // the differences it accounts for, the mean of the latest ten runs, and the comparison with the stretch before. So a page that put a run in the wrong period, took the wrong
 // middle or fitted the wrong line fails.
 import type { Locator, Page } from '@playwright/test';
-import { Api, newRunner } from '../fixtures/api.ts';
+import { Api, freshClientAddress, newRunner } from '../fixtures/api.ts';
 import { KM_PER_MILE, importRunSpecs, sharedRunner, type RunSpec } from '../fixtures/analysis.ts';
 import { addDays, addMonths, hms, mmss, shortDate } from '../fixtures/format.ts';
 import { markRatios } from '../fixtures/marks.ts';
@@ -17,6 +17,13 @@ import { a11yViolations, contrastProblems, expect, expectNoRawKeys, test } from 
 
 const ROUTE = '/analysis/trends';
 const pages = pageOpener();
+async function setProfileUnits(api: Api, units: 'metric' | 'imperial' = 'metric'): Promise<void> {
+  const profile = (await api.get('/api/training/me')).json;
+  if (profile.units === units) return;
+  expect((await api.request('PATCH', '/api/training/me', {
+    body: { units }, headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  })).status).toBe(200);
+}
 test.afterEach(() => pages.closeAll());
 
 const METRICS = ['pace', 'distance', 'duration', 'heartRate', 'efficiency', 'cadence'] as const;
@@ -42,7 +49,12 @@ interface Point {
   value: number;
 }
 
-const rowsOf = async (api: Api): Promise<Row[]> => (await api.get('/api/activities/analysis')).json;
+const rowsOf = async (api: Api): Promise<Row[]> => {
+  const result = await api.get('/api/activities/analysis');
+  expect(result.status, 'analysis rows API succeeds').toBe(200);
+  expect(Array.isArray(result.json), 'analysis rows are a list').toBe(true);
+  return result.json;
+};
 const whoOf = (made: { api: Api; email: string }): { token: string; email: string } => ({ token: made.api.token as string, email: made.email });
 
 /** The runner's today as the page counts it: the date on the device, or the date of the latest run when that is ahead of it by two days at most. */
@@ -247,7 +259,7 @@ function compareSentence(metric: Metric, range: Range, found: Found): string | n
 }
 
 // ---- the page
-const heading = (page: Page): Locator => page.getByRole('heading', { level: 1, name: 'Trends' });
+const heading = (page: Page): Locator => page.getByRole('heading', { level: 2, name: 'Trends', exact: true });
 const chart = (page: Page): Locator => page.getByRole('slider');
 const readout = (page: Page): Locator => page.locator('.metric-trend-v2__tooltip');
 const dots = (page: Page): Locator => page.locator('svg circle.metric-trend-v2__dot');
@@ -284,6 +296,7 @@ const FIXTURE: RunSpec[] = Array.from({ length: 60 }, (_, k) => ({
 const typeOfRun = (k: number): string | null => (k % 10 === 4 ? 'WORKOUT' : k % 17 === 5 ? 'RACE' : k === 30 ? 'LONG_RUN' : null);
 
 let runner: Awaited<ReturnType<typeof sharedRunner<null>>>;
+test.beforeEach(async () => { runner.api.clientIp = freshClientAddress(); await setProfileUnits(runner.api); });
 
 test.beforeAll(async () => {
   test.setTimeout(900_000);
@@ -402,9 +415,10 @@ test.describe('A15 trends: what the page says', () => {
 
   test('A15-H5 the choices are in the address: they are written, kept over a reload, dropped when they are the default again, and Back leaves the page', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, '/analysis');
-    await page.getByRole('link', { name: /^Trends/ }).click();
+    await page.goto(ROUTE);
     await openPage(page);
-    expect(new URL(page.url()).pathname).toBe(ROUTE);
+    expect(new URL(page.url()).pathname).toBe('/analysis');
+    expect(new URL(page.url()).hash).toBe('#analysis-trends');
 
     await chip(page, 'Show', 'Heart rate').click();
     await chip(page, 'Which runs', 'Workouts').click();
@@ -422,7 +436,7 @@ test.describe('A15 trends: what the page says', () => {
     expect(new URLSearchParams(new URL(page.url()).search).toString()).toBe('runs=workout&line=average');
 
     await page.goBack();
-    await expect(page.getByRole('heading', { level: 2, name: 'More ways to look' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Go deeper' })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/analysis');
   });
 });
@@ -601,21 +615,25 @@ test.describe('A15 trends: runners it has little to say to, and other conditions
     test.setTimeout(240_000);
     guard.allow(/Failed to load resource|net::ERR_/);
     const page = await pages.open(browser, baseURL, guard, runner, null);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => { release = resolve; });
     await page.route('**/api/activities/analysis', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await pending;
       await route.continue();
     });
     await page.goto(ROUTE);
-    await expect(page.getByRole('status').filter({ hasText: 'Loading your runs...' })).toHaveCount(1);
-    await expect(page.locator('.metric-trend-v2')).toHaveAttribute('aria-busy', 'true');
+    await expect(page.locator('[data-loading-state="analysis"] > [aria-busy="true"]')).toBeVisible();
+    await expect(page.locator('[data-loading-state="analysis"]').getByRole('status')).toContainText('Loading');
+    await expect(page.locator('.metric-trend-v2')).toHaveCount(0);
     await expect(page.getByRole('alert')).toHaveCount(0);
+    release();
     await expect(reads(page)).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('.metric-trend-v2')).not.toHaveAttribute('aria-busy', 'true');
     await page.unroute('**/api/activities/analysis');
 
     await page.route('**/api/activities/analysis', (route) => route.abort());
     await page.goto(viewOf({ range: '1y' }));
-    await expect(page.getByRole('alert')).toHaveText('Your runs could not be loaded.');
+    await expect(page.getByRole('alert').getByRole('heading')).toHaveText('Unable to load analysis right now.');
     await expect(reads(page)).toHaveCount(0);
     await page.unroute('**/api/activities/analysis');
     await page.getByRole('button', { name: 'Try again' }).click();
@@ -662,6 +680,7 @@ test.describe('A15 trends: runners it has little to say to, and other conditions
 
 test.describe('A15 trends: units, language, themes and phones', () => {
   test('A15-U1 in miles the pace, the distance and the axis are in miles', async ({ browser, baseURL, guard }) => {
+    await setProfileUnits(runner.api, 'imperial');
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_unit', 'mile'));
     await page.goto(ROUTE);
@@ -690,7 +709,7 @@ test.describe('A15 trends: units, language, themes and phones', () => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(ROUTE);
-    await expect(page.getByRole('heading', { level: 1, name: '趋势' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '趋势', exact: true })).toBeVisible();
     const found = trendOf(await rowsOf(runner.api));
     const change = found.stats!.median - found.before!.stats!.median;
 
@@ -781,14 +800,17 @@ test.describe('A15 trends: units, language, themes and phones', () => {
 });
 
 test.describe('A15 trends: the way in from Analysis', () => {
-  test('A15-X1 Analysis has a card "More ways to look" with a link to the page, which opens it', async ({ browser, baseURL, guard }) => {
+  test('A15-X1 Analysis opens Trends from its Go deeper disclosure', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, '/analysis');
-    const card = page.getByRole('region', { name: 'More ways to look' });
+    const card = page.getByRole('region', { name: 'Go deeper' });
     await expect(card).toBeVisible();
-    const link = card.getByRole('link', { name: /^Trends/ });
-    await expect(link).toHaveAttribute('href', ROUTE);
-    await link.click();
+    const disclosure = card.locator('#analysis-trends');
+    await expect(disclosure).not.toHaveAttribute('open');
+    await disclosure.locator(':scope > summary').click();
+    await expect(disclosure).toHaveAttribute('open', '');
     await expect(heading(page)).toBeVisible();
-    await expect(page).toHaveTitle(/^Trends \| HermesRuns/);
+    await expect(reads(page)).toBeVisible();
+    await expect(page).toHaveURL(/\/analysis$/);
+    await expect(page).toHaveTitle('Analysis | HermesRuns');
   });
 });

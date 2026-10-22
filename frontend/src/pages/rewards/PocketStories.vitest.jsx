@@ -66,7 +66,7 @@ it('keyboard choice and completion show a finite ending, one postcard, next/repl
   await openFirst();
   const user = userEvent.setup();
   const choice = screen.getByRole('radio', { name: 'Leave it above the bench for the next stranger' });
-  choice.focus(); await user.keyboard(' ');
+  choice.focus(); await user.keyboard('[Space]');
   await screen.findByText('Saved choice');
   const complete = screen.getByRole('button', { name: 'Finish chapter and save postcard' });
   complete.focus(); await user.keyboard('{Enter}');

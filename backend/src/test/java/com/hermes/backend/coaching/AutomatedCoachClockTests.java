@@ -108,7 +108,7 @@ class AutomatedCoachClockTests {
 
     @ParameterizedTest
     @ValueSource(strings = {"2026-03-08T07:05:00Z", "2026-11-01T06:05:00Z", "2026-10-11T04:05:00Z"})
-    void rollingAggregatesKeepExactElapsedCutoffsAcrossDstAndMidnight(String timestamp) {
+    void aggregatesUseAccountCalendarDaysAndExcludeFutureRunsAcrossDstAndMidnight(String timestamp) {
         Instant now = Instant.parse(timestamp);
         try (Fixture f = new Fixture(now)) {
             List<RunMetricsProjection> rows = List.of(
@@ -121,13 +121,15 @@ class AutomatedCoachClockTests {
             when(f.activities.findRunMetricsBetween(eq(f.runner), eq(ActivityType.RUN), any(), any()))
                     .thenReturn(rows);
             AutomatedCoachService.CoachStateDto actual = f.service.getCoachStatePreservingSchedule(f.runner);
-            assertThat(actual.volumeKm7d()).isEqualTo(10);
-            assertThat(actual.volumeKm28d()).isEqualTo(15);
-            assertThat(actual.minutesUnknownHrLast7d()).isEqualTo(2);
+            // The seven-day-old runs are on the day before the seven calendar-day window;
+            // the 28-day-old runs are likewise outside that window. The future run never counts.
+            assertThat(actual.volumeKm7d()).isEqualTo(8);
+            assertThat(actual.volumeKm28d()).isEqualTo(11);
+            assertThat(actual.minutesUnknownHrLast7d()).isEqualTo(1);
             assertThat(f.state.getLastAggregatedAt()).isEqualTo(LocalDateTime.ofInstant(now, ZoneOffset.UTC));
             verify(f.activities).findRunMetricsBetween(f.runner, ActivityType.RUN,
-                    LocalDateTime.ofInstant(now.minus(90, ChronoUnit.DAYS), ZoneOffset.UTC).minusDays(1),
-                    LocalDateTime.ofInstant(now, ZoneOffset.UTC).plusDays(1));
+                    now.atZone(java.time.ZoneId.of("America/New_York")).toLocalDate().minusDays(90).atStartOfDay(),
+                    now.atZone(java.time.ZoneId.of("America/New_York")).toLocalDate().plusDays(2).atStartOfDay());
         }
     }
 

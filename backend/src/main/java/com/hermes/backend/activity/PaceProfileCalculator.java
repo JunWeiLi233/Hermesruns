@@ -18,8 +18,8 @@ import java.util.function.Function;
  *       metres a watch drifts while standing, so a pace is moving seconds over metres run.</li>
  *   <li><b>Grade.</b> Elevation is cleaned (median of five readings, then an average over 40 m of the run) and the grade
  *       at a point is the rise over the 80 m around it, so a GPS altitude that jumps a few metres does not read as a
- *       hill. Beyond 30% it counts as 30%.</li>
- *   <li><b>Grade-adjusted pace.</b> Each stretch is worth {@link GradeAdjustedPace#costRatio} times its length in
+ *       hill. A climb beyond 30% counts as 30% and a descent beyond 20% as 20%.</li>
+ *   <li><b>Grade-adjusted pace.</b> Each stretch is worth {@link GradeAdjustedPace#effortRatio} times its length in
  *       flat-equivalent metres, so a split's grade-adjusted pace is its moving seconds per flat-equivalent kilometre.</li>
  * </ul>
  */
@@ -32,7 +32,7 @@ final class PaceProfileCalculator {
     static final double SLOWEST_PLAUSIBLE_PACE = 1800.0;
     static final double SPLIT_METERS = 1000.0;
     /** What is left after the last full kilometre only counts as a split if it is at least this long. */
-    static final double MIN_PARTIAL_SPLIT_METERS = 100.0;
+    static final double MIN_PARTIAL_SPLIT_METERS = ActivityAnalyticsHelper.MIN_PARTIAL_SPLIT_METERS;
     /** A stream shorter than this has no profile. It is also the shortest leftover that counts as a split, so every profile has a split. */
     static final double MIN_STREAM_METERS = 100.0;
     static final double MIN_STREAM_SECONDS = 10.0;
@@ -60,9 +60,9 @@ final class PaceProfileCalculator {
      *               {@link ActivityAnalyticsHelper#normalizeSamples} does
      */
     static PaceProfileResponse compute(List<SamplePoint> points) {
-        Track track = Track.of(points);
-        if (track == null) {
-            return PaceProfileResponse.noStream();
+        RunStream track = RunStream.of(points, MIN_STREAM_METERS, MIN_STREAM_SECONDS);
+        if (track.problem() != null) {
+            return PaceProfileResponse.noStream(track.problem());
         }
         int n = track.n();
         double[] t = track.t();
@@ -79,7 +79,7 @@ final class PaceProfileCalculator {
             double seconds = t[i] - t[i - 1];
             double meters = d[i] - d[i - 1];
             boolean running = meters / seconds >= STOPPED_SPEED_MPS;
-            double ratio = terrain == null ? 1.0 : GradeAdjustedPace.costRatio(terrain.grade((d[i - 1] + d[i]) / 2.0));
+            double ratio = terrain == null ? 1.0 : GradeAdjustedPace.effortRatio(terrain.grade((d[i - 1] + d[i]) / 2.0));
             moving[i] = moving[i - 1] + (running ? seconds : 0.0);
             runMeters[i] = runMeters[i - 1] + (running ? meters : 0.0);
             equivalent[i] = equivalent[i - 1] + (running ? meters * ratio : 0.0);
@@ -105,7 +105,7 @@ final class PaceProfileCalculator {
                 : new PaceProfileResponse.Markers(paceMarker, gapMarker);
 
         return new PaceProfileResponse(true, terrain != null, summary, splits, markers,
-                series(t, d, moving, runMeters, equivalent, n, terrain));
+                series(t, d, moving, runMeters, equivalent, n, terrain), null);
     }
 
     // ----- splits -----
@@ -208,65 +208,6 @@ final class PaceProfileCalculator {
         return new PaceProfileResponse.Series(step, window, times, distances, paces, gaps, elevations);
     }
 
-    // ----- the cleaned stream -----
-
-    /** Time and distance from the first reading, and elevation where there was one (NaN where there was none). */
-    private record Track(double[] t, double[] d, double[] z, int n) {
-
-        static Track of(List<SamplePoint> points) {
-            if (points == null || points.size() < 2) {
-                return null;
-            }
-            double[] t = new double[points.size()];
-            double[] d = new double[points.size()];
-            double[] z = new double[points.size()];
-            int n = 0;
-            for (SamplePoint p : points) {
-                if (p == null || p.elapsedSeconds() == null || p.distanceMeters() == null) {
-                    continue;
-                }
-                double time = p.elapsedSeconds();
-                double distance = p.distanceMeters();
-                if (!Double.isFinite(distance) || distance < 0) {
-                    continue;
-                }
-                double elevation = p.elevationMeters() == null || !Double.isFinite(p.elevationMeters())
-                        ? Double.NaN
-                        : p.elevationMeters();
-                if (n > 0) {
-                    if (time < t[n - 1] || distance < d[n - 1]) {
-                        continue;
-                    }
-                    if (time == t[n - 1]) {
-                        if (distance > d[n - 1]) {
-                            d[n - 1] = distance;
-                            if (!Double.isNaN(elevation)) {
-                                z[n - 1] = elevation;
-                            }
-                        }
-                        continue;
-                    }
-                }
-                t[n] = time;
-                d[n] = distance;
-                z[n] = elevation;
-                n++;
-            }
-            if (n < 2 || d[n - 1] - d[0] < MIN_STREAM_METERS || t[n - 1] - t[0] < MIN_STREAM_SECONDS) {
-                return null;
-            }
-            double t0 = t[0];
-            double d0 = d[0];
-            double[] tt = new double[n];
-            double[] dd = new double[n];
-            for (int i = 0; i < n; i++) {
-                tt[i] = t[i] - t0;
-                dd[i] = d[i] - d0;
-            }
-            return new Track(tt, dd, Arrays.copyOf(z, n), n);
-        }
-    }
-
     // ----- elevation and grade -----
 
     /** The run's elevation after cleaning, looked up by distance along the run. */
@@ -280,7 +221,7 @@ final class PaceProfileCalculator {
         }
 
         /** Null when the stream has too little elevation to say anything about grade. */
-        static Terrain of(Track track) {
+        static Terrain of(RunStream track) {
             int readings = 0;
             for (int i = 0; i < track.n(); i++) {
                 if (!Double.isNaN(track.z()[i])) {

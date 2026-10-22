@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -115,6 +118,32 @@ class GoalSuggestionsMvcTests {
                 .andExpect(jsonPath("$.suggestions[0].basis.span").value(8))
                 .andExpect(jsonPath("$.suggestions[0].basis.usual").value(30.0))
                 .andExpect(jsonPath("$.suggestions[0].basis.stretchPercent").value(0));
+    }
+
+    @Test
+    void theEndpointKeepsHistoricalMonthAndYearTargetsBesideThePrescribedWeek() throws Exception {
+        Runner owner = runner();
+        var days = new ArrayList<GoalSuggestions.Day>();
+        LocalDate monday = GoalPeriods.start(GoalPeriods.WEEK, today());
+        for (int back = 1; back <= 60; back++) {
+            LocalDate day = monday.minusWeeks(back).plusDays(1);
+            run(owner, day, 6);
+            days.add(new GoalSuggestions.Day(day, 6, 1980, 1, 0));
+        }
+        var response = json.readTree(mockMvc.perform(get("/api/goals/suggestions")
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        var actual = new ArrayList<com.fasterxml.jackson.databind.JsonNode>();
+        response.path("suggestions").forEach(actual::add);
+        assertThat(actual.get(0).path("basis").path("kind").asText()).isEqualTo("coach-plan");
+        assertThat(actual.get(0).path("target").asDouble())
+                .isEqualTo(response.at("/recommendation/plan/targetWeeklyKm").asDouble());
+        var historical = GoalSuggestions.suggest(days, today(), Set.of()).stream()
+                .filter(s -> !s.period().equals("WEEK")).toList();
+        assertThat(historical).extracting(GoalSuggestions.Suggestion::period).containsExactly("MONTH", "YEAR");
+        for (var suggestion : historical) assertThat(actual).contains(json.valueToTree(suggestion));
+        assertThat(actual).extracting(s -> s.path("period").asText() + "/" + s.path("metric").asText())
+                .doesNotHaveDuplicates();
     }
 
     @Test

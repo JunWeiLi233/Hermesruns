@@ -9,6 +9,8 @@ import SettingsTrainingZones from './SettingsTrainingZones';
 import TrainingDataProvider from '../features/training/integrated/TrainingDataProvider';
 import SettingsTrainingTools from '../features/training/integrated/SettingsTrainingTools';
 import { dismissCompletionCard, isCompletionCardDismissed } from '../utils/settingsCompletionDismissal';
+import SettingsPaceZones from './SettingsPaceZones';
+import { useRunSummariesEnabled } from '../utils/runSummaryPreference';
 
 /* Settings v2 (design 25a): sticky section selector + one active group.
    Disconnecting Strava and deleting the account only ask here (requestStravaDisconnect,
@@ -79,6 +81,7 @@ export default function SettingsAtlasLayout({
   const completionDismissed = dismissedAccount === accountEmail || isCompletionCardDismissed(accountEmail);
   const avatarInputRef = useRef(null);
   const sectionTabsRef = useRef(null);
+  const [summariesOn, setSummariesOn] = useRunSummariesEnabled();
   const stravaConnected = Boolean(stravaStatus?.linked);
   const avatarActionLabel = avatarUrl ? t('settings.avatar_change') : t('settings.avatar_upload');
   const doneCount = setupChecklist.filter((item) => item.done).length;
@@ -273,6 +276,16 @@ export default function SettingsAtlasLayout({
               </div>
               <div className="st-v2-row">
                 <div className="st-v2-row-copy">
+                  <strong id="settings-summaries-label">{t('settings.run_summaries_title')}</strong>
+                  <span>{t('settings.run_summaries_hint')}</span>
+                </div>
+                <div className="st-v2-segmented" role="group" aria-labelledby="settings-summaries-label">
+                  <button type="button" className={summariesOn ? 'is-active' : ''} aria-pressed={summariesOn} onClick={() => setSummariesOn(true)}>{t('settings.run_summaries_show')}</button>
+                  <button type="button" className={summariesOn ? '' : 'is-active'} aria-pressed={!summariesOn} onClick={() => setSummariesOn(false)}>{t('settings.run_summaries_hide')}</button>
+                </div>
+              </div>
+              <div className="st-v2-row">
+                <div className="st-v2-row-copy">
                   <strong>{t('settings.stitch_theme_title')}</strong>
                   <span>{activeThemeLabel}</span>
                 </div>
@@ -308,6 +321,7 @@ export default function SettingsAtlasLayout({
             <h2 id="st-v2-training-label" className="st-v2-group-label">{t('settings.training_zones_title')}</h2>
             <SettingsTrainingZones t={t} active={activeSection === 'training'} />
             {activeSection === 'training' && <TrainingDataProvider><SettingsTrainingTools view="training" /></TrainingDataProvider>}
+            <SettingsPaceZones t={t} lang={lang} unit={unit} active={activeSection === 'training'} />
           </section>
 
           <section id="st-v2-connections" className="st-v2-group" role="tabpanel" hidden={activeSection !== 'connections'} aria-labelledby="st-v2-tab-connections">

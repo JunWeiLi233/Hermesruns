@@ -178,7 +178,7 @@ class PersonalizedRunningPlannerTests {
         assertThat(plan.sessions())
                 .filteredOn(session -> session.date().equals(today.plusDays(3)))
                 .singleElement()
-                .extracting(PersonalizedRunningPlanner.PlannedSession::workoutType)
+                .extracting(PlannedSession::workoutType)
                 .isEqualTo(CoachWorkoutType.LONG_RUN);
     }
 
@@ -219,7 +219,7 @@ class PersonalizedRunningPlannerTests {
                 null
         ));
 
-        PersonalizedRunningPlanner.PlannedSession easy = plan.sessions().stream()
+        PlannedSession easy = plan.sessions().stream()
                 .filter(session -> session.workoutType() == CoachWorkoutType.EASY)
                 .findFirst()
                 .orElseThrow();

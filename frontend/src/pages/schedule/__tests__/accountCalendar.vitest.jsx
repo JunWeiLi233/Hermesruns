@@ -6,8 +6,10 @@ import Runs from '../../runs/Runs';
 import en from '../../../i18n/locales/en';
 import { apiJson } from '../../../api';
 import { cachedApiJson } from '../../../api/resourceCache';
+import { historyPageFixture } from '../../runs/__tests__/historyPageFixture';
 
 const t = (key, vars = {}) => Object.entries(vars).reduce((copy, [k, v]) => copy.replaceAll(`{${k}}`, String(v)), key.split('.').reduce((v, k) => v?.[k], en) || key);
+vi.mock('../../../contexts/ThemeContext', () => ({ useTheme: () => ({ isDark: false }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: true, email: 'calendar@hermes.test' }) }));
 vi.mock('../../../contexts/I18nContext', () => ({ useI18n: () => ({ lang: 'en', t }) }));
 vi.mock('../../../contexts/UnitContext', () => ({ useUnit: () => ({ unit: 'km' }) }));
@@ -28,6 +30,7 @@ beforeEach(() => {
   const read = async url => {
     if (url === '/api/profile/me') return { timeZone: zone, displayName: 'Calendar' };
     if (url === '/api/activities') return activities;
+    if (url.startsWith('/api/activities/page?')) return historyPageFixture(activities, new URL(url, 'http://localhost').searchParams, zone);
     if (url === '/api/coach/today') return { today };
     if (url === '/api/coach/schedule?days=14') return [today];
     if (url.startsWith('/api/activities/route-previews?')) return [];

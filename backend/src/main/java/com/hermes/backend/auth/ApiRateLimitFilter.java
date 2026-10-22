@@ -37,6 +37,10 @@ public class ApiRateLimitFilter implements Filter {
     private int globalIpLimit = 600;
     @Value("${app.api.rate-limit.global-user-per-minute:900}")
     private int globalUserLimit = 900;
+    @Value("${app.api.rate-limit.activity-read-user-per-minute:180}")
+    private int activityReadUserLimit = 180;
+    @Value("${app.api.rate-limit.auth-read-user-per-minute:90}")
+    private int authReadUserLimit = 90;
     @Value("${app.api.rate-limit.checkout-ip-per-minute:5}")
     private int checkoutIpLimit = 5;
     @Value("${app.api.rate-limit.checkout-user-per-minute:5}")
@@ -121,6 +125,12 @@ public class ApiRateLimitFilter implements Filter {
                 return;
             }
             int userMax = "/api/billing/checkout".equals(path) ? checkoutUserLimit : authenticatedLimit(max, method);
+            if ("GET".equals(method) && path.startsWith("/api/activities")) {
+                userMax = activityReadUserLimit;
+            }
+            if ("READ".equals(methodBucket) && path.startsWith("/api/auth/")) {
+                userMax = authReadUserLimit;
+            }
             String userKey = "user|" + authenticatedRunner.get().getId() + "|" + methodBucket + "|" + bucket;
             if (!limiter.allow(userKey, userMax, windowSec)) {
                 log.warn("API rate limit hit scope=user runnerId={} method={} path={} maxPerWindow={} windowSeconds={}",

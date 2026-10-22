@@ -1,11 +1,19 @@
 {
-  "name": "hermes-local-e2e",
+  "name": "hermesruns-e2e",
   "private": true,
   "type": "module",
+  "description": "Disposable end-to-end tests for Hermes analysis, integrated training, and generated plans",
   "scripts": {
+    "stack:start": "node tools/stack.mjs start",
+    "stack:stop": "node tools/stack.mjs stop",
+    "stack:status": "node tools/stack.mjs status",
+    "test": "playwright test --config playwright.config.ts",
+    "test:headed": "playwright test --config playwright.config.ts --headed",
+    "report": "playwright show-report",
     "test:runna": "playwright test --config playwright.config.mjs",
     "test:analysis": "playwright test --config playwright.config.ts",
-    "test:analysis:integrated": "playwright test --config playwright.config.ts specs/61-analysis-existing-pages.spec.ts"
+    "test:analysis:integrated": "playwright test --config playwright.config.ts specs/61-analysis-existing-pages.spec.ts",
+    "test:intervals": "playwright test --config playwright.intervals.config.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

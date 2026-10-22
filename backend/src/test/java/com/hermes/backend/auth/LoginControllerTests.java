@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -85,6 +86,70 @@ class LoginControllerTests {
         ResponseEntity<?> response = controller.login(validLoginBody(), request("198.51.100.7"));
 
         assertError(response, HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
+    }
+
+    @Test
+    void aLockedOutClientDoesNotStartAfreshByWritingAnotherForwardedForAddress() {
+        AuthService authService = mock(AuthService.class);
+        when(authService.normalizeEmail("runner@hermes.test")).thenReturn("runner@hermes.test");
+        when(authService.authenticate(anyString(), anyString())).thenReturn(Optional.empty());
+        LoginController controller = controller(mock(RunnerRepository.class), authService, new LoginRateLimiter());
+
+        // Ten wrong passwords from one connection, each with a different X-Forwarded-For: the header is the client's own.
+        for (int attempt = 0; attempt < 10; attempt++) {
+            ResponseEntity<?> response = controller.login(validLoginBody(), connection("198.51.100.20", "10.1.1." + attempt));
+            assertThat(response.getStatusCode()).as("attempt " + attempt).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        Runner runner = runner("runner@hermes.test", "USER", true);
+        when(authService.authenticate("runner@hermes.test", "Password1!")).thenReturn(Optional.of(runner));
+        ResponseEntity<?> withNewHeader = controller.login(validLoginBody(), connection("198.51.100.20", "10.9.9.9"));
+        assertError(withNewHeader, HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
+        ResponseEntity<?> withNoHeader = controller.login(validLoginBody(), connection("198.51.100.20", null));
+        assertError(withNoHeader, HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
+        // Somebody else on another connection is not locked out by it.
+        ResponseEntity<?> another = controller.login(validLoginBody(), connection("198.51.100.21", null));
+        assertThat(another.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void behindOurProxyTheLockIsOfTheClientTheProxyAddedNotOfTheProxyAndNotOfWhatTheClientWrote() {
+        AuthService authService = mock(AuthService.class);
+        when(authService.normalizeEmail("runner@hermes.test")).thenReturn("runner@hermes.test");
+        when(authService.authenticate(anyString(), anyString())).thenReturn(Optional.empty());
+        LoginController controller = controller(mock(RunnerRepository.class), authService, new LoginRateLimiter());
+
+        // The proxy is 10.0.0.5. The attacker is 203.0.113.50 and writes a new address in front each time; the proxy adds the real one.
+        for (int attempt = 0; attempt < 10; attempt++) {
+            controller.login(validLoginBody(), connection("10.0.0.5", "192.0.2." + attempt + ", 203.0.113.50"));
+        }
+        Runner runner = runner("runner@hermes.test", "USER", true);
+        when(authService.authenticate("runner@hermes.test", "Password1!")).thenReturn(Optional.of(runner));
+        assertError(controller.login(validLoginBody(), connection("10.0.0.5", "192.0.2.77, 203.0.113.50")),
+                HttpStatus.TOO_MANY_REQUESTS, "Too many failed attempts. Try again in 15 minutes.");
+        // A different person reaching the same proxy is not locked out with the attacker.
+        assertThat(controller.login(validLoginBody(), connection("10.0.0.5", "203.0.113.51")).getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void theSignUpCapFollowsTheConnectionNotTheHeader() {
+        AuthService authService = mock(AuthService.class);
+        LoginController controller = controller(
+                mock(RunnerRepository.class), authService, new LoginRateLimiter(),
+                mock(SecretEncryptionService.class), mock(AiUsageService.class), mock(EmailVerificationService.class),
+                mock(EmailValidationService.class), mock(VerificationResendLimiter.class), mock(PasswordResetLimiter.class),
+                mock(PasswordResetService.class), new ApiRateLimiter());
+
+        // An empty body is refused, but only after the cap has counted it: the first eight reach the validation.
+        for (int attempt = 0; attempt < 8; attempt++) {
+            ResponseEntity<?> response = controller.signup(null, connection("198.51.100.30", "10.2.2." + attempt));
+            assertThat(response.getStatusCode()).as("sign-up " + attempt).isEqualTo(HttpStatus.BAD_REQUEST);
+        }
+        assertError(controller.signup(null, connection("198.51.100.30", "10.2.2.200")),
+                HttpStatus.TOO_MANY_REQUESTS, "Too many sign-up attempts. Try again later.");
+        assertError(controller.signup(null, connection("198.51.100.30", null)),
+                HttpStatus.TOO_MANY_REQUESTS, "Too many sign-up attempts. Try again later.");
+        assertThat(controller.signup(null, connection("198.51.100.31", null)).getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -407,6 +472,14 @@ class LoginControllerTests {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("email", "runner@hermes.test");
         return body;
+    }
+
+    /** A request that came over a connection from {@code peer} and carries the X-Forwarded-For line the sender wrote (or none). */
+    private HttpServletRequest connection(String peer, String forwardedFor) {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        when(request.getRemoteAddr()).thenReturn(peer);
+        when(request.getHeader("X-Forwarded-For")).thenReturn(forwardedFor);
+        return request;
     }
 
     private HttpServletRequest request(String ip) {

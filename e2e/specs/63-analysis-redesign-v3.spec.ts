@@ -47,10 +47,15 @@ test('overview tools still load their API-backed dialogs from the redesigned hea
     await page.goto('/analysis');
     await page.getByRole('button', { name: 'Sport totals', exact: true }).click();
     const totals = page.getByRole('dialog', { name: 'Sport totals' });
-    await expect(totals.getByRole('table')).toBeVisible();
+    await expect(totals.locator('.sport-totals-summary')).toBeVisible();
+    await expect(totals.locator('.sport-totals-list')).toContainText('Running');
+    await expect(totals.locator('.sport-totals-summary dt')).toHaveText(['Sessions', 'Time', 'Known load']);
     await totals.getByRole('button', { name: 'Close', exact: true }).click();
     await page.getByRole('button', { name: 'Compare periods', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Compare periods' }).getByRole('table')).toBeVisible();
+    const comparison = page.getByRole('dialog', { name: 'Compare periods' });
+    await expect(comparison.locator('.periods-metrics')).toBeVisible();
+    await expect(comparison.locator('.periods-metric')).toHaveCount(3);
+    await expect(comparison.getByRole('combobox')).toBeEnabled();
     expect(guard.problems).toEqual([]);
   } finally { await context.close(); }
 });

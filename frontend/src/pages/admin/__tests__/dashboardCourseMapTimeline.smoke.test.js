@@ -1,95 +1,14 @@
-import { readDashboardSources } from '../readDashboardSources.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readDashboardSources } from '../readDashboardSources.mjs';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const dashboardSource = readDashboardSources();
-const stylesheetSource = readFileSync(path.join(here, "../../../styles/style.generated.css"), 'utf8');
-
-assert.match(
-  dashboardSource,
-  /courseMapScanTimeline/,
-  'Dashboard should have course-map scan timeline state.'
-);
-
-assert.match(
-  dashboardSource,
-  /loadCourseMapScanTimeline/,
-  'Dashboard should fetch course-map scan timeline data.'
-);
-
-assert.match(
-  dashboardSource,
-  /\/api\/admin\/race-course-maps\/\$\{raceId\}\/scan-timeline/,
-  'Dashboard should fetch scan timeline from the dedicated backend endpoint.'
-);
-
-assert.match(
-  dashboardSource,
-  /admin-jobs-detail__timeline-shell admin-coursemap-scan-timeline/,
-  'Dashboard should render the scan timeline in its own stacked shell container.'
-);
-
-assert.doesNotMatch(
-  dashboardSource,
-  /admin-jobs-detail__timeline-shell admin-track-hub-workspace-stack/,
-  'The scan timeline shell must not inherit the course-map workspace grid.'
-);
-
-assert.match(
-  stylesheetSource,
-  /admin-coursemap-scan-timeline[\s\S]*grid-column:\s*1\s*\/\s*-1/,
-  'The scan timeline should span the course-map workspace instead of squeezing into a grid cell.'
-);
-
-assert.match(
-  stylesheetSource,
-  /admin-coursemap-scan-timeline[\s\S]*overflow-wrap:\s*anywhere/,
-  'The scan timeline should wrap long AI scan details instead of compressing adjacent content.'
-);
-
-assert.match(
-  dashboardSource,
-  /admin-jobs-detail__timeline/,
-  'Dashboard should render scan steps using the timeline list pattern.'
-);
-
-assert.match(
-  dashboardSource,
-  /getDashboardJobTimelineTone/,
-  'Dashboard should apply timeline tone coloring to scan steps.'
-);
-
-assert.match(
-  dashboardSource,
-  /course_maps_scan_timeline_title/,
-  'Dashboard should use i18n key for scan timeline title.'
-);
-
-assert.match(
-  dashboardSource,
-  /admin-coursemap-scan-timeline__heading[\s\S]*course_maps_timeline_label[\s\S]*course_maps_scan_timeline_title/,
-  'Dashboard should keep the scan timeline label and Qwen title in one aligned heading group.'
-);
-
-assert.match(
-  stylesheetSource,
-  /\.admin-coursemap-scan-timeline__heading\s*\{[\s\S]*display:\s*grid;[\s\S]*gap:\s*4px;/,
-  'The scan timeline heading should use an in-bounds stacked layout instead of distributing its labels to the edges.'
-);
-
-assert.match(
-  dashboardSource,
-  /course_maps_timeline_no_steps/,
-  'Dashboard should show an empty state when no scan steps exist.'
-);
-
-assert.match(
-  dashboardSource,
-  /course_maps_timeline_load_error/,
-  'Dashboard should show an error state when timeline loading fails.'
-);
-
-console.log('[PASS] Dashboard course-map scan timeline guardrails passed.');
+// The dedicated admin console owns these controls after the reference redesign.
+const source = readDashboardSources();
+const styles = readFileSync(new URL('../../../styles/admin-reference.css', import.meta.url), 'utf8');
+assert.ok(styles.includes('.admin-reference'), 'Admin console styling remains scoped to its route.');
+for (const marker of [
+  "admin-ref-map-timeline",
+  "getDashboardJobTimelineTone(step.status)",
+  "courseMapScanTimeline",
+  "loadCourseMapScanTimeline"
+]) assert.ok(source.includes(marker), `Admin console must retain ${marker}`);

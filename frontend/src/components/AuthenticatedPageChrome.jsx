@@ -18,11 +18,18 @@ function resolveShellTitle(pathname, t) {
   return t('settings.heading');
 }
 
+/**
+ * The runner shell around a page: the sidebar, the top bar and the canvas. Settings pages use it as it is. Another page
+ * can say its own `title`, the page it sits under (`parentLabel`, `parentRoute`) and which sidebar item to mark
+ * (`activeKey`, as in getRunnerShellNavItems).
+ */
 export default function AuthenticatedPageChrome({
   children,
   bodyClassName = '',
   profile = null,
   title = null,
+  parentLabel = null,
+  parentRoute = null,
   activeKey = null,
   breadcrumbLabel = null,
 }) {
@@ -120,8 +127,8 @@ export default function AuthenticatedPageChrome({
             <RunnerShellTopNav
               navItems={navItems}
               activeLabel={pageTitle}
-              parentLabel={breadcrumbLabel || (title ? t('profile.dashboard_nav_dashboard') : t('settings.heading'))}
-              parentRoute={title ? '/profile' : '/settings'}
+              parentLabel={parentLabel || breadcrumbLabel || (title ? t('profile.dashboard_nav_dashboard') : t('settings.heading'))}
+              parentRoute={parentRoute || (title ? '/profile' : '/settings')}
               navigate={navigate}
             />
           </div>

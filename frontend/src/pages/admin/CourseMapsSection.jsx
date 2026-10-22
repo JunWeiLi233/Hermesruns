@@ -47,6 +47,7 @@ export default function CourseMapsSection({
   pendingCourseMapBadgeValue,
   liveCourseMapBadgeValue,
   courseMapLoadState,
+  showAllCourseMapArchives,
 }) {
   const [previewChoice, setPreviewChoice] = useState(null);
   const selectedPendingWasPublished = previewChoice?.value === "pending"
@@ -95,6 +96,7 @@ export default function CourseMapsSection({
             setCourseMapQuery((prev) => ({ ...prev, search, page: 0 }))
           }
         />
+        <button type="button" className="admin-ref-button" onClick={showAllCourseMapArchives}>{t("dashboard.course_maps_sidebar_archives")}</button>
         <div className="admin-ref-review-list">
           {courseMapQueueItems.map((item) => (
             <button

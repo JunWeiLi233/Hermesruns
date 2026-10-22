@@ -31,6 +31,30 @@ assert.equal(privateRoute.canonicalUrl, null);
 assert.match(privateRoute.robots, /^noindex,nofollow/);
 assert.equal(privateRoute.structuredData, null);
 
+// Every page of the app has a title of its own, so the tab, the history and a screen reader can tell them apart (BUG-018).
+const genericPrivateTitle = getSeoMetadata('/an-address-the-app-does-not-know', 'en').title;
+const pageRoutes = [
+  '/login', '/signup', '/forgot-password', '/profile', '/runs', '/runs/12', '/analysis', '/heatmap', '/weather', '/today-run', '/rewards',
+  '/training-log', '/settings', '/settings/import-data', '/shoes', '/shoes/add', '/shoe-catalog', '/races', '/races/details/3', '/schedule',
+  '/muscle-training', '/prediction/5k', '/prediction/10k', '/prediction/half', '/prediction/marathon',
+];
+for (const language of ['en', 'zh-CN']) {
+  const titles = pageRoutes.map((route) => getSeoMetadata(route, language).title);
+  assert.equal(new Set(titles).size, titles.length, `every page has a title of its own (${language}): ${titles.join(' / ')}`);
+  for (const title of titles) assert.match(title, / \| HermesRuns$/, `a page title ends with the product name (${language})`);
+  assert.notEqual(getSeoMetadata('/profile', language).title, getSeoMetadata('/an-address-the-app-does-not-know', language).title);
+}
+assert.equal(getSeoMetadata('/login', 'en').title, 'Sign in | HermesRuns');
+assert.equal(getSeoMetadata('/prediction/10k', 'en').title, '10K prediction | HermesRuns');
+assert.equal(getSeoMetadata('/login', 'en').robots.startsWith('noindex'), true, 'a page title does not make a private page indexable');
+// A page added to the router without a title falls back to the generic one and fails here.
+const routedPages = [...appSource.matchAll(/<Route path="([^"*]+)" element=\{<(UserOnlyRoute|Login|Signup|ForgotPassword)/g)]
+  .map((match) => match[1].replace(':id', '1').replace(':insightKey', 'x').replace(':distKey', '5k').replace(':raceId', '1'));
+assert.ok(routedPages.length >= 20, 'the router pages were found');
+for (const route of routedPages) {
+  assert.notEqual(getSeoMetadata(route, 'en').title, genericPrivateTitle, `${route} needs a title in utils/seoMetadata.js`);
+}
+
 const chineseHome = getSeoMetadata('/', 'zh-CN');
 assert.equal(chineseHome.locale, 'zh_CN');
 assert.match(chineseHome.title, /HermesRuns$/);

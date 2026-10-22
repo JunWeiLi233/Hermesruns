@@ -8,6 +8,7 @@ import en from '../../../i18n/locales/en';
 import zh from '../../../i18n/locales/zh-CN';
 import { writeRunsCache } from '../runsCache';
 import Runs from '../Runs';
+import { historyPageFixture } from './historyPageFixture';
 
 const state = vi.hoisted(() => ({ lang: 'en' }));
 const email = 'f1-runner@hermes.test';
@@ -112,6 +113,7 @@ beforeEach(() => {
   apiFetch.mockReset();
   apiJson.mockReset();
   apiJson.mockImplementation(async (url) => {
+    if (url.startsWith('/api/activities/page?')) return historyPageFixture(activities, new URL(url, 'http://localhost').searchParams);
     if (url === '/api/activities') return activities;
     if (url === '/api/profile/me') return profile;
     if (url === '/api/auth/strava/status') return stravaStatus;
@@ -169,7 +171,7 @@ describe('Runs history status', () => {
     const { container } = view;
     expectRecordedRun(container);
     expectNoFalseBanner();
-    await act(async () => { pending.resolve(activities); });
+    await act(async () => { pending.resolve(historyPageFixture(activities)); });
   });
 
   it('removes the no-activity status when an empty cached snapshot refreshes with an imported run', async () => {
@@ -177,8 +179,8 @@ describe('Runs history status', () => {
     const pending = deferred();
     apiJson.mockImplementationOnce(() => pending.promise);
     const { container } = openRuns();
-    expect(screen.getByText(t('runs.awaiting_status_disconnected'))).toBeInTheDocument();
-    await act(async () => { pending.resolve(activities); });
+    expectNoFalseBanner();
+    await act(async () => { pending.resolve(historyPageFixture(activities)); });
     expectRecordedRun(container);
     expectNoFalseBanner();
   });
@@ -208,7 +210,7 @@ describe('Runs history status', () => {
     await user.upload(screen.getByLabelText(/Drop FIT\/GPX files/), new File(['synthetic activity'], 'beginner-first.tcx', { type: 'application/xml' }));
     await user.click(screen.getByRole('button', { name: t('profile.upload_file_count', { count: 1 }), exact: true }));
     await waitFor(() => expectRecordedRun(container));
-    expect(apiJson.mock.calls.filter(([url]) => url === '/api/activities')).toHaveLength(2);
+    expect(apiJson.mock.calls.filter(([url]) => url.startsWith('/api/activities/page?'))).toHaveLength(2);
     expectNoFalseBanner();
   });
 

@@ -7,6 +7,7 @@ import com.hermes.backend.activity.ActivityPoint;
 import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
+import com.hermes.backend.activity.ElevationAscent;
 import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
@@ -184,6 +185,18 @@ public class ActivityImportService {
         return importWorkoutBytes(runner, provider, workoutName, gunzipWithLimits(gzipBytes, MAX_ZIP_ENTRY_BYTES));
     }
 
+    /** The climb of a file's track in metres, or null when its points carry no elevation. */
+    private static Double climbOf(List<ParsedTrackPoint> points) {
+        if (points == null || points.isEmpty()) {
+            return null;
+        }
+        List<Double> elevations = new ArrayList<>(points.size());
+        for (ParsedTrackPoint point : points) {
+            elevations.add(point.elevationMeters());
+        }
+        return ElevationAscent.of(elevations);
+    }
+
     private static boolean isGzipName(String fileName) {
         return fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(GZIP_SUFFIX);
     }
@@ -291,11 +304,21 @@ public class ActivityImportService {
         activity.setDistanceKm(parsedActivity.distanceMeters() == null ? 0d : parsedActivity.distanceMeters() / 1000d);
         activity.setMovingTimeSeconds(parsedActivity.durationSeconds() == null ? 0 : Math.toIntExact(parsedActivity.durationSeconds()));
         activity.setStartDate(parsedActivity.startTime() == null ? null : parsedActivity.startTime().toString());
-        activity.setSourceFileName(fileName);
+        activity.setSourceFileName(capLength(fileName));
         activity.setSourceChecksum(checksum);
         activity.setCreatedAt(LocalDateTime.now());
-        activity.setAverageHeartRate(parsedActivity.averageHeartRate());
-        activity.setMaxHeartRate(parsedActivity.maxHeartRate());
+        Double averageHeartRate = parsedActivity.averageHeartRate();
+        Double maxHeartRate = parsedActivity.maxHeartRate();
+        if (averageHeartRate == null && maxHeartRate == null) {
+            HeartRateSummary fromPoints = HeartRateSummary.of(parsedActivity.points());
+            if (fromPoints != null) {
+                averageHeartRate = fromPoints.average();
+                maxHeartRate = fromPoints.max();
+            }
+        }
+        activity.setAverageHeartRate(averageHeartRate);
+        activity.setMaxHeartRate(maxHeartRate);
+        activity.setTotalElevationGain(climbOf(parsedActivity.points()));
         activity.setSourceImportedLapsJson(com.hermes.backend.activity.analysis.SessionAnalysisSources.encode(parsedActivity.sourceLaps()));
 
         // Weather adjustment
@@ -361,7 +384,7 @@ public class ActivityImportService {
 
     private String resolveActivityName(ParsedActivityData parsedActivity, String fileName) {
         if (parsedActivity.name() != null && !parsedActivity.name().isBlank()) {
-            return parsedActivity.name().trim();
+            return capLength(parsedActivity.name().trim());
         }
 
         if (fileName == null || fileName.isBlank()) {
@@ -369,7 +392,21 @@ public class ActivityImportService {
         }
 
         int dotIndex = fileName.lastIndexOf('.');
-        return dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName;
+        return capLength(dotIndex > 0 ? fileName.substring(0, dotIndex) : fileName);
+    }
+
+    /** The longest name or file name a run keeps: the column holds 255 characters, and a longer one made the insert fail (a 500). */
+    static final int MAX_TEXT_LENGTH = 255;
+
+    static String capLength(String text) {
+        if (text == null || text.length() <= MAX_TEXT_LENGTH) {
+            return text;
+        }
+        int end = MAX_TEXT_LENGTH;
+        if (Character.isHighSurrogate(text.charAt(end - 1))) {
+            end -= 1; // do not cut an emoji in half
+        }
+        return text.substring(0, end).trim();
     }
 
     private String fileExtension(String fileName) {

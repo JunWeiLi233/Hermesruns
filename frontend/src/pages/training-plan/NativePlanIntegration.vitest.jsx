@@ -11,7 +11,7 @@ import Schedule from '../schedule/Schedule';
 import TodayRun from '../today-run/TodayRun';
 vi.mock('../../contexts/AuthContext',()=>({useAuth:()=>({isAuthenticated:true,email:'runner@example.test',token:'native-session'})}));
 vi.mock('../../api',()=>({apiFetch:vi.fn(),apiJson:vi.fn(),subscribeWakeRetry:()=>()=>{}}));
-vi.mock('../../api/resourceCache',()=>({cachedApiJson:vi.fn()}));
+vi.mock('../../api/resourceCache',()=>({cachedApiJson:vi.fn(),invalidateResourceCache:vi.fn()}));
 vi.mock('../../components/TopbarUserMenu',()=>({default:()=>null}));
 vi.mock('../../components/TopbarNotifications',()=>({default:()=>null}));
 const authoredClient=vi.hoisted(()=>({mode:'http',getMe:vi.fn(),getCalendar:vi.fn(),getRoster:vi.fn(),getLibrary:vi.fn(),saveWorkout:vi.fn(),createEvent:vi.fn(),getActor:()=> 'athlete',getSecurityKey:()=> 'athlete:1',subscribe:()=>()=>{}}));
@@ -26,7 +26,7 @@ beforeEach(()=>{
   authoredClient.getRoster.mockResolvedValue({items:[{id:'athlete',access:'owner'}]});
   authoredClient.getCalendar.mockImplementation(async()=>({events:authoredEvents,activities:[]}));
   authoredClient.getLibrary.mockResolvedValue({workouts:[],folders:[],plans:[]});
-  authoredClient.saveWorkout.mockResolvedValue({id:'saved-workout',version:2});
+  authoredClient.saveWorkout.mockImplementation(async input=>({...input,id:'saved-workout',version:2}));
   authoredClient.createEvent.mockImplementation(async input=>{const event={id:'created-event',state:'planned',revision:0,...input};authoredEvents=[...authoredEvents,event];window.dispatchEvent(new Event('hermes-training-changed'));return event;});
   vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date('2026-10-20T16:00:00Z'));
   localStorage.clear();localStorage.setItem('hermes_jwt','native-session');localStorage.setItem('hermes_lang','en');localStorage.setItem('hermes_unit','km');
@@ -77,6 +77,18 @@ it('keeps published Schedule available when optional support data cannot be fetc
   expect((await screen.findAllByRole('button',{name:'Session details'})).some(button => !button.disabled)).toBe(true);
   expect(container.querySelector('.schedule-plan-readiness-card')).toBeInTheDocument();
 });
+it('keeps an explicit preview and its owner-scoped offline denial visible without support data or an active plan',async()=>{
+  generated=false;
+  cachedApiJson.mockRejectedValue(new TypeError('offline'));apiJson.mockRejectedValue(new TypeError('offline'));
+  const request=apiFetch.getMockImplementation();
+  apiFetch.mockImplementation((url,...args)=>url.includes('/versions/')?Promise.reject(new TypeError('offline')):request(url,...args));
+  const {container}=mount(Schedule,'/schedule?planView=preview&planId=unavailable-plan&versionId=unavailable-version');
+  expect(await screen.findByRole('heading',{name:'Your whole plan, before you begin.'})).toBeVisible();
+  expect(await screen.findByText('This page has not been saved for offline reading, or its saved copy has expired. Reconnect to load it.')).toBeVisible();
+  expect(container.querySelector('.schedule-plan-management')).toHaveAttribute('open');
+  expect(screen.queryByText('Unable to load the schedule right now.')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button',{name:'Activate this plan',exact:true})).not.toBeInTheDocument();
+});
 it('makes today’s authored workout authoritative in the native Today hero',async()=>{
   generated=false;authoredEvents=[{id:'authored',title:'Coach hill session',date:'2026-10-20',minutes:37,sport:'Run',state:'planned',revision:0,source:'7m @60% Warm up\n30m @80% Hills'}];
   const {container}=mount(TodayRun,'/today-run');
@@ -115,16 +127,16 @@ it('keeps the open workout editor and success receipt while its new event refres
   generated=false;const user=userEvent.setup();const {container}=mount(Schedule,'/schedule?trainingTool=workout');
   const name=await screen.findByLabelText('Workout name');await user.clear(name);await user.type(name,'Scheduled without losing editor');
   await user.click(screen.getByRole('button',{name:'Save workout version',exact:true}));
-  await screen.findByText('Published a pinned workout version in your library.');
+  await screen.findByText('Workout saved in your library.');
   let finishRefresh;const refresh=new Promise(resolve=>{finishRefresh=resolve;});const callsBefore=cachedApiJson.mock.calls.length;
   cachedApiJson.mockImplementation(url=>refresh.then(()=>url==='/api/profile/me'?{displayName:'Runner',timeZone:'America/New_York'}:[]));
   try {
-    await user.click(screen.getByRole('button',{name:'Schedule for selected athlete',exact:true}));
+    await user.click(screen.getByRole('button',{name:'Schedule workout',exact:true}));
     await waitFor(()=>expect(cachedApiJson.mock.calls.length).toBeGreaterThan(callsBefore));
     expect(name).toBeInTheDocument();
   } finally {await act(async()=>finishRefresh());}
   await waitFor(()=>expect(container.querySelector('.schedule-plan-day.is-today')).toHaveTextContent('Scheduled without losing editor'));
-  expect(screen.getByText('Workout scheduled. Open the calendar to move or match it.')).toBeVisible();
+  expect(screen.getByText('Workout scheduled. View it in your calendar.')).toBeVisible();
   expect(screen.getByLabelText('Workout name')).toBe(name);
   expect(name).toHaveValue('Scheduled without losing editor');
   expect(authoredClient.createEvent.mock.calls.at(-1)[0].sourceVersion).toBe(2);

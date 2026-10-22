@@ -97,7 +97,7 @@ class RecoveredCourseMapWorkflowTests {
         when(persistence.save(any(),anyString(),anyString(),anyString(),anyString(),anyString(),any(),anyString()))
                 .thenReturn(new GeneratedRaceGpxAsset());
         var pipeline=new MarathonRoutePipelineService(extraction,georeferencing,
-                new MarathonRouteMatchAndExportService(matching,new GpxExportService(),persistence));
+                new MarathonRouteMatchAndExportService(matching,new GpxExportService(),persistence),mock(RaceCourseMapImageService.class));
         var result=pipeline.runPipeline(new Runner(),"singapore-marathon","Standard Chartered Singapore Marathon","Singapore","Singapore",
                 "https://www.singaporemarathon.com",42.195,"data:image/jpeg;base64,"+Base64.getEncoder().encodeToString(bytes));
         assertThat(result.matchExportResult().matchedBreadcrumbs()).hasSize(124);
@@ -140,7 +140,7 @@ class RecoveredCourseMapWorkflowTests {
         when(persistence.save(any(),anyString(),anyString(),anyString(),anyString(),anyString(),any(),anyString()))
                 .thenReturn(new GeneratedRaceGpxAsset());
         var pipeline=new MarathonRoutePipelineService(extraction,georeferencing,
-                new MarathonRouteMatchAndExportService(matching,new GpxExportService(),persistence));
+                new MarathonRouteMatchAndExportService(matching,new GpxExportService(),persistence),mock(RaceCourseMapImageService.class));
         var result=pipeline.runPipeline(new Runner(),"honolulu-marathon","Honolulu Marathon","Honolulu","United States","https://www.honolulumarathon.org",42.195,
                 "data:image/jpeg;base64,"+Base64.getEncoder().encodeToString(bytes));
         assertThat(result.matchExportResult().matchedBreadcrumbs()).hasSize(492);

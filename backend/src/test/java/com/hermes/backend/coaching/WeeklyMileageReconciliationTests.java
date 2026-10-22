@@ -59,7 +59,7 @@ class WeeklyMileageReconciliationTests {
         var plan = planner.plan(new PersonalizedRunningPlanner.PlannerInput(LocalDate.of(2026, 10, 19),
                 7, history, 76, "EASY", false, "LOW", null, null));
         double planned = plan.sessions().stream().filter(s -> s.distanceKm() != null)
-                .mapToDouble(PersonalizedRunningPlanner.PlannedSession::distanceKm).sum();
+                .mapToDouble(PlannedSession::distanceKm).sum();
         assertThat(planned).isLessThanOrEqualTo(plan.targetWeeklyKm());
     }
 

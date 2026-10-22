@@ -5,15 +5,22 @@
 // gives (docs/README-ANALYSIS.md, "VDOT and VO2max", "The runs behind the number"): so a page that drew a wrong estimate, picked the wrong
 // three, or drifted from the number on Analysis fails. Case numbers are the rows of replica/runalyze/test-plan.md.
 import type { Locator, Page } from '@playwright/test';
-import { Api, newRunner } from '../fixtures/api.ts';
+import { Api, freshClientAddress, newRunner } from '../fixtures/api.ts';
 import { KM_PER_MILE, importRunSpecs, sharedRunner, type RunSpec } from '../fixtures/analysis.ts';
-import { heartRateVo2max, mmss, raceEquationVo2max, shortDate } from '../fixtures/format.ts';
+import { heartRateVo2max, mmss, raceEquationVo2max } from '../fixtures/format.ts';
 import { pageOpener } from '../fixtures/pages.ts';
 import { enlargeText, readingsThatCollide } from '../fixtures/reflow.ts';
 import { a11yViolations, contrastProblems, expect, expectNoHorizontalOverflow, expectNoRawKeys, test } from '../fixtures/test.ts';
 
 const ROUTE = '/analysis/vo2max-estimates';
 const pages = pageOpener();
+async function setProfileUnits(api: Api, units: 'metric' | 'imperial' = 'metric'): Promise<void> {
+  const profile = (await api.get('/api/training/me')).json;
+  if (profile.units === units) return;
+  expect((await api.request('PATCH', '/api/training/me', {
+    body: { units }, headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  })).status).toBe(200);
+}
 test.afterEach(() => pages.closeAll());
 
 interface Row {
@@ -141,6 +148,7 @@ const MIXED: RunSpec[] = [
 ];
 
 let runner: Awaited<ReturnType<typeof sharedRunner<null>>>;
+test.beforeEach(async () => { runner.api.clientIp = freshClientAddress(); await setProfileUnits(runner.api); });
 
 test.beforeAll(async () => {
   test.setTimeout(480_000);
@@ -151,8 +159,15 @@ test.beforeAll(async () => {
 });
 
 async function openPage(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1, name: 'VO2max estimates' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'VO2max estimates', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/analysis#vo2max-estimates$/);
   await expect(table(page)).toBeVisible();
+  for (const selector of ['.vo2max-estimates-v2__race-evidence', '.vo2max-estimates-v2__calculation-details', '.vo2max-estimates-v2__history-disclosure']) {
+    const disclosure = body(page).locator(selector);
+    if (await disclosure.count() && await disclosure.getAttribute('open') === null) await disclosure.locator(':scope > summary').click();
+  }
+  const allRuns = body(page).getByRole('button', { name: /^Show all \d+ runs$/ });
+  if (await allRuns.count()) await allRuns.click();
 }
 
 test.describe('A3 VO2max estimates: what the page says', () => {
@@ -167,7 +182,8 @@ test.describe('A3 VO2max estimates: what the page says', () => {
     await expect(rows).toHaveCount(expected.rows.length);
     for (const [index, item] of expected.rows.entries()) {
       const row = rows.nth(index);
-      await expect(row.locator('th')).toHaveText(shortDate(new Date(`${item.date}T12:00:00Z`)));
+      await expect(row.locator('th')).toHaveText(new Date(`${item.date}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+      await expect(row.locator('th time')).toHaveAttribute('datetime', new RegExp(`^${item.date}T`));
       await expect(row.locator('td').nth(0)).toHaveText(item.name);
       await expect(row.locator('td').nth(0).getByRole('link')).toHaveAttribute('href', `/runs/${item.id}`);
       await expect(row.locator('td').nth(1)).toHaveText(`${one(item.km)} km`);
@@ -256,17 +272,17 @@ test.describe('A3 VO2max estimates: what the page says', () => {
     expect(onAnalysis).toBe(one(expected.value));
 
     await card.getByRole('link', { name: 'The runs behind this number' }).click();
-    await expect(page).toHaveURL(/\/analysis\/vo2max-estimates$/);
+    await expect(page).toHaveURL(/\/analysis#vo2max-estimates$/);
     await openPage(page);
-    await expect(page).toHaveTitle('VO2max estimates | HermesRuns');
+    await expect(page).toHaveTitle('Analysis | HermesRuns');
     await expect(tiles(page).locator('article').nth(0).locator('strong')).toHaveText(onAnalysis);
 
     // From the prediction page, which is made from the same estimates, to the page and back.
     await page.goto('/prediction/half');
     await page.getByRole('link', { name: 'The runs behind this number' }).click();
-    await expect(page).toHaveURL(/\/analysis\/vo2max-estimates$/);
+    await expect(page).toHaveURL(/\/analysis#vo2max-estimates$/);
     await openPage(page);
-    await page.getByRole('navigation', { name: 'Related pages' }).getByRole('link', { name: 'Analysis' }).click();
+    await page.getByRole('button', { name: 'Analysis', exact: true }).first().click();
     await expect(page).toHaveURL(/\/analysis$/);
   });
 
@@ -437,6 +453,7 @@ test.describe('A3 VO2max estimates: runs that do not fit the usual picture', () 
   });
 
   test('A3-E6 in miles the distances, paces and the length of the pool are in miles', async ({ browser, baseURL, guard }) => {
+    await setProfileUnits(runner.api, 'imperial');
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_unit', 'mile'));
     await page.goto(ROUTE);
@@ -454,11 +471,11 @@ test.describe('A3 VO2max estimates: runs that do not fit the usual picture', () 
   test('A3-E7 the keyboard reaches every link in turn, each shows where it is, and Enter follows a run', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
     await openPage(page);
-    await page.locator('body').click({ position: { x: 5, y: 5 } });
+    await page.locator('#vo2max-estimates').focus();
 
     // Every link and button of the page's own content is a stop, and so is the line of the number over time (a slider); the loop ends when they have all been reached
     // (and not later, or the focus wraps round).
-    const stops = await body(page).locator('a[href], button, [role="slider"]').count();
+    const stops = await body(page).locator('summary, a[href], button, [role="slider"], [tabindex="0"]').count();
     const seen: string[] = [];
     for (let step = 0; step < 200 && seen.length < stops; step += 1) {
       await page.keyboard.press('Tab');
@@ -466,7 +483,10 @@ test.describe('A3 VO2max estimates: runs that do not fit the usual picture', () 
         const el = document.activeElement as HTMLElement | null;
         if (!el || el === document.body || !el.closest('.vo2max-estimates-v2')) return null;
         const style = getComputedStyle(el);
-        const name = el.getAttribute('role') === 'slider' ? 'the line of the number' : (el.textContent || '').trim().slice(0, 40);
+        const name = el.getAttribute('role') === 'slider' ? 'the line of the number'
+          : el.matches('.vo2max-estimates-v2__table-wrap') ? 'the scrollable runs table'
+          : el.matches('summary') ? (el.querySelector('strong')?.textContent || el.textContent || '').trim()
+          : (el.textContent || '').trim().slice(0, 40);
         return { name, outline: `${style.outlineStyle} ${style.outlineWidth}` };
       });
       if (info) {
@@ -475,9 +495,8 @@ test.describe('A3 VO2max estimates: runs that do not fit the usual picture', () 
       }
     }
     const expected = evidenceFrom(await rowsOf(runner.api));
-    // The page's order: the line over time (its three ranges are buttons, which hold the focus as the links do, then the line itself, and the rule of the line), then
-    // the races (this runner has flagged none, so one link, to choose a run to flag), then the runs of the table, then the rule of the number itself.
-    expect(seen).toEqual(['Analysis', 'Race predictions', '6 mo', '1 yr', 'All', 'the line of the number', 'How it is worked out', 'Choose a run to flag', ...expected.rows.map((row) => row.name), 'How it is worked out']);
+    // The integrated view retains the run links, independently operable evidence disclosures and the history slider.
+    expect(seen).toEqual(['Against your races', 'Choose a run to flag', 'the scrollable runs table', ...expected.rows.map((row) => row.name), 'How it is worked out', 'Calculation details', 'How it is worked out', 'Your VO2max over time', '6 mo', '1 yr', 'All', 'the line of the number', 'How it is worked out']);
 
     await table(page).getByRole('link', { name: expected.rows[0].name }).focus();
     await page.keyboard.press('Enter');
@@ -491,7 +510,7 @@ test.describe('A3 VO2max estimates: when the server or the network does not play
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.route('**/api/activities/analysis', (route) => route.abort());
     await page.goto(ROUTE);
-    await expect(page.getByRole('alert')).toHaveText('Your runs could not be loaded.');
+    await expect(page.getByRole('alert').getByRole('heading')).toHaveText('Unable to load analysis right now.');
     await expect(table(page)).toHaveCount(0);
 
     await page.unroute('**/api/activities/analysis');
@@ -505,27 +524,30 @@ test.describe('A3 VO2max estimates: when the server or the network does not play
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.route('**/api/activities/analysis', (route) => route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"boom"}' }));
     await page.goto(ROUTE);
-    await expect(page.getByRole('alert')).toHaveText('Your runs could not be loaded.');
+    await expect(page.getByRole('alert').getByRole('heading')).toHaveText('Unable to load analysis right now.');
     await expect(page.getByRole('heading', { level: 2, name: 'No run gives an estimate yet' })).toHaveCount(0);
 
     await page.unroute('**/api/activities/analysis');
     await page.route('**/api/activities/analysis', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"runs":[]}' }));
     await page.goto(ROUTE);
-    await expect(page.getByRole('alert')).toHaveText('Your runs could not be loaded.');
+    await expect(page.getByRole('alert').getByRole('heading')).toHaveText('Unable to load analysis right now.');
     await expect(page.getByRole('heading', { level: 2, name: 'No run gives an estimate yet' })).toHaveCount(0);
   });
 
   test('A3-N3 a slow answer shows a busy page with a skeleton, never the empty sentence', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => { release = resolve; });
     await page.route('**/api/activities/analysis', async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await pending;
       await route.continue();
     });
     await page.goto(ROUTE);
-    await expect(body(page)).toHaveAttribute('aria-busy', 'true');
-    await expect(body(page).getByRole('status')).toHaveText('Loading your runs...');
-    await expect(page.locator('.vo2max-estimates-v2__skeleton')).toBeVisible();
+    await expect(page.locator('[data-loading-state="analysis"] > [aria-busy="true"]')).toBeVisible();
+    await expect(page.locator('[data-loading-state="analysis"]').getByRole('status')).toContainText('Loading');
+    await expect(body(page)).toHaveCount(0);
     await expect(page.getByRole('heading', { level: 2, name: 'No run gives an estimate yet' })).toHaveCount(0);
+    release();
     await expect(table(page)).toBeVisible({ timeout: 15_000 });
   });
 
@@ -551,10 +573,10 @@ test.describe('A3 VO2max estimates: in other conditions', () => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(ROUTE);
-    await expect(page.getByRole('heading', { level: 1, name: 'VO2max 估算' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'VO2max 估算', exact: true })).toBeVisible();
     // The page has more than one table now (the runs, the races, the years): the runs are the one with this name.
     await expect(page.getByRole('table', { name: /^最近 90 天内有估算值的跑步，从高到低$/ })).toBeVisible();
-    await expect(page).toHaveTitle('VO2max 估算 | HermesRuns');
+    await expect(page).toHaveTitle('分析 | HermesRuns');
     const expected = evidenceFrom(await rowsOf(runner.api));
     await expect(body(page)).toContainText(`（${expected.terms.map(two).join(' + ')}）÷ 3 = ${two(expected.mean)}，显示为 ${one(expected.value)}。`);
     await expect(body(page)).not.toContainText('Counted');
@@ -572,9 +594,15 @@ test.describe('A3 VO2max estimates: in other conditions', () => {
     });
   }
 
-  test('A3-H9 the line of the number over time and the races come before the table of runs, so the line starts within two screens', async ({ browser, baseURL, guard }) => {
+  test('A3-H9 compact estimates show the chart and runs before independently expandable history', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
-    await openPage(page);
+    await expect(table(page)).toBeVisible();
+    const historyDisclosure = body(page).locator('.vo2max-estimates-v2__history-disclosure');
+    await expect(historyDisclosure).not.toHaveAttribute('open');
+    await expect(body(page).locator('.vo2max-estimates-v2__history')).toHaveCount(0);
+    await historyDisclosure.locator(':scope > summary').click();
+    await expect(historyDisclosure.getByRole('slider')).toBeVisible();
+    await body(page).locator('.vo2max-estimates-v2__race-evidence > summary').click();
     const top = (selector: string): Promise<number> => page.locator(selector).first().evaluate((node) => node.getBoundingClientRect().top + window.scrollY);
     const [plot, history, races, runs, working] = [
       await top('.vo2max-estimates-v2__plot'),
@@ -584,8 +612,9 @@ test.describe('A3 VO2max estimates: in other conditions', () => {
       await top('.vo2max-estimates-v2__working'),
     ];
 
-    expect([plot, history, races, runs, working], 'dots of the 90 days, line over time, races, table of runs, working').toEqual([...[plot, history, races, runs, working]].sort((a, b) => a - b));
-    expect(history, 'the line over time starts within two screens of 900 px').toBeLessThan(1800);
+    expect([plot, races, runs, working, history], 'compact chart and run evidence precede the optional full history').toEqual([...[plot, races, runs, working, history]].sort((a, b) => a - b));
+    const sectionTop = await top('.vo2max-estimates-v2');
+    expect(plot - sectionTop, 'the estimate chart follows its compact readings').toBeLessThan(500);
   });
 
   test('A3-M2 @mobile on a phone the three tiles are the rows of one card and take under 340 px, so the first chart is within one screen', async ({ browser, baseURL, guard }) => {

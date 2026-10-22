@@ -85,7 +85,7 @@ test.beforeAll(async () => {
 });
 
 async function openCurve(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1, name: 'Pace curve' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Pace curve' })).toBeVisible();
   await expect(table(page)).toBeVisible();
 }
 
@@ -173,10 +173,10 @@ test.describe('A2 pace curve: what the page says', () => {
       if (request.url().includes('/api/training/pace-curve')) asked.push(new URL(request.url()).search);
     });
     await chips(page).getByRole('button', { name: '12 months' }).click();
-    await expect(page).toHaveURL(/\/analysis\/pace-curve\?days=365$/);
+    await expect(page).toHaveURL(/\/analysis\?days=365#pace-curve$/);
     await expect(chips(page).getByRole('button', { name: '12 months' })).toHaveAttribute('aria-pressed', 'true');
     await chips(page).getByRole('button', { name: 'All time' }).click();
-    await expect(page).toHaveURL(/\?days=all$/);
+    await expect(page).toHaveURL(/\?days=all#pace-curve$/);
     await expect.poll(() => asked).toEqual(expect.arrayContaining(['?days=365', '?days=all']));
 
     await page.reload();
@@ -185,7 +185,7 @@ test.describe('A2 pace curve: what the page says', () => {
 
     // Back to six months is the plain address again.
     await chips(page).getByRole('button', { name: '6 months' }).click();
-    await expect(page).toHaveURL(/\/analysis\/pace-curve$/);
+    await expect(page).toHaveURL(/\/analysis#pace-curve$/);
   });
 
   test('A2-H5 a window the page does not offer is taken for six months, and the window changes what the dots are made of', async ({ browser, baseURL, guard }) => {
@@ -204,18 +204,18 @@ test.describe('A2 pace curve: what the page says', () => {
   test('A2-H6 the page is a part of Analysis: it sits under it, has its own title and is reached from Analysis and from a prediction', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, '/analysis');
     await page.getByRole('link', { name: 'Pace curve and critical pace' }).first().click();
-    await expect(page).toHaveURL(/\/analysis\/pace-curve$/);
+    await expect(page).toHaveURL(/\/analysis#pace-curve$/);
     await openCurve(page);
-    await expect(page).toHaveTitle('Pace curve | HermesRuns');
-    await expect(page.getByRole('link', { name: 'Analysis', exact: true }).first()).toBeVisible();
+    await expect(page).toHaveTitle('Analysis | HermesRuns');
+    await expect(page.getByRole('heading', { level: 1, name: 'Your fitness picture' })).toBeVisible();
 
     await page.goto('/prediction/10k');
     await page.getByRole('link', { name: 'Pace curve and critical pace' }).click();
-    await expect(page).toHaveURL(/\/analysis\/pace-curve$/);
+    await expect(page).toHaveURL(/\/analysis#pace-curve$/);
     await openCurve(page);
 
     // From the page itself the way back and across.
-    await page.getByRole('navigation', { name: 'Related pages' }).getByRole('link', { name: 'Race predictions' }).click();
+    await page.getByRole('region', { name: 'Race predictions' }).getByRole('link', { name: /^10K/ }).click();
     await expect(page).toHaveURL(/\/prediction\/10k$/);
   });
 
@@ -224,9 +224,9 @@ test.describe('A2 pace curve: what the page says', () => {
     await page.getByRole('link', { name: 'Pace curve and critical pace' }).first().click();
     await openCurve(page);
     await chips(page).getByRole('button', { name: '3 months' }).click();
-    await expect(page).toHaveURL(/\?days=90$/);
+    await expect(page).toHaveURL(/\?days=90#pace-curve$/);
     await chips(page).getByRole('button', { name: '12 months' }).click();
-    await expect(page).toHaveURL(/\?days=365$/);
+    await expect(page).toHaveURL(/\?days=365#pace-curve$/);
     await page.goBack();
     await expect(page).toHaveURL(/\/analysis$/);
   });
@@ -331,7 +331,9 @@ test.describe('A2 pace curve: efforts that do not make a picture', () => {
   test('A2-E7 the keyboard reaches every control in turn and each shows where it is', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
     await openCurve(page);
-    await page.locator('body').click({ position: { x: 5, y: 5 } });
+    const disclosure = page.locator('#pace-curve > summary');
+    await disclosure.focus();
+    await expect(disclosure).toBeFocused();
 
     const seen: string[] = [];
     for (let step = 0; step < 120 && seen.length < 12; step += 1) {
@@ -347,8 +349,8 @@ test.describe('A2 pace curve: efforts that do not make a picture', () => {
         seen.push(info.name);
       }
     }
-    // The two links of the header, the four window buttons and a link to each run in the table.
-    expect(seen.slice(0, 6)).toEqual(['Analysis', 'Race predictions', '3 months', '6 months', '12 months', 'All time']);
+    // The embedded section's four window buttons and a link to each run in the table.
+    expect(seen.slice(0, 4)).toEqual(['3 months', '6 months', '12 months', 'All time']);
     expect(seen.filter((name) => name.startsWith('E2E curve')).length).toBeGreaterThanOrEqual(4);
     // Keyboard: Enter on a window button chooses it.
     await chips(page).getByRole('button', { name: '3 months' }).focus();
@@ -517,9 +519,9 @@ test.describe('A2 pace curve: in other conditions', () => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(ROUTE);
-    await expect(page.getByRole('heading', { level: 1, name: '配速曲线' })).toBeVisible();
-    await expect(page.getByRole('table')).toBeVisible();
-    await expect(page).toHaveTitle('配速曲线 | HermesRuns');
+    await expect(page.getByRole('heading', { level: 2, name: '配速曲线' })).toBeVisible();
+    await expect(page.getByRole('table', { name: '这个范围内你在每个距离上的最快用时', exact: true })).toBeVisible();
+    await expect(page).toHaveTitle('分析 | HermesRuns');
     await expectNoRawKeys(page);
     await expect(page.locator('.pace-curve-v2')).not.toContainText('Critical pace');
   });

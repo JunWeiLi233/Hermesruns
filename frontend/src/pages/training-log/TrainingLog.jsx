@@ -194,6 +194,13 @@ export default function TrainingLog({ showHeader = true } = {}) {
     );
   }
 
+  const relatedLinks = (
+    <nav className="training-log-v2__links" aria-label={t('training_log.links_label')}>
+      <Link to="/runs">{t('training_log.link_runs')}</Link>
+      <Link to="/analysis/load-balance#load-fitness">{t('training_log.link_fitness')}</Link>
+    </nav>
+  );
+
   return (
     <section aria-label={t('training_log.title')} className="training-log-v2" aria-busy={status === 'loading' || busy ? 'true' : undefined}>
         {showHeader ? (
@@ -202,12 +209,10 @@ export default function TrainingLog({ showHeader = true } = {}) {
             <h2>{t('training_log.title')}</h2>
             <p>{t('training_log.subtitle')}</p>
           </div>
-          <nav className="training-log-v2__links" aria-label={t('training_log.links_label')}>
-            <Link to="/runs">{t('training_log.link_runs')}</Link>
-            <Link to="/analysis/load-balance#load-fitness">{t('training_log.link_fitness')}</Link>
-          </nav>
+          {relatedLinks}
         </header>
         ) : null}
+        {!showHeader ? relatedLinks : null}
         <GoalsCard />
         {body}
     </section>

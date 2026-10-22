@@ -27,6 +27,11 @@ import RunIntervalAnalysis from './RunIntervalAnalysis';
 import ConditionSessionComparison from './ConditionSessionComparison';
 import RunDetailSessionAnalysis from './RunDetailSessionAnalysis';
 import { SessionConversationTool } from '../../features/training/integrated/AthleteTools';
+import RunBestEfforts from './RunBestEfforts';
+import RunEditDrawer from './RunEditDrawer';
+import RunNotes from './RunNotes';
+import RunMatches from './RunMatches';
+import RunSummaryCard from './RunSummaryCard';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -259,6 +264,10 @@ export default function RunDetail() {
   const [streamCheckedFor, setStreamCheckedFor] = useState(null);
   const [paceRefresh, setPaceRefresh] = useState(0);
   const [comparisonRefresh, setComparisonRefresh] = useState(0);
+  // The edit drawer, and a count of the saves that changed what the cards beside it are drawn from (type, tags, rating, title).
+  const [editOpen, setEditOpen] = useState(false);
+  const [editVersion, setEditVersion] = useState(0);
+  const [editNotice, setEditNotice] = useState(null);
 
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -348,6 +357,27 @@ export default function RunDetail() {
       }
     }).catch(() => {});
   }, [isAuthenticated, id]);
+
+  // The drawer saved something: the run on this page follows it, and so do the cards drawn from what was edited.
+  function handleEdited(result) {
+    const touched = result.fields.length > 0 || result.shoeChanged;
+    if (!touched) return;
+    invalidateResourceCache('/api/activities');
+    setRun((prev) => {
+      if (!prev) return prev;
+      const nextRun = { ...prev, name: result.name, notes: result.notes ?? null };
+      if (result.shoeChanged) {
+        nextRun.shoeId = result.shoeId;
+        nextRun.shoeName = result.shoeName;
+      }
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('hermes_selected_run', JSON.stringify(nextRun));
+      }
+      return nextRun;
+    });
+    if (result.fields.length > 0) setEditVersion((current) => current + 1);
+    setEditNotice({ runId: run?.id, text: t('run_detail.edit_saved') });
+  }
 
   async function assignShoe(shoeId) {
     if (!run?.id) {
@@ -746,7 +776,8 @@ export default function RunDetail() {
     if (!Array.isArray(profile) || profile.length < 2) return null;
     if (!lapRows.length) return null;
     return lapRows.map((lap) => {
-      const startKm = ((lap.lapIndex || 1) - 1) * (lap.distanceKm || 1);
+      // Whole laps are a kilometre each; the partial lap at the end starts where the last whole one stopped.
+      const startKm = (lap.lapIndex || 1) - 1;
       const endKm = startKm + (lap.distanceKm || 1);
       let gain = 0;
       for (let i = 1; i < profile.length; i++) {
@@ -793,6 +824,7 @@ export default function RunDetail() {
       paceTrend: direction === 'faster' ? 'improving' : direction === 'slower' ? 'declining' : 'stable',
     };
   }, [run, recentRuns]);
+  const comparisonWindow = runComparison ? t('run_detail.run_comparison_window', { count: runComparison.recentRuns }) : '';
 
   async function refreshRunFromActivities() {
     if (!isAuthenticated || !id) return null;
@@ -1023,9 +1055,10 @@ export default function RunDetail() {
     const match = /(\d+):(\d{2})/.exec(String(lap?.pace || ''));
     return match ? Number(match[1]) * 60 + Number(match[2]) : null;
   };
+  // The partial lap at the end is listed but never the fastest or slowest: like the pace profile, only whole kilometres are compared.
   const fastestVisibleLapIndex = visibleLapRows.reduce((bestIndex, lap, index, source) => {
     const seconds = lapPaceSeconds(lap);
-    if (seconds == null) return bestIndex;
+    if (seconds == null || lap.partial) return bestIndex;
     if (bestIndex === -1) return index;
     const bestSeconds = lapPaceSeconds(source[bestIndex]);
     return bestSeconds == null || seconds < bestSeconds ? index : bestIndex;
@@ -1059,13 +1092,13 @@ export default function RunDetail() {
     { key: 'cadence', label: t('run_detail.average_cadence'), value: cadenceValue, unit: t('run_detail.unit_spm') },
   ];
   const visibleLapPaces = visibleLapRows.map(lapPaceSeconds);
-  const knownLapPaces = lapRows.map(lapPaceSeconds).filter((value) => value != null);
+  const knownLapPaces = lapRows.filter((lap) => !lap.partial).map(lapPaceSeconds).filter((value) => value != null);
   const slowestLapPace = knownLapPaces.length ? Math.max(...knownLapPaces) : null;
   const fastestLapPace = knownLapPaces.length ? Math.min(...knownLapPaces) : null;
   const lapBarWidth = (seconds) => {
     if (seconds == null || slowestLapPace == null) return 0;
     const span = Math.max(1, slowestLapPace - fastestLapPace);
-    return Math.round(35 + ((slowestLapPace - seconds) / span) * 65);
+    return Math.max(10, Math.min(100, Math.round(35 + ((slowestLapPace - seconds) / span) * 65)));
   };
   const telemetryBounds = hasTelemetryData ? getTelemetryValueBounds(activeTelemetrySamples) : null;
   const telemetryAverage = activeTelemetrySamples.length
@@ -1103,6 +1136,16 @@ export default function RunDetail() {
               <h1>{run.name || t('run_detail.detail_title')}</h1>
               <div className="run-detail-v2__actions">
                 <SessionConversationTool canonicalId={run.id} />
+                {run.provider && <span className="run-detail-provider-pill run-detail-v2__provider">{run.provider}</span>}
+                <button
+                  type="button"
+                  className="run-detail-v2__btn"
+                  aria-haspopup="dialog"
+                  onClick={() => { setEditNotice(null); setEditOpen(true); }}
+                >
+                  <AppIcon name="edit" />
+                  {t('run_detail.edit_run')}
+                </button>
                 <button type="button" className="run-detail-v2__btn" onClick={handleShare} aria-label={t('run_detail.share')}>
                   <AppIcon name="upload" />
                   {shareFeedback || t('run_detail.share')}
@@ -1114,6 +1157,8 @@ export default function RunDetail() {
                   </button>
                 )}
               </div>
+              {editNotice && editNotice.runId === run.id ? <p className="run-detail-v2__edit-notice" role="status">{editNotice.text}</p> : null}
+              <RunNotes notes={run.notes} />
             </div>
 
             <div className="run-detail-v2__primary">
@@ -1146,10 +1191,10 @@ export default function RunDetail() {
                 <div>
                   <strong>
                     {runComparison.direction === 'faster'
-                      ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
+                      ? t('run_detail.run_comparison_faster', { percent: runComparison.absPct, window: comparisonWindow })
                       : runComparison.direction === 'slower'
-                        ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: `${runComparison.recentRuns}-run` })
-                        : t('run_detail.run_comparison_same', { window: `${runComparison.recentRuns}-run` })}
+                        ? t('run_detail.run_comparison_slower', { percent: runComparison.absPct, window: comparisonWindow })
+                        : t('run_detail.run_comparison_same', { window: comparisonWindow })}
                   </strong>
                   <p>
                     {runComparison.paceTrend === 'improving' ? t('run_detail.run_comparison_improving')
@@ -1162,6 +1207,8 @@ export default function RunDetail() {
             )}
           </div>
         </section>
+
+        <RunSummaryCard key={`summary-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh + editVersion} />
 
         {analytics?.debrief && (
           <section id="run-detail-coach" className="run-detail-v2__coach">
@@ -1244,7 +1291,15 @@ export default function RunDetail() {
             </div>
             <div className="run-detail-telemetry-chart run-detail-v2__chart">
               {telemetryChartData ? (
-                <Line data={telemetryChartData} options={telemetryChartOptions} aria-label={`${activeTelemetryDefinition.label} (${activeTelemetryDefinition.unit})`} />
+                <Line
+                  data={telemetryChartData}
+                  options={telemetryChartOptions}
+                  aria-label={t('run_detail.telemetry_chart_label', {
+                    metric: activeTelemetryDefinition.label,
+                    min: telemetryBounds ? `${formatTelemetryValue(telemetryBounds.min, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}` : '--',
+                    max: telemetryBounds ? `${formatTelemetryValue(telemetryBounds.max, activeTelemetryDefinition.key)} ${activeTelemetryDefinition.unit}` : '--',
+                  })}
+                />
               ) : (
                 <div className="run-detail-chart-empty">{t('run_detail.telemetry_no_stream')}</div>
               )}
@@ -1268,6 +1323,14 @@ export default function RunDetail() {
           <RunIntervalAnalysis key={`intervals-${run.id}-${token}-${email}`} activityId={run.id} token={token} onAnalysisSaved={() => setComparisonRefresh((value) => value + 1)} />
           <ConditionSessionComparison key={`conditions-${run.id}-${token}-${email}`} activityId={run.id} token={token} currentRun={run} recentRuns={recentRuns} refreshToken={comparisonRefresh} />
         </RunDetailSessionAnalysis>
+        {/* Siblings need different keys: two children with the same key are duplicated or dropped on update. */}
+        <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} startTime={run.startTime || run.startDate} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
+
+        <RunTrainingCards key={`training-${run.id}`} runId={run.id} refreshToken={editVersion} />
+
+        <RunBestEfforts key={`efforts-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
+
+        <RunMatches key={`matches-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} />
 
         <div className="run-detail-v2__lower">
           <section id="run-detail-splits" className="run-detail-v2__card run-detail-v2__splits">
@@ -1293,7 +1356,7 @@ export default function RunDetail() {
                   const lapGain = lapElevationGains ? lapElevationGains[index] : null;
                   return (
                     <tr key={`lap-${lap.lapIndex || index}`} className={index === fastestVisibleLapIndex ? 'is-highlight' : ''}>
-                      <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
+                      <td>{lap.distanceKm ? `${lap.distanceKm.toFixed(lap.partial ? 2 : 1)} ${distanceUnitLabel}` : `#${lap.lapIndex || index + 1}`}</td>
                       <td className="run-detail-v2__pace-bar" aria-hidden="true"><span style={{ width: `${lapBarWidth(visibleLapPaces[index])}%` }} /></td>
                       <td className="run-detail-v2__pace">{lap.pace || '--'}</td>
                       <td>{lapGain != null ? `+${Math.round(lapGain)} ${elevationUnitLabel}` : formatLapElevation(lap)}</td>
@@ -1310,7 +1373,8 @@ export default function RunDetail() {
           </section>
 
           <aside className="run-detail-v2__side">
-            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} compact />
+            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} compact refreshToken={editVersion} />
+            <RunGoalsCard key={`goals-${run.id}`} runId={run.id} />
             <section className="run-detail-v2__card run-detail-gear-section run-detail-v2__gear">
               <div className="run-detail-v2__card-head">
                 <h3>{t('run_detail.gear_linked')}</h3>
@@ -1409,13 +1473,22 @@ export default function RunDetail() {
             </section>
           </aside>
         </div>
-        <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
-        <RunTrainingCards key={`training-${run.id}`} runId={run.id} />
-        <RunGoalsCard key={`goals-${run.id}`} runId={run.id} />
       </div>
       <footer className="runner-shell-footer runner-dashboard-footer run-detail-footer">
         <FooterNavLinks />
       </footer>
+      {editOpen ? (
+        <RunEditDrawer
+          key={`edit-${run.id}`}
+          runId={run.id}
+          provider={run.provider}
+          shoes={shoes}
+          currentShoeName={linkedShoeName}
+          lang={lang}
+          onClose={() => setEditOpen(false)}
+          onSaved={handleEdited}
+        />
+      ) : null}
     </div>,
     {
       hasCoachReview: Boolean(analytics?.debrief),

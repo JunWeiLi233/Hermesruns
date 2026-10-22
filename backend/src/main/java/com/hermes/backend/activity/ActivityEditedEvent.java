@@ -12,6 +12,11 @@ import java.util.Set;
 public record ActivityEditedEvent(Long runnerId, Long activityId, Set<String> fields) {
 
     public static final String PERCEIVED_EXERTION = "perceivedExertion";
+    public static final String RUN_TYPE = "runType";
+    public static final String TAGS = "tags";
+    public static final String NAME = "name";
+    public static final String NOTES = "notes";
+    public static final String USE_RATING_FOR_EFFORT = "useRatingForEffort";
 
     public ActivityEditedEvent {
         fields = fields == null ? Set.of() : Set.copyOf(fields);

@@ -6,9 +6,11 @@ import java.util.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @RestController
 @RequestMapping("/api/profile/heatmap")
+@ConditionalOnProperty(name="app.explorer.enabled",havingValue="true")
 public class RecordedHeatmapController {
     private final AuthService auth;private final RecordedHeatmapService service;
     public RecordedHeatmapController(AuthService auth,RecordedHeatmapService service){this.auth=auth;this.service=service;}

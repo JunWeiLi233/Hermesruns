@@ -33,6 +33,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -144,6 +145,57 @@ class StravaSyncServiceTests {
         verify(restTemplate).exchange(bootstrapRecentPage(2), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef());
         verify(automatedCoachService).reaggregateRunner(41L);
         verify(applicationEventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
+    void aRunTheRunnerRenamedKeepsItsTitleWhileTheRestOfItFollowsStrava() {
+        ActivityRepository activityRepository = mock(ActivityRepository.class);
+        ActivityPointRepository activityPointRepository = mock(ActivityPointRepository.class);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
+        RestTemplate restTemplate = mock(RestTemplate.class);
+        AcclimatizationService acclimatizationService = mock(AcclimatizationService.class);
+
+        StravaSyncService service = new StravaSyncService(
+                activityRepository,
+                activityPointRepository,
+                runnerRepository,
+                restTemplate,
+                acclimatizationService,
+                mock(AutomatedCoachService.class),
+                mock(ApplicationEventPublisher.class),
+                mock(AiUsageService.class),
+                mock(StravaTokenService.class),
+                mock(ActivityDataAccess.class)
+        );
+        ReflectionTestUtils.setField(service, "stravaRecentSyncMaxPages", 1);
+
+        Runner runner = new Runner();
+        runner.setId(43L);
+        when(runnerRepository.findById(43L)).thenReturn(Optional.of(runner));
+
+        Activity renamed = existingStravaRun(1003L, runner, "STRAVA_1003", "My own title", 6000d, 1800L);
+        renamed.setNameEdited(true);
+        Activity untouched = existingStravaRun(1004L, runner, "STRAVA_1004", "Old Strava title", 6000d, 1800L);
+        when(activityRepository.findByRunnerAndProviderAndSourceChecksum(runner, ImportProvider.STRAVA, "STRAVA_1003"))
+                .thenReturn(Optional.of(renamed));
+        when(activityRepository.findByRunnerAndProviderAndSourceChecksum(runner, ImportProvider.STRAVA, "STRAVA_1004"))
+                .thenReturn(Optional.of(untouched));
+        when(activityRepository.save(any(Activity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(activityPointRepository.existsByActivity(any(Activity.class))).thenReturn(true);
+        when(acclimatizationService.calculatePenaltyForActivity(any(Activity.class))).thenReturn(0);
+        when(restTemplate.exchange(bootstrapRecentPage(1), eq(HttpMethod.GET), anyHttpEntity(), anyTypeRef()))
+                .thenReturn(ResponseEntity.ok(List.of(
+                        stravaActivity("1003", "Strava's new title", 7000d, 2100L),
+                        stravaActivity("1004", "Strava's new title", 7000d, 2100L))));
+
+        service.fetchAndSaveStravaActivities("token", 43L, true, "test_recent_sync");
+
+        assertEquals("My own title", renamed.getName());
+        assertTrue(renamed.isNameEdited());
+        assertEquals(7000d, renamed.getDistanceMeters());
+        assertEquals(2100, renamed.getMovingTimeSeconds());
+        assertEquals("Strava's new title", untouched.getName());
+        assertFalse(untouched.isNameEdited());
     }
 
     @Test

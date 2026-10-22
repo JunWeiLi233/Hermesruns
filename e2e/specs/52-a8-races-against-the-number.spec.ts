@@ -11,12 +11,25 @@ import { Api, newRunner } from '../fixtures/api.ts';
 import { importRunSpecs, sharedRunner, type RunSpec } from '../fixtures/analysis.ts';
 import { hms, mmss, raceEquationVo2max, shortDate, signedChange } from '../fixtures/format.ts';
 import { pageOpener } from '../fixtures/pages.ts';
+import { expandRunLabels } from '../fixtures/run-labels.ts';
 import { a11yViolations, contrastProblems, expect, expectNoHorizontalOverflow, expectNoRawKeys, test } from '../fixtures/test.ts';
 
-const ROUTE = '/analysis/vo2max-estimates';
+const ROUTE = '/analysis#vo2max-estimates';
 const DAY = 24 * 3600 * 1000;
 const pages = pageOpener();
 test.afterEach(() => pages.closeAll());
+
+async function setProfileUnits(api: Api, units: 'metric' | 'imperial' = 'metric'): Promise<void> {
+  const profile = (await api.get('/api/training/me')).json;
+  if (profile.units === units) return;
+  const saved = await api.request('PATCH', '/api/training/me', {
+    body: { units }, headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  });
+  expect(saved.status).toBe(200);
+}
+
+test.beforeEach(async () => setProfileUnits(runner.api));
+
 
 interface Row {
   id: number;
@@ -80,7 +93,7 @@ function racesFrom(rows: Row[]): Expected[] {
 const section = (page: Page): Locator => page.locator('.vo2max-estimates-v2__races');
 const racesTable = (page: Page): Locator => page.getByRole('table', { name: /^Your races, newest first/ });
 const runsTable = (page: Page): Locator => page.getByRole('table', { name: /^Runs of the last 90 days with an estimate, highest first$/ });
-const typeGroup = (page: Page): Locator => page.getByRole('region', { name: 'Type and tags', exact: true }).getByRole('group', { name: 'Run type' });
+const typeGroup = (page: Page): Locator => page.getByRole('region', { name: 'Labels', exact: true }).getByRole('group', { name: 'Run type' });
 
 /** Three easy 5 km runs, two races (a 10 km and a 5 km), a 1.2 km fun run that is also flagged, none with a heart rate. */
 const FIXTURE: RunSpec[] = [
@@ -106,8 +119,17 @@ test.beforeAll(async () => {
   });
 });
 
+async function openEvidence(page: Page): Promise<void> {
+  const disclosure = page.locator('.vo2max-estimates-v2__race-evidence');
+  await expect(disclosure).toBeVisible();
+  if (!(await disclosure.evaluate(node => (node as HTMLDetailsElement).open))) {
+    await disclosure.locator(':scope > summary').click();
+  }
+}
+
 async function openPage(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1, name: 'VO2max estimates' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'VO2max estimates', exact: true })).toBeVisible();
+  await openEvidence(page);
   await expect(page.getByRole('heading', { level: 2, name: 'Your races against the number' })).toBeVisible();
 }
 
@@ -213,8 +235,12 @@ test.describe('A8 races against the number: flagging a race and taking the flag 
     // Into the run (the list of runs was read a moment ago and is kept), flag it, and back, all inside the app.
     await runsTable(page).getByRole('link', { name: 'E2E a8 flow hard five' }).click();
     await expect(page).toHaveURL(new RegExp(`/runs/${ids[3]}$`));
+    await expandRunLabels(page);
     await expect(typeGroup(page)).toBeVisible();
+    const flagged = page.waitForResponse(response => response.request().method() === 'PATCH'
+      && new URL(response.url()).pathname === `/api/activities/${ids[3]}`);
     await typeGroup(page).getByRole('radio', { name: 'Race', exact: true }).check();
+    expect((await flagged).status()).toBe(200);
     await expect(typeGroup(page).getByRole('radio', { name: 'Race', exact: true })).toBeChecked();
     await expect(typeGroup(page)).not.toHaveAttribute('aria-busy', 'true');
     expect((await rowsOf(made.api)).find((row) => row.id === ids[3])?.runType).toBe('RACE');
@@ -232,8 +258,12 @@ test.describe('A8 races against the number: flagging a race and taking the flag 
 
     // And the other way: take the flag off.
     await line.getByRole('link').click();
+    await expandRunLabels(page);
     await expect(typeGroup(page)).toBeVisible();
+    const unflagged = page.waitForResponse(response => response.request().method() === 'PATCH'
+      && new URL(response.url()).pathname === `/api/activities/${ids[3]}`);
     await typeGroup(page).getByRole('radio', { name: 'Just a run' }).check();
+    expect((await unflagged).status()).toBe(200);
     await expect(typeGroup(page).getByRole('radio', { name: 'Just a run' })).toBeChecked();
     await expect(typeGroup(page)).not.toHaveAttribute('aria-busy', 'true');
     await page.goBack();
@@ -284,6 +314,7 @@ test.describe('A8 races against the number: flagging a race and taking the flag 
 test.describe('A8 races against the number: in other conditions', () => {
   test('A8-U1 in miles the distance of a race and the shortest race are in miles', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
+    await setProfileUnits(runner.api, 'imperial');
     await page.addInitScript(() => localStorage.setItem('hermes_unit', 'mile'));
     await page.goto(ROUTE);
     await openPage(page);
@@ -297,6 +328,7 @@ test.describe('A8 races against the number: in other conditions', () => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(ROUTE);
+    await openEvidence(page);
     await expect(page.getByRole('heading', { level: 2, name: '你的比赛与这个数字的对照' })).toBeVisible();
     const [club] = racesFrom(await rowsOf(runner.api));
     const table = page.getByRole('table', { name: /^你的比赛，最近的在前/ });

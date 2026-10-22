@@ -9,6 +9,7 @@ import Modal from '../../components/Modal';
 
 import AppIcon from '../../components/AppIcon';
 import HermesLogo from '../../components/HermesLogo';
+import HermesWordmarkSvg from '../../components/HermesWordmarkSvg';
 import PageSkeleton from '../../components/PageSkeleton';
 import ShoeBrandLogo from '../../components/ShoeBrandLogo';
 import CatalogLongPressCard from '../../components/CatalogLongPressCard.jsx';

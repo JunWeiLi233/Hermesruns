@@ -129,6 +129,25 @@ describe('buildVo2maxHistory', () => {
     expect(years.map((row) => row.current)).toEqual([true, false]);
   });
 
+  it('uses account calendar years and year-end boundaries while preserving instant-based estimates and geometry', () => {
+    const starts = ['2025-12-29T10:50:00Z', '2025-12-30T10:50:00Z', '2025-12-31T10:50:00Z', '2025-12-31T11:10:00Z'];
+    const days = ['2025-12-29', '2025-12-30', '2025-12-31', '2026-01-01'];
+    const runs = starts.map((startTime, index) => ({
+      id: index + 1, startTime, activityInstant: startTime, accountLocalDate: days[index],
+      accountLocalTime: index === 3 ? '00:10:00' : '23:50:00', accountTimeZone: 'Pacific/Auckland',
+      distanceKm: 5, movingTimeSeconds: (25 - index) * 60,
+    }));
+    const now = Date.parse('2025-12-31T11:20:00Z');
+    const history = buildVo2maxHistory(runs, { now });
+    expect(history.years.map(row => [row.year, row.runs, row.km, row.current])).toEqual([[2026, 1, 5, true], [2025, 3, 15, false]]);
+    expect(history.years[1].average.days).toBeCloseTo(10 / 1440, 8);
+    expect(history.years[0].average.days).toBeCloseTo(10 / 1440, 8);
+    expect(history.years[0].high.date.getFullYear()).toBe(2026);
+    expect(history.points.slice(0, 4).map(point => point.time)).toEqual(starts.map(Date.parse));
+    const withoutCalendar = buildVo2maxHistory(runs.map(({ id, startTime, distanceKm, movingTimeSeconds }) => ({ id, startTime, distanceKm, movingTimeSeconds })), { now });
+    expect(history.points.map(point => [point.time, point.value])).toEqual(withoutCalendar.points.map(point => [point.time, point.value]));
+  });
+
   it('takes the highest, the lowest and the end of a year from its points, and only a firm point can be the highest or the lowest', () => {
     const june = Date.UTC(2025, 5, 15, 12);
     const at = (id, days, minutes) => ({ id, name: `Run ${id}`, startTime: new Date(june + days * DAY).toISOString(), distanceKm: 5, movingTimeSeconds: Math.round(minutes * 60) });

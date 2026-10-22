@@ -9,6 +9,9 @@ export function useAccountDate(timeZone) {
       const now = new Date();
       setClock(previous => getAccountDate(timeZone, previous) === getAccountDate(timeZone, now) ? previous : now);
     };
+    // A profile timezone can arrive after focus was handled by the previous
+    // zone's listener. Reconcile the clock now instead of waiting a minute.
+    refresh();
     const timer = window.setInterval(refresh, 60_000);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);

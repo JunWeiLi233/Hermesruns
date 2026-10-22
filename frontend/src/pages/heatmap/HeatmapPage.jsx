@@ -19,9 +19,6 @@ import '../../features/heatmap-explorer/ui/app.css';
 import './heatmap-workspace.css';
 
 export default function HeatmapPage() {
-  const {pathname} = useLocation();
-  const {token}=useAuth();
-  if (/^\/heatmap(?:\/recorded)?\/?$/.test(pathname)) return <WorkoutHeatmap key={token}/>;
   return <HeatmapWorkspacePage/>;
 }
 
@@ -31,14 +28,13 @@ function HeatmapWorkspacePage() {
   const { isDark, setTheme } = useTheme();
   const { unit, setUnit } = useUnit();
   const location = useLocation();
-  const recorded = location.pathname === '/heatmap/recorded';
+  const recorded = /^\/heatmap(?:\/recorded)?\/?$/.test(location.pathname);
   const [attempt, setAttempt] = useState(0);
   const [capability, setCapability] = useState({});
   const client=useMemo(()=>createNativeExplorerApi({token,email,fetcher:apiFetch}),[token,email]);
   useLayoutEffect(()=>{client.configure({logout,setUnit,setLang,setTheme,unit});},[client,logout,setUnit,setLang,setTheme,unit]);
   useEffect(() => () => client.retire(), [client]);
   useEffect(() => {
-    if (recorded) return undefined;
     const controller = new AbortController();
     setCapability({});
     apiFetch('/api/profile/heatmap/explorer', {signal: controller.signal}).then(async response => {
@@ -52,13 +48,14 @@ function HeatmapWorkspacePage() {
   }, [recorded, attempt, token, client]);
 
   const tr = key => t(`heatmapExplorer.${key}`);
-  if (recorded || capability.available === false) return <>
+  if (capability.available === false) return <>
     <RecordedHeatmap/>
     <aside className="heatmap-workspace-switch" aria-label={tr('workspace')}>
-      {recorded ? <Link to="/heatmap">{tr('workspace')}</Link> : <><span>{tr('workspaceUnavailable')}</span><button onClick={() => setAttempt(value => value + 1)}>{tr('retry')}</button></>}
+      <span>{tr('workspaceUnavailable')}</span><button onClick={() => setAttempt(value => value + 1)}>{tr('retry')}</button>
     </aside>
   </>;
   if (!capability.available && !capability.error) return <PageSkeleton variant="heatmap"/>;
+  if (recorded && capability.available) return <WorkoutHeatmap key={token}/>;
   return <AuthenticatedPageChrome key={token} activeKey="heatmap" title={t('profile.dashboard_nav_heatmap')} bodyClassName="heatmap-native-page">
     <div className="heatmap-native-switch"><Link to="/heatmap/recorded">{tr('recordedMap')}</Link></div>
     {capability.error ? <section role="alert" className="heatmap-native-error"><p>{tr('workspaceError')}</p><button onClick={() => setAttempt(value => value + 1)}>{tr('retry')}</button></section> :

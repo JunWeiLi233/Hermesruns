@@ -123,7 +123,9 @@ class AnalysisActivitySummaryTimeTests {
         assertThat(summary.path("accountLocalDate").asText()).isEqualTo("2026-10-04");
         assertThat(summary.path("accountLocalTime").asText()).isEqualTo("23:55");
         assertThat(summary.path("accountTimeZone").asText()).isEqualTo("America/New_York");
-        assertThat(summary.path("startTime").asText()).isEqualTo("2026-10-05T03:55:00");
+        assertThat(summary.path("startTime").asText()).isEqualTo("2026-10-04T23:55:00");
+        assertThat(summary.path("startDate").asText()).isEqualTo("2026-10-04T23:55");
+        assertThat(summary.path("startTime")).isEqualTo(full(r, a).path("startTime"));
         assertThat(summary.path("movingTimeSeconds").asInt()).isEqualTo(300);
         assertThat(summary.path("distanceKm").asDouble()).isEqualTo(1);
         assertThat(summary.path("averageHeartRate").asDouble()).isEqualTo(130);

@@ -12,6 +12,18 @@ import { a11yViolations, contrastProblems, expect, expectNoHorizontalOverflow, e
 const pages = pageOpener();
 test.afterEach(() => pages.closeAll());
 
+async function setProfileUnits(api: Api, units: 'metric' | 'imperial' = 'metric'): Promise<void> {
+  const profile = (await api.get('/api/training/me')).json;
+  if (profile.units === units) return;
+  const saved = await api.request('PATCH', '/api/training/me', {
+    body: { units }, headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  });
+  expect(saved.status).toBe(200);
+}
+
+test.beforeEach(async () => setProfileUnits(base.api));
+
+
 interface Row {
   id: number;
   name: string;
@@ -159,6 +171,7 @@ test.describe('A4 long-run check: runs that do not fit the usual picture', () =>
 
   test('A4-E4 in miles the distances, the line and the average are in miles', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, base, null);
+    await setProfileUnits(base.api, 'imperial');
     await page.addInitScript(() => localStorage.setItem('hermes_unit', 'mile'));
     await page.goto('/prediction/marathon');
     await expect(check(page)).toBeVisible();

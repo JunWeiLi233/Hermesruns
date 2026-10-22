@@ -637,14 +637,6 @@ export default function RacesDetail() {
   const routePoints = useMemo(() => mapTrust.routePoints, [mapTrust.routePoints]);
   const routeMapPoints = useMemo(() => routePoints.map((point) => [point.lat, point.lng]), [routePoints]);
   const hasAlignedRoute = mapTrust.trustedRouteGeometry && courseMapData.routeAvailable && routeMapPoints.length > 1;
-  const hasTrustedCourseMapOverlay = hasAlignedRoute && mapTrust.trustedOverlay;
-  const courseMapImageOverlayBounds = useMemo(
-    () => (hasTrustedCourseMapOverlay && courseMapData.overlayImageUrl
-      ? toLeafletBoundsCorners(courseMapData.viewportBounds)
-      : null),
-    [courseMapData.overlayImageUrl, courseMapData.viewportBounds, hasTrustedCourseMapOverlay],
-  );
-  const hasTransparentCourseMapOverlay = Boolean(courseMapImageOverlayBounds && courseMapData.overlayImageUrl);
   const hasCityLevelCourseMap = mapTrust.cityLevelMatch && courseMapData.routeAvailable && !hasAlignedRoute;
   const mapViewportBounds = mapTrust.viewportBounds || courseMapData.viewportBounds;
   const absoluteElevationProfile = useMemo(
@@ -846,10 +838,6 @@ export default function RacesDetail() {
         fadeAnimation: false,
         markerZoomAnimation: false,
       });
-      const courseImagePane = map.createPane('race-detail-course-image');
-      courseImagePane.style.zIndex = '430';
-      courseImagePane.style.pointerEvents = 'none';
-      courseImagePane.style.mixBlendMode = 'multiply';
       const routeShadowPane = map.createPane('race-detail-route-shadow');
       routeShadowPane.style.zIndex = '440';
       routeShadowPane.style.pointerEvents = 'none';
@@ -868,7 +856,6 @@ export default function RacesDetail() {
       const tileAttribution = '&copy; OpenStreetMap contributors';
       let activeTileLayer = null;
       let fallbackTileLayer = null;
-      let courseMapImageOverlayLayer = null;
       let routeShadowPolyline = null;
       let polyline = null;
       const routeRenderer = L.svg({ padding: 0.5 });
@@ -886,7 +873,7 @@ export default function RacesDetail() {
         routeRenderer._reset?.();
         routeRenderer._updateTransform?.(currentCenter, currentZoom);
       };
-      const refreshCourseMapOverlayOnViewChange = () => {
+      const refreshRouteOnViewChange = () => {
         if (cancelled) return;
         // Size invalidation belongs to the initial/resize layout pass. Calling
         // it after every zoom makes Leaflet remeasure the whole card while the
@@ -896,11 +883,7 @@ export default function RacesDetail() {
         const refresh = () => {
           if (cancelled) return;
           synchronizeRouteRenderer();
-          // Leaflet owns the overlay element; explicitly asking its native
-          // reset routine to recalculate the pixel bounds keeps the raster
-          // aligned after a pan/zoom completes, including when a map was
-          // mounted while its card was below the fold.
-          courseMapImageOverlayLayer?._reset?.();
+          // Refresh only the trusted vector route after the basemap settles.
           routeShadowPolyline?.redraw?.();
           polyline?.redraw?.();
         };
@@ -978,7 +961,7 @@ export default function RacesDetail() {
           applyRouteMapViewport({ force: true });
         }
         activeTileLayer?.redraw?.();
-        refreshCourseMapOverlayOnViewChange();
+        refreshRouteOnViewChange();
         setRouteMapPainted(true);
         setRouteMapReady(true);
       };
@@ -1015,15 +998,6 @@ export default function RacesDetail() {
         hasAppliedInitialViewport = true;
       };
 
-      if (hasTransparentCourseMapOverlay) {
-        courseMapImageOverlayLayer = L.imageOverlay(courseMapData.overlayImageUrl, courseMapImageOverlayBounds, {
-          pane: 'race-detail-course-image',
-          opacity: 0.72,
-          interactive: false,
-          className: 'race-detail-course-map-overlay',
-        }).addTo(map);
-        courseMapImageOverlayLayer.on('load', refreshCourseMapOverlayOnViewChange);
-      }
 
       if (hasAlignedRoute) {
         routeShadowPolyline = L.polyline(routeMapPoints, {
@@ -1077,7 +1051,7 @@ export default function RacesDetail() {
           applyRouteMapViewport({ force: true });
         }
         activeTileLayer?.redraw?.();
-        refreshCourseMapOverlayOnViewChange();
+        refreshRouteOnViewChange();
         setRouteMapPainted(true);
         setRouteMapReady(true);
       };
@@ -1101,9 +1075,9 @@ export default function RacesDetail() {
       map.on('resize', scheduleMapLayoutSettle);
       map.invalidateSize({ pan: false });
       applyRouteMapViewport({ force: true });
-      map.on('moveend zoomend resize viewreset', refreshCourseMapOverlayOnViewChange);
+      map.on('moveend zoomend resize viewreset', refreshRouteOnViewChange);
       map.on('zoomstart moveend', refreshWarmFallbackTiles);
-      refreshCourseMapOverlayOnViewChange();
+      refreshRouteOnViewChange();
       ensureFallbackTiles();
       activeTileLayer = attachTileLayer(tileUrl);
 
@@ -1148,7 +1122,7 @@ export default function RacesDetail() {
         createdMap.remove();
       }
     };
-  }, [courseMapData.imageUrl, courseMapData.overlayImageUrl, courseMapData.previewImageUrl, courseMapData.viewportBounds, courseMapImageOverlayBounds, courseMapRequestSettled, fallbackTileUrl, hasAlignedRoute, hasTransparentCourseMapOverlay, loadState, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
+  }, [courseMapData.imageUrl, courseMapData.overlayImageUrl, courseMapData.previewImageUrl, courseMapData.viewportBounds, courseMapRequestSettled, fallbackTileUrl, hasAlignedRoute, loadState, mapCenter, mapViewportBounds, race, routeMapPoints, routePoints, tileUrl]);
 
   if (loadState === 'loading') return <PageSkeleton variant="race-detail" />;
 

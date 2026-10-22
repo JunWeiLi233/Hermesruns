@@ -5,7 +5,7 @@
 // its Moving Average"): Monday to Sunday on the runner's own calendar, a week with no run a real zero, the average of a week that is over and has three weeks of history before
 // it. So a card that put a run in the wrong week, left out a rest week or averaged the wrong weeks fails.
 import type { Locator, Page } from '@playwright/test';
-import { Api, newRunner } from '../fixtures/api.ts';
+import { Api, freshClientAddress, newRunner } from '../fixtures/api.ts';
 import { KM_PER_MILE, importRunSpecs, sharedRunner, type RunSpec } from '../fixtures/analysis.ts';
 import { addDays, shortDay, utcDay, weekStartOf } from '../fixtures/format.ts';
 import { gpxRun } from '../fixtures/gpx.ts';
@@ -18,6 +18,20 @@ import { a11yViolations, contrastProblems, expect, expectNoHorizontalOverflow, e
 const ROUTE = '/analysis/load-balance';
 const pages = pageOpener();
 test.afterEach(() => pages.closeAll());
+
+async function setProfileUnits(api: Api, units: 'metric' | 'imperial' = 'metric'): Promise<void> {
+  const profile = (await api.get('/api/training/me')).json;
+  if (profile.units === units) return;
+  const saved = await api.request('PATCH', '/api/training/me', {
+    body: { units }, headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  });
+  expect(saved.status).toBe(200);
+}
+
+test.beforeEach(async () => {
+  runner.api.clientIp = freshClientAddress();
+  await setProfileUnits(runner.api);
+});
 
 interface Row {
   id: number;
@@ -34,7 +48,12 @@ interface Week {
 }
 type Box = { x: number; y: number; width: number; height: number };
 
-const rowsOf = async (api: Api): Promise<Row[]> => (await api.get('/api/activities/analysis')).json;
+const rowsOf = async (api: Api): Promise<Row[]> => {
+  const response = await api.get('/api/activities/analysis');
+  expect(response.status, 'analysis activity list status').toBe(200);
+  expect(Array.isArray(response.json), 'analysis returns the owner activity list').toBe(true);
+  return response.json;
+};
 const whoOf = (made: { api: Api; email: string }): { token: string; email: string } => ({ token: made.api.token as string, email: made.email });
 
 /** The runner's today as the page counts it: the date on the device, or the date of the latest run when that is ahead of it by two days at most. */
@@ -493,6 +512,7 @@ test.describe('A10 weekly distance: runners it has little to say to, and other c
 
   test('A10-U1 in miles the distances and the scale are in miles', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
+    await setProfileUnits(runner.api, 'imperial');
     await page.addInitScript(() => localStorage.setItem('hermes_unit', 'mile'));
     await page.goto(ROUTE);
     await openCard(page);

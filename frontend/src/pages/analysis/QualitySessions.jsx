@@ -245,6 +245,7 @@ function EmptyState({ model }) {
 export default function QualitySessions({ showHeader = true, runs: providedRuns, compact = false } = {}) {
   const { t } = useI18n();
   const { unit } = useUnit();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const choice = useSessionChoice();
   const { status, runs, reload } = useAnalysisRuns(providedRuns);
   const typesKey = choice.types.join(',');
@@ -264,7 +265,10 @@ export default function QualitySessions({ showHeader = true, runs: providedRuns,
         {SESSION_TYPES.map(type => <button key={type} type="button" aria-pressed={choice.types.includes(type)} onClick={() => choice.toggle(type)}>{choice.types.includes(type) ? <span aria-hidden="true">✓</span> : null}{t(`quality_sessions.type_${type}`)}</button>)}
       </div>
       {model.count > 0 ? <><Readings model={model} paceWords={paceWords} compact /><CompactSessions model={model} paceWords={paceWords} /></> : <EmptyState model={model} />}
-      <details className="intensity-quality-methods"><summary>{t('methods.link')}</summary><p>{t('quality_sessions.types_hint')}</p><p>{t('quality_sessions.basis')} <MethodsLink anchor="quality-sessions" /></p></details>
+      <details className="intensity-quality-methods" onToggle={event => setDetailsOpen(event.currentTarget.open)}><summary>{t('methods.link')}</summary>
+        {model.count > 0 && detailsOpen ? <div className="quality-sessions-v2__full-details"><Readings model={model} paceWords={paceWords} /><SessionsTable model={model} paceWords={paceWords} /></div> : null}
+        <p>{t('quality_sessions.types_hint')}</p><p>{t('quality_sessions.basis')} <MethodsLink anchor="quality-sessions" /></p>
+      </details>
     </section>
   );
 

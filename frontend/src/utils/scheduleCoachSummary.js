@@ -1,5 +1,5 @@
 import { describeAcwrState } from './todayRunAcwrInsight.js';
-import { addCalendarDays } from './timeZone';
+import { addCalendarDays } from './timeZone.js';
 
 export function selectNextSessionForWeek(schedule, todayKey, weekStart) {
   const end = addCalendarDays(weekStart, 6);

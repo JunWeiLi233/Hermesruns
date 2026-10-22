@@ -29,7 +29,7 @@ async function nativeLogin(page) {
 
 test('N01 native Hermes heatmap keeps filters history statistics and refresh under the main route', async ({page}, info) => {
   await nativeLogin(page);
-  await page.goto('/heatmap');
+  await page.goto('/heatmap/map');
   await expect(page.getByRole('heading', {name: 'Places become familiar.'})).toBeVisible();
   expect(page.url()).not.toContain('/explorer/');
   await expect(page.locator('iframe')).toHaveCount(0);
@@ -55,7 +55,7 @@ test('N01 native Hermes heatmap keeps filters history statistics and refresh und
 
 test('N02 native file import from an empty workspace uses canonical jobs and survives main-route refresh', async ({page}, info) => {
   const token=await nativeLogin(page);
-  await page.goto('/heatmap');
+  await page.goto('/heatmap/map');
   await expect(page.getByRole('heading', {name: 'A map made of your own days outside'})).toBeVisible();
   await page.getByRole('button', {name: 'Add activity files', exact: true}).first().click();
   await page.getByLabel('FIT, GPX or TCX activity files').setInputFiles('../public/examples/independent-loop.gpx');
@@ -68,7 +68,7 @@ test('N02 native file import from an empty workspace uses canonical jobs and sur
   const canonical=await page.request.get('/api/activities/analysis',{headers:{Authorization:`Bearer ${token}`}});
   expect(canonical.ok()).toBeTruthy();
   expect(await canonical.text()).toContain('Sunday reservoir circuit');
-  await page.goto('/heatmap');
+  await page.goto('/heatmap/map');
   await expect(page.getByRole('link', {name: 'Sunday reservoir circuit', exact: true}).first()).toBeVisible();
   await page.reload();
   await expect(page.getByRole('link', {name: 'Sunday reservoir circuit', exact: true}).first()).toBeVisible();

@@ -1,6 +1,8 @@
 package com.hermes.backend.races;
 
+import com.hermes.backend.races.model.ResolvedCandidateAsset;
 import com.hermes.backend.runner.Runner;
+import java.nio.file.Path;
 import java.util.Collections;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,19 +20,29 @@ class MarathonRoutePipelineServiceTests {
     private MarathonRouteExtractionService extractionService;
     private MarathonRouteGeoreferencingService georeferencingService;
     private MarathonRouteMatchAndExportService matchAndExportService;
+    private RaceCourseMapImageService imageService;
     private MarathonRoutePipelineService pipelineService;
+    private final Path stagedImage = Path.of(System.getProperty("java.io.tmpdir"), "hermes-route-staged.png");
 
     @BeforeEach
     void setUp() {
         extractionService = Mockito.mock(MarathonRouteExtractionService.class);
         georeferencingService = Mockito.mock(MarathonRouteGeoreferencingService.class);
         matchAndExportService = Mockito.mock(MarathonRouteMatchAndExportService.class);
-        pipelineService = new MarathonRoutePipelineService(extractionService, georeferencingService, matchAndExportService);
+        imageService = Mockito.mock(RaceCourseMapImageService.class);
+        pipelineService = new MarathonRoutePipelineService(extractionService, georeferencingService, matchAndExportService, imageService);
+    }
+
+    private void stageImage(String imageReference) throws Exception {
+        byte[] bytes = new byte[] {1, 2, 3};
+        when(imageService.resolveUploadedReference(imageReference)).thenReturn(new ResolvedCandidateAsset(imageReference, bytes));
+        when(imageService.writePipelineImageFile(bytes)).thenReturn(stagedImage);
     }
 
     @Test
-    void testRunPipeline_Success() {
+    void testRunPipeline_Success() throws Exception {
         when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
+        stageImage("data:image/png;base64,AQID");
 
         // Mocking Step 1 & 2
         RouteParametersDTO routeParams = new RouteParametersDTO("#FF0000", Collections.emptyList());
@@ -53,14 +65,15 @@ class MarathonRoutePipelineServiceTests {
 
         MarathonRoutePipelineService.PipelineResult result = pipelineService.runPipeline(
                 new Runner(),
-                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 52.5200, 13.4050, 42.195, "path/to/img.png");
+                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 52.5200, 13.4050, 42.195, "data:image/png;base64,AQID");
 
         assertNotNull(result);
         assertEquals(extractionResult, result.extractionResult());
         assertEquals(georefResult, result.georefResult());
         assertEquals(matchExportResult, result.matchExportResult());
+        verify(extractionService).extractRoutePath(stagedImage.toString(), "Berlin Marathon", "Berlin", "Germany", 42.195);
         verify(georeferencingService).georeferenceRoute(
-                "path/to/img.png",
+                stagedImage.toString(),
                 "Berlin Marathon",
                 "Berlin",
                 "Germany",
@@ -69,6 +82,36 @@ class MarathonRoutePipelineServiceTests {
                 13.4050,
                 42.195
         );
+        verify(imageService).deletePipelineImageFile(stagedImage);
+    }
+
+    @Test
+    void testRunPipeline_NeverTreatsTheRequestReferenceAsAServerPath() {
+        when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
+        when(imageService.resolveUploadedReference("/etc/passwd")).thenReturn(null);
+
+        assertThatThrownBy(() -> pipelineService.runPipeline(
+                new Runner(),
+                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 52.5200, 13.4050, 42.195, "/etc/passwd"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Could not load the course-map image");
+
+        verify(extractionService, never()).extractRoutePath(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void testRunPipeline_DeletesTheStagedImageWhenAStepFails() throws Exception {
+        when(georeferencingService.isConfiguredForPipelineFallback()).thenReturn(true);
+        stageImage("local-course-map:berlin.png");
+        when(extractionService.extractRoutePath(any(), any(), any(), any(), any())).thenThrow(new IllegalStateException("cv failed"));
+
+        assertThatThrownBy(() -> pipelineService.runPipeline(
+                new Runner(),
+                "race-123", "Berlin Marathon", "Berlin", "Germany", "https://berlin.com", 52.5200, 13.4050, 42.195, "local-course-map:berlin.png"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("cv failed");
+
+        verify(imageService).deletePipelineImageFile(stagedImage);
     }
 
     @Test
@@ -82,6 +125,7 @@ class MarathonRoutePipelineServiceTests {
                 .hasMessageContaining("disabled");
 
         verify(extractionService, never()).extractRoutePath(any(), any(), any(), any(), any());
+        verify(imageService, never()).resolveUploadedReference(any());
         verify(matchAndExportService, never()).matchExportAndPersist(any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

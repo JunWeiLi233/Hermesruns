@@ -98,7 +98,7 @@ public class ActivityController {
         // ?id= serves the same feed-item shape for a single run.
         if (id != null) {
             return activityDataAccess.findActivityForRunner(id, activeUser.get())
-                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunFeedItem(activity, activeUser.get())))
+                    .<ResponseEntity<?>>map(activity -> ResponseEntity.ok(ActivityRoutePreviewHelper.toRunDetailItem(activity, ActivityLocalDates.zoneOf(activeUser.get()))))
                     .orElseGet(() -> err(HttpStatus.NOT_FOUND, "NOT_FOUND", "Activity not found."));
         }
 
@@ -236,6 +236,7 @@ public class ActivityController {
         int boundedLimit = normalizeAnalysisSummaryLimit(limit);
         List<ActivityRepository.AnalysisActivitySummaryProjection> runs =
                 activityDataAccess.findAnalysisSummaries(activeUser.get(), boundedLimit);
+        java.time.ZoneId zone = ActivityLocalDates.zoneOf(activeUser.get());
         List<AnalysisActivitySummary> response = runs.stream()
                 .map(run -> {
                     ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.fromRawFields(
@@ -254,8 +255,8 @@ public class ActivityController {
                             run.getDistanceKm(),
                             run.getDistanceMeters(),
                             run.getMovingTimeSeconds(),
-                            run.getStartDate(),
-                            run.getStartTime(),
+                            ActivityLocalDates.localStartDate(run.getStartDate(), run.getStartTime(), run.getStravaApiSourced(), zone),
+                            ActivityLocalDates.localStart(run.getStartTime(), run.getStravaApiSourced(), zone),
                             run.getAverageHeartRate(),
                             run.getMaxHeartRate(),
                             run.getAverageCadence(),
@@ -456,7 +457,8 @@ public class ActivityController {
         List<ActivityAnalyticsHelper.LapBreakdown> rawLaps = ActivityAnalyticsHelper.buildLapBreakdown(pts);
         List<ActivityLap> enrichedLaps = rawLaps.stream().map(lap -> {
             double startM = (lap.lapIndex() - 1) * 1000.0;
-            double endM = lap.lapIndex() * 1000.0;
+            Double lastMeters = pts.get(pts.size() - 1).distanceMeters();
+            double endM = lap.partial() && lastMeters != null ? lastMeters : lap.lapIndex() * 1000.0;
             Double elevGain = ActivityLap.computeElevationGain(pts, startM, endM);
             return new ActivityLap(
                     lap.lapIndex(),
@@ -465,7 +467,8 @@ public class ActivityController {
                     lap.pace(),
                     lap.averageHeartRate(),
                     lap.averageCadence(),
-                    elevGain
+                    elevGain,
+                    lap.partial()
             );
         }).toList();
 

@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiFetch, apiJson } from '../../../api';
+import { cachedApiJson } from '../../../api/resourceCache';
 import en from '../../../i18n/locales/en';
 import RunDetail from '../RunDetail';
 import { paceProfile } from './paceFixtures';
@@ -24,6 +25,7 @@ vi.mock('../../../contexts/I18nContext', () => ({
     formatNumber: (value, options) => new Intl.NumberFormat('en-US', options).format(value),
   }),
 }));
+vi.mock('../../../contexts/UnitContext', () => ({ useUnit: () => ({ unit: 'km', isMile: false }) }));
 vi.mock('../../../components/TopbarUserMenu', () => ({ default: () => null }));
 vi.mock('../../../components/TopbarNotifications', () => ({ default: () => null }));
 vi.mock('../../../components/FooterNavLinks', () => ({ default: () => null }));
@@ -268,6 +270,54 @@ describe('the pace analysis on the run page', () => {
       expect(screen.getByRole('button', { name: t('run_detail.recalibrate') })).toBeInTheDocument();
       expect(paceRequests()).toEqual(['/api/activities/7/pace-profile', '/api/activities/8/pace-profile']);
     });
+  });
+
+  it('cuts the pace zones from the runs before the one on the page, using the start time of that run', async () => {
+    const original = cachedApiJson.getMockImplementation();
+    cachedApiJson.mockImplementation(async (url) => {
+      if (url === '/api/activities/analysis') {
+        return [
+          { id: 1, startTime: '2026-09-01T08:00:00', distanceKm: 5, movingTimeSeconds: 1500 },
+          // After run 7 (it started on 2026-10-01): its fitness is not the fitness run 7 was run with.
+          { id: 2, startTime: '2026-10-10T08:00:00', distanceKm: 5, movingTimeSeconds: 1200 },
+        ];
+      }
+      return url.startsWith('/api/activities') ? [] : {};
+    });
+    try {
+      renderPage();
+      expect(await screen.findByText(/best runs in the 90 days before this one \(VDOT 3\d\.\d\)/)).toBeInTheDocument();
+    } finally {
+      cachedApiJson.mockImplementation(original);
+    }
+  });
+
+  it('finds the zones of a run that has only a date, no exact start time', async () => {
+    const originalApi = apiJson.getMockImplementation();
+    apiJson.mockImplementation(async (url, options) => {
+      if (url.startsWith('/api/activities?id=')) {
+        const id = Number(url.split('=')[1]);
+        return { id, name: `Run ${id}`, distanceKm: 5, movingTimeSeconds: 1500, startTime: null, startDate: '2026-10-01' };
+      }
+      return originalApi(url, options);
+    });
+    const originalCache = cachedApiJson.getMockImplementation();
+    cachedApiJson.mockImplementation(async (url) => {
+      if (url === '/api/activities/analysis') {
+        return [
+          { id: 1, startTime: '2026-09-01T08:00:00', distanceKm: 5, movingTimeSeconds: 1500 },
+          { id: 2, startTime: '2026-10-10T08:00:00', distanceKm: 5, movingTimeSeconds: 1200 },
+        ];
+      }
+      return url.startsWith('/api/activities') ? [] : {};
+    });
+    try {
+      renderPage();
+      expect(await screen.findByText(/best runs in the 90 days before this one \(VDOT 3\d\.\d\)/)).toBeInTheDocument();
+    } finally {
+      apiJson.mockImplementation(originalApi);
+      cachedApiJson.mockImplementation(originalCache);
+    }
   });
 
   it('does not ask again when the recalibration itself fails, nothing changed', async () => {

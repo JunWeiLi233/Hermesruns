@@ -2,9 +2,6 @@ import { useI18n } from '../../contexts/I18nContext';
 import { useGoalWords } from './GoalRow';
 import RecommendationEvidence from '../RecommendationEvidence';
 
-/** How many suggestions the card shows at once. */
-export const SHOWN = 3;
-
 /** The working behind a suggestion, in words: the usual figure it comes from and what was added to it. */
 function useBasisText() {
   const { t } = useI18n();
@@ -31,12 +28,11 @@ export default function GoalSuggestions({ enough, suggestions, busyKey, onSet, o
   const words = useGoalWords();
   const basisText = useBasisText();
   const Heading = `h${headingLevel}`;
-  const shown = suggestions.slice(0, SHOWN);
 
   if (!enough) {
     return <p className="goals-v2__suggest-note">{t('goals.suggest_need_history')}</p>;
   }
-  if (shown.length === 0) return recommendation?.plan?.historyEvidence ? <>
+  if (suggestions.length === 0) return recommendation?.plan?.historyEvidence ? <>
     {recommendation.plan.weeklyBudgets?.[0]?.remainingAllowanceKm === 0 && <p>{t('recommendation_evidence.exhausted_goals')}</p>}
     <RecommendationEvidence payload={recommendation} />
   </> : null;
@@ -47,7 +43,7 @@ export default function GoalSuggestions({ enough, suggestions, busyKey, onSet, o
       <p className="goals-v2__suggest-hint">{t('goals.suggest_hint')}</p>
       <RecommendationEvidence payload={recommendation} />
       <ul className="goals-v2__suggest-list">
-        {shown.map((suggestion) => {
+        {suggestions.map((suggestion) => {
           const key = `${suggestion.period}/${suggestion.metric}`;
           const title = words.title(suggestion);
           const target = words.amount(suggestion.metric, suggestion.target);

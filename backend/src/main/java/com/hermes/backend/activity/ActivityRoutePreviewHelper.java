@@ -19,6 +19,16 @@ final class ActivityRoutePreviewHelper {
     }
 
     static Map<String, Object> toRunFeedItem(Activity activity, Runner runner) {
+        return toRunFeedItem(activity, ActivityLocalDates.zoneOf(runner));
+    }
+
+    static Map<String, Object> toRunDetailItem(Activity activity, java.time.ZoneId zone) {
+        Map<String, Object> body = toRunFeedItem(activity, zone);
+        body.put("notes", activity.getNotes());
+        return body;
+    }
+
+    static Map<String, Object> toRunFeedItem(Activity activity, java.time.ZoneId zone) {
         Map<String, Object> body = new LinkedHashMap<>();
         ActivityWeatherCorrection.Value correction = ActivityWeatherCorrection.from(activity);
         body.put("id", activity.getId());
@@ -26,12 +36,12 @@ final class ActivityRoutePreviewHelper {
         body.put("stravaId", activity.getStravaId());
         body.put("distanceKm", activity.getDistanceKm());
         body.put("movingTimeSeconds", activity.getMovingTimeSeconds());
-        body.put("startDate", activity.getStartDate());
+        body.put("startDate", ActivityLocalDates.startDateOf(activity, zone));
         body.put("provider", activity.getProvider() == null ? null : activity.getProvider().name());
         body.put("activityType", activity.getActivityType() == null ? null : activity.getActivityType().name());
         body.put("runType", activity.getRunType());
-        body.put("startTime", activity.getStartTime());
-        body.putAll(ActivityLocalDates.responseFields(activity.getStartTime(), activity.isStravaApiSourced(), runner));
+        body.put("startTime", ActivityLocalDates.startTimeOf(activity, zone));
+        body.putAll(ActivityLocalDates.responseFields(activity.getStartTime(), activity.isStravaApiSourced(), zone));
         body.put("distanceMeters", activity.getDistanceMeters());
         body.put("durationSeconds", activity.getDurationSeconds());
         body.put("sourceFileName", activity.getSourceFileName());

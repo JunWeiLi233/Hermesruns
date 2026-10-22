@@ -22,6 +22,7 @@ class SpaReleaseAssetTests {
             files.when(()->Files.readString(diskIndex,StandardCharsets.UTF_8)).thenReturn("<html>Different build with unavailable hashed assets</html>");
             var request=new MockHttpServletRequest("GET","/schedule");
             assertThat(new SpaForwardingController().forward(request).getBody()).isEqualTo(expected);
+            assertThat(SpaForwardingController.readShell()).isEqualTo(expected);
         }
     }
 }

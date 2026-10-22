@@ -5,6 +5,7 @@ import com.hermes.backend.activity.Activity;
 import com.hermes.backend.activity.ActivityPointRepository;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
+import com.hermes.backend.activity.RunRecordsCoordinator;
 import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.billing.QuotaService;
 import com.hermes.backend.coaching.AutomatedCoachService;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -36,6 +38,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -43,6 +50,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ProfileControllerTests {
+
+    private final RunRecordsCoordinator runRecords = mock(RunRecordsCoordinator.class);
 
     @Test
     void meRejectsMissingAuthorization() {
@@ -727,6 +736,58 @@ class ProfileControllerTests {
     }
 
     @Test
+    void personalRecordsAnalyseTheRunsThatHaveNotBeenBeforeTheyAreRead() {
+        AuthService authService = mock(AuthService.class);
+        PersonalRecordService personalRecordService = mock(PersonalRecordService.class);
+        Runner runner = runner();
+        PersonalRecordService.PersonalRecordsResponse payload = new PersonalRecordService.PersonalRecordsResponse(
+                List.of(), Map.of(), null, null, null);
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(personalRecordService.buildForRunner(runner)).thenReturn(payload);
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                mock(ActivityRepository.class),
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                personalRecordService,
+                mock(QuotaService.class)
+        );
+
+        controller.personalRecords("Bearer runner-token");
+
+        InOrder order = inOrder(runRecords, personalRecordService);
+        order.verify(runRecords).ensurePending(eq(runner), any(Duration.class), anyInt());
+        order.verify(personalRecordService).buildForRunner(runner);
+    }
+
+    @Test
+    void personalRecordsStillAnswerWhenAnalysingTheRunsFails() {
+        AuthService authService = mock(AuthService.class);
+        PersonalRecordService personalRecordService = mock(PersonalRecordService.class);
+        Runner runner = runner();
+        PersonalRecordService.PersonalRecordsResponse payload = new PersonalRecordService.PersonalRecordsResponse(
+                List.of(), Map.of(), null, null, null);
+        when(authService.findByAuthorizationHeader("Bearer runner-token")).thenReturn(Optional.of(runner));
+        when(personalRecordService.buildForRunner(runner)).thenReturn(payload);
+        doThrow(new IllegalStateException("database busy")).when(runRecords).ensurePending(any(), any(), anyInt());
+        ProfileController controller = controller(
+                authService,
+                mock(RunnerRepository.class),
+                mock(ActivityRepository.class),
+                mock(ActivityPointRepository.class),
+                mock(ActivityNormalizationService.class),
+                personalRecordService,
+                mock(QuotaService.class)
+        );
+
+        ResponseEntity<?> response = controller.personalRecords("Bearer runner-token");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(payload);
+    }
+
+    @Test
     void profileDashboardRejectsMissingAuthorization() {
         AuthService authService = mock(AuthService.class);
         when(authService.findByAuthorizationHeader(null)).thenReturn(Optional.empty());
@@ -1393,7 +1454,7 @@ class ProfileControllerTests {
         ProfileHeatmapService heatmapService = new ProfileHeatmapService(
                 activityRepository, activityPointRepository, activityNormalizationService, cacheStore);
         return new ProfileController(authService, profileService, heatmapService,
-                avatarService, personalRecordService, quotaService);
+                avatarService, personalRecordService, quotaService, runRecords);
     }
 
     private byte[] samplePng() throws IOException {

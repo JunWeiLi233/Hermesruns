@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Locale;
 
 final class ActivityAnalyticsHelper {
+    /** Minimum leftover distance shown by both lap and pace-profile summaries. */
+    static final double MIN_PARTIAL_SPLIT_METERS = 100.0;
 
     static final int ROUTE_PREVIEW_POINT_LIMIT = 40;
 
@@ -19,14 +21,36 @@ final class ActivityAnalyticsHelper {
         return legacy;
     }
 
+    /**
+     * Gives every sample a distance and, where it has none, an elapsed time.
+     *
+     * <p>A sample with no distance of its own gets one from the GPS positions: the straight-line hops from the sample
+     * before it, added up. Where such a stretch has a sample with a distance of its own after it, the stretch is
+     * scaled to fit between the distance before it and that one, because the watch's own distance is the better
+     * measure and the GPS hops only say how it was spread. Without that, hops that add up to more than the watch
+     * measured (a jittery trace) would leave the samples after the stretch behind the ones inside it.</p>
+     */
     static void normalizeSamples(List<SamplePoint> pts, Activity activity) {
         if (pts.isEmpty()) return;
         double cum = 0;
+        int stretchStart = -1;
+        double stretchFloor = 0;
         for (int i = 0; i < pts.size(); i++) {
             SamplePoint p = pts.get(i);
             if (p.distanceMeters() != null && p.distanceMeters() >= 0) {
+                if (stretchStart >= 0) {
+                    if (p.distanceMeters() >= stretchFloor) {
+                        fitStretchBetween(pts, stretchStart, i, stretchFloor, p.distanceMeters());
+                        cum = stretchFloor;
+                    }
+                    stretchStart = -1;
+                }
                 cum = Math.max(cum, p.distanceMeters());
                 continue;
+            }
+            if (stretchStart < 0) {
+                stretchStart = i;
+                stretchFloor = cum;
             }
             if (i > 0) {
                 SamplePoint prev = pts.get(i - 1);
@@ -54,6 +78,25 @@ final class ActivityAnalyticsHelper {
         }
     }
 
+    /**
+     * Scales the GPS-made distances of the samples {@code from} up to (not including) {@code knownIndex} so that they
+     * run from {@code floor}, the distance before them, to {@code known}, the distance of the sample at
+     * {@code knownIndex}, keeping how the hops were spread. Hops that add up to nothing are spread evenly.
+     */
+    private static void fitStretchBetween(List<SamplePoint> pts, int from, int knownIndex, double floor, double known) {
+        SamplePoint last = pts.get(knownIndex - 1);
+        SamplePoint next = pts.get(knownIndex);
+        double path = (last.distanceMeters() - floor)
+                + haversineMeters(last.latitude(), last.longitude(), next.latitude(), next.longitude());
+        for (int k = from; k < knownIndex; k++) {
+            SamplePoint q = pts.get(k);
+            double share = path > 0
+                    ? (q.distanceMeters() - floor) / path
+                    : (double) (k - from + 1) / (knownIndex - from + 1);
+            pts.set(k, q.withDistanceMeters(floor + (known - floor) * share));
+        }
+    }
+
     static List<LapBreakdown> buildLapBreakdown(List<SamplePoint> pts) {
         List<LapBreakdown> out = new ArrayList<>();
         if (pts.isEmpty()) return out;
@@ -72,8 +115,28 @@ final class ActivityAnalyticsHelper {
                     (int) Math.round(endSec - startSec),
                     formatPace(endSec - startSec),
                     averageHrBetweenDistance(pts, startM, endM),
-                    averageCadenceBetweenDistance(pts, startM, endM)
+                    averageCadenceBetweenDistance(pts, startM, endM),
+                    false
             ));
+        }
+        // The stretch after the last whole kilometre is a split too, as the pace profile has it: a 7.99 km run has eight rows,
+        // not seven. A scrap shorter than the profile's minimum is left out, as it is there.
+        double rest = total - laps * 1000.0;
+        if (rest >= MIN_PARTIAL_SPLIT_METERS) {
+            double startM = laps * 1000.0;
+            Double startSec = interpolateSecondsAtDistance(pts, startM);
+            Double endSec = interpolateSecondsAtDistance(pts, total);
+            if (startSec != null && endSec != null && endSec > startSec) {
+                out.add(new LapBreakdown(
+                        laps + 1,
+                        round2(rest / 1000.0),
+                        (int) Math.round(endSec - startSec),
+                        formatPace((endSec - startSec) / (rest / 1000.0)),
+                        averageHrBetweenDistance(pts, startM, total),
+                        averageCadenceBetweenDistance(pts, startM, total),
+                        true
+                ));
+            }
         }
         return out;
     }
@@ -269,7 +332,7 @@ final class ActivityAnalyticsHelper {
     }
 
     record Metrics(double avgHr, double paceSecPerKm) {}
-    record LapBreakdown(int lapIndex, double distanceKm, int durationSeconds, String pace, Integer averageHeartRate, Integer averageCadence) {}
+    record LapBreakdown(int lapIndex, double distanceKm, int durationSeconds, String pace, Integer averageHeartRate, Integer averageCadence, boolean partial) {}
     record ElevationSample(double distanceKm, double elevationMeters) {}
     record CardiacDrift(double driftPercent, double firstHalfAverageHeartRate, double secondHalfAverageHeartRate, String firstHalfPace, String secondHalfPace) {}
     record PostRunDebrief(String interpretation, Integer readinessScore, String nextDayGuidance) {}

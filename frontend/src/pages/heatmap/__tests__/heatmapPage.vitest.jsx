@@ -19,11 +19,23 @@ vi.mock('../../../features/heatmap-explorer/App.jsx', () => ({default: ({embedde
 const mount = path => render(<MemoryRouter initialEntries={[path || '/heatmap/activities']}><HeatmapPage/></MemoryRouter>);
 beforeEach(() => {mocks.fetch.mockReset();mocks.logout.mockReset();mocks.setUnit.mockReset();mocks.setLang.mockReset();mocks.setTheme.mockReset();});
 
-it('opens only the existing GPS heat layer at the main route, without bootstrapping an empty file workspace', () => {
+it('probes availability before opening the full recorded heat layer at the main route', async () => {
+  mocks.fetch.mockResolvedValue(new Response(JSON.stringify({available: true}), {status: 200}));
   mount('/heatmap');
-  expect(screen.getByRole('heading', {name:'Full screen heat layer'})).toBeVisible();
+  expect(screen.queryByRole('heading', {name:'Full screen heat layer'})).not.toBeInTheDocument();
+  expect(await screen.findByRole('heading', {name:'Full screen heat layer'})).toBeVisible();
   expect(screen.queryByRole('region', {name:'Native workspace'})).not.toBeInTheDocument();
-  expect(mocks.fetch).not.toHaveBeenCalled();
+  expect(mocks.fetch.mock.calls[0][0]).toBe('/api/profile/heatmap/explorer');
+});
+
+it.each(['/heatmap', '/heatmap/recorded'])('keeps legacy GPS history usable at %s when recorded services are unavailable', async path => {
+  mocks.fetch.mockResolvedValue(new Response(JSON.stringify({available: false}), {status: 200}));
+  mount(path);
+  expect(await screen.findByRole('heading', {name:'Recorded GPS heatmap'})).toBeVisible();
+  expect(screen.getByText('heatmapExplorer.workspaceUnavailable')).toBeVisible();
+  expect(screen.queryByRole('heading', {name:'Full screen heat layer'})).not.toBeInTheDocument();
+  expect(screen.queryByRole('region', {name:'Native workspace'})).not.toBeInTheDocument();
+  expect(mocks.fetch.mock.calls.map(([url]) => url)).toEqual(['/api/profile/heatmap/explorer']);
 });
 
 it('uses the native workspace and existing language/theme when the backend is available', async () => {
@@ -56,10 +68,11 @@ it('uses Hermes logout when the owning session expires', async () => {
   await waitFor(() => expect(mocks.logout).toHaveBeenCalledOnce());
   expect(screen.queryByRole('region', {name: 'Native workspace'})).not.toBeInTheDocument();
 });
-it('opens the recorded map directly without probing the file workspace', () => {
+it('opens the recorded map after confirming its backend is available', async () => {
+  mocks.fetch.mockResolvedValue(new Response(JSON.stringify({available: true}), {status: 200}));
   mount('/heatmap/recorded');
-  expect(screen.getByRole('heading', {name: 'Full screen heat layer'})).toBeVisible();
-  expect(mocks.fetch).not.toHaveBeenCalled();
+  expect(await screen.findByRole('heading', {name: 'Full screen heat layer'})).toBeVisible();
+  expect(mocks.fetch.mock.calls[0][0]).toBe('/api/profile/heatmap/explorer');
 });
 it('does not reset the workspace when the owning router refreshes its logout callback', async () => {
   mocks.fetch.mockResolvedValue(new Response(JSON.stringify({available: true}), {status: 200}));

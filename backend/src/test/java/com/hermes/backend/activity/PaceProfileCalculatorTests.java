@@ -64,6 +64,34 @@ class PaceProfileCalculatorTests {
     }
 
     @Test
+    void theAnswerSaysWhyThereIsNoProfile() {
+        // Nothing, or one reading, or readings without a time or a distance: there is no stream to speak of.
+        assertThat(PaceProfileCalculator.compute(List.of()).reason()).isEqualTo(PaceProfileResponse.NO_POINTS);
+        assertThat(PaceProfileCalculator.compute(null).reason()).isEqualTo(PaceProfileResponse.NO_POINTS);
+        assertThat(PaceProfileCalculator.compute(List.of(point(0, 0, 10.0))).reason()).isEqualTo(PaceProfileResponse.NO_POINTS);
+        List<SamplePoint> noTimes = new ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            noTimes.add(new SamplePoint(40.78, -73.96, null, i * 10.0, 10.0, null, null, null, null));
+        }
+        assertThat(PaceProfileCalculator.compute(noTimes).reason()).isEqualTo(PaceProfileResponse.NO_POINTS);
+        // A stream that is there but too short to say anything.
+        assertThat(PaceProfileCalculator.compute(List.of(point(0, 0, 10.0), point(60, 0, 10.0))).reason())
+                .isEqualTo(PaceProfileResponse.TOO_SHORT);
+        assertThat(PaceProfileCalculator.compute(List.of(point(0, 0, 10.0), point(2, 5, 10.0))).reason())
+                .isEqualTo(PaceProfileResponse.TOO_SHORT);
+        assertThat(PaceProfileCalculator.compute(List.of(point(0, 0, 10.0), point(60, 99.0, 10.0))).reason())
+                .isEqualTo(PaceProfileResponse.TOO_SHORT);
+        // Every reading in the same second is one reading.
+        assertThat(PaceProfileCalculator.compute(List.of(point(5, 0, 10.0), point(5, 50.0, 10.0), point(5, 400.0, 10.0))).reason())
+                .isEqualTo(PaceProfileResponse.TOO_SHORT);
+    }
+
+    @Test
+    void aProfileHasNoReason() {
+        assertThat(PaceProfileCalculator.compute(stream(100.0, steady(600, 300))).reason()).isNull();
+    }
+
+    @Test
     void anEmptyAnswerHasEmptyPartsNotNulls() {
         PaceProfileResponse none = PaceProfileCalculator.compute(List.of());
 
@@ -160,10 +188,10 @@ class PaceProfileCalculatorTests {
 
         for (PaceProfileResponse.Split split : profile.splits()) {
             assertThat(split.paceSecPerKm()).isCloseTo(300.0, within(0.2));
-            assertThat(split.gapSecPerKm()).isCloseTo(300.0 / GradeAdjustedPace.costRatio(0.05), within(1.5));
+            assertThat(split.gapSecPerKm()).isCloseTo(300.0 / GradeAdjustedPace.effortRatio(0.05), within(1.5));
             assertThat(split.elevationChangeMeters()).isCloseTo(50.0, within(1.0));
         }
-        assertThat(profile.summary().gapSecPerKm()).isLessThan(profile.summary().paceSecPerKm() - 50.0);
+        assertThat(profile.summary().gapSecPerKm()).isLessThan(profile.summary().paceSecPerKm() - 40.0);
     }
 
     @Test
@@ -171,7 +199,7 @@ class PaceProfileCalculatorTests {
         PaceProfileResponse profile = PaceProfileCalculator.compute(stream(300.0, new Leg(600, FIVE_MINUTES_PER_KM, -0.05)));
 
         for (PaceProfileResponse.Split split : profile.splits()) {
-            assertThat(split.gapSecPerKm()).isCloseTo(300.0 / GradeAdjustedPace.costRatio(-0.05), within(1.5));
+            assertThat(split.gapSecPerKm()).isCloseTo(300.0 / GradeAdjustedPace.effortRatio(-0.05), within(1.5));
             assertThat(split.elevationChangeMeters()).isCloseTo(-50.0, within(1.0));
         }
         assertThat(profile.summary().gapSecPerKm()).isGreaterThan(profile.summary().paceSecPerKm() + 30.0);
@@ -182,7 +210,8 @@ class PaceProfileCalculatorTests {
         PaceProfileResponse profile = PaceProfileCalculator.compute(stream(100.0,
                 new Leg(300, FIVE_MINUTES_PER_KM, 0.04), new Leg(300, FIVE_MINUTES_PER_KM, -0.04)));
 
-        // Down is worth half of what up costs, so the whole run is a little faster than flat in grade-adjusted terms.
+        // A climb costs more than the same descent saves, so the whole run is a little faster than flat in
+        // grade-adjusted terms.
         assertThat(profile.splits().get(0).gapSecPerKm()).isLessThan(300.0);
         assertThat(profile.splits().get(1).gapSecPerKm()).isGreaterThan(300.0);
         assertThat(profile.summary().gapSecPerKm()).isLessThan(300.0).isGreaterThan(270.0);
@@ -235,8 +264,9 @@ class PaceProfileCalculatorTests {
     }
 
     @Test
-    void threeMetresOfElevationNoiseStillLeavesTheGradeAdjustedPaceWithinTwoAndAHalfPercent() {
-        // The README says about 2% at 3 m (standard deviation) on every reading, always on the faster side.
+    void threeMetresOfElevationNoiseStillLeavesTheGradeAdjustedPaceWithinOnePercent() {
+        // The README says about 0.5% at 3 m (standard deviation) on every reading, always on the faster side. The seeds
+        // below measure 0.47%, 0.24% and 0.27%; the bound leaves some room over the worst of them.
         for (long seed : new long[] {1, 7, 42}) {
             Random random = new Random(seed);
             List<SamplePoint> noisy = new ArrayList<>();
@@ -246,7 +276,7 @@ class PaceProfileCalculatorTests {
 
             double gap = PaceProfileCalculator.compute(noisy).summary().gapSecPerKm();
 
-            assertThat(gap).as("seed %d", seed).isBetween(300.0 * 0.975, 300.0);
+            assertThat(gap).as("seed %d", seed).isBetween(300.0 * 0.9935, 300.0);
         }
     }
 
@@ -262,9 +292,9 @@ class PaceProfileCalculatorTests {
 
         PaceProfileResponse profile = PaceProfileCalculator.compute(noisy);
 
-        assertThat(profile.summary().gapSecPerKm()).isCloseTo(300.0, within(300.0 * 0.015));
+        assertThat(profile.summary().gapSecPerKm()).isCloseTo(300.0, within(300.0 * 0.005));
         for (PaceProfileResponse.Split split : profile.splits()) {
-            assertThat(split.gapSecPerKm()).isCloseTo(300.0, within(300.0 * 0.03));
+            assertThat(split.gapSecPerKm()).isCloseTo(300.0, within(300.0 * 0.01));
         }
     }
 
@@ -536,7 +566,7 @@ class PaceProfileCalculatorTests {
         int climb = series.t().indexOf(900);
         assertThat(series.gapSecPerKm().get(flat)).isCloseTo(300.0, within(1.0));
         assertThat(series.paceSecPerKm().get(climb)).isCloseTo(300.0, within(1.0));
-        assertThat(series.gapSecPerKm().get(climb)).isCloseTo(300.0 / GradeAdjustedPace.costRatio(0.06), within(4.0));
+        assertThat(series.gapSecPerKm().get(climb)).isCloseTo(300.0 / GradeAdjustedPace.effortRatio(0.06), within(4.0));
         assertThat(series.elevationMeters().get(climb)).isGreaterThan(series.elevationMeters().get(flat) + 10.0);
     }
 

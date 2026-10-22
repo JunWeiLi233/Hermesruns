@@ -599,7 +599,7 @@ function TodayRun() {
                 </div>
               </dl>
 
-              <div className="tr-v2-structure" aria-label={t('today_run.plan_title')}>
+              <div className="tr-v2-structure" role="group" aria-label={t('today_run.plan_title')}>
                 <div className="tr-v2-structure-bar" aria-hidden="true">
                   {blueprintSteps.map((step) => (
                     <span

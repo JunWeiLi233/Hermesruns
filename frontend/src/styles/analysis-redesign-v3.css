@@ -88,7 +88,6 @@ body #root .analysis-reference-overview .analysis-v2-intro .athlete-tools-action
   --ve-line: var(--a2-line);
   --ve-fill: var(--a2-fill);
   --ve-accent: var(--a2-accent);
-  --ve-other: var(--a2-chart-history);
   --ve-mean: var(--a2-ink);
   gap: 20px;
   padding: 0;

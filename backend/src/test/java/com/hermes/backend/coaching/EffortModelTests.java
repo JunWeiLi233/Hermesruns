@@ -19,7 +19,7 @@ class EffortModelTests {
 
     private static EffortModel.Input input(double movingSeconds, double km, Integer rating, Double averageHr,
                                            HrZoneAnalysis.Result hr, Double scale) {
-        return new EffortModel.Input(movingSeconds, km, rating, averageHr, hr, ZONES, scale);
+        return new EffortModel.Input(movingSeconds, km, rating, false, averageHr, hr, ZONES, scale);
     }
 
     // --- heart-rate stream ------------------------------------------------------------------------------------
@@ -119,6 +119,59 @@ class EffortModelTests {
 
         EffortModel.Result result = EffortModel.compute(input(3600, 10, 11, null, HrZoneAnalysis.Result.empty(), null));
         assertThat(result.source()).isEqualTo(EffortModel.PACE_MODEL);
+    }
+
+    // --- the rating the runner asked for ----------------------------------------------------------------------
+
+    private static EffortModel.Input preferring(double movingSeconds, Integer rating, HrZoneAnalysis.Result hr) {
+        return new EffortModel.Input(movingSeconds, 10, rating, true, 150.0, hr, ZONES, 2.0);
+    }
+
+    @Test
+    void aRatingTheRunnerAskedForBeatsAHeartRateStream() {
+        EffortModel.Result result = EffortModel.compute(preferring(3600, 5, hourInZoneThree(3600)));
+
+        assertThat(result.source()).isEqualTo(EffortModel.PERCEIVED);
+        assertThat(result.score()).isEqualTo(Math.round(60 * EffortModel.ratingWeight(5) * 10.0) / 10.0);
+        assertThat(result.hrEffort()).as("the score is the rating's, not the heart rate's").isNull();
+        assertThat(result.paceEffort()).isNotNull();
+    }
+
+    @Test
+    void askingForTheRatingChangesNothingWithoutOne() {
+        EffortModel.Result result = EffortModel.compute(preferring(3600, null, hourInZoneThree(3600)));
+
+        assertThat(result.source()).isEqualTo(EffortModel.HR_ZONES);
+        assertThat(result.score()).isEqualTo(180.0);
+    }
+
+    @Test
+    void askingForTheRatingChangesNothingForARatingOutsideTheScale() {
+        assertThat(EffortModel.compute(preferring(3600, 0, hourInZoneThree(3600))).source()).isEqualTo(EffortModel.HR_ZONES);
+        assertThat(EffortModel.compute(preferring(3600, 11, hourInZoneThree(3600))).source()).isEqualTo(EffortModel.HR_ZONES);
+    }
+
+    @Test
+    void aRunWithNoMovingTimeCannotBeScoredFromARating() {
+        EffortModel.Result result = EffortModel.compute(preferring(0, 5, hourInZoneThree(3600)));
+
+        assertThat(result.source()).as("no minutes to weigh: the heart rate stands").isEqualTo(EffortModel.HR_ZONES);
+    }
+
+    @Test
+    void askingForTheRatingOnARunWithoutAHeartRateIsTheSameAsNotAsking() {
+        EffortModel.Result asked = EffortModel.compute(preferring(3600, 7, HrZoneAnalysis.Result.empty()));
+        EffortModel.Result not = EffortModel.compute(input(3600, 10, 7, 150.0, HrZoneAnalysis.Result.empty(), 2.0));
+
+        assertThat(asked.source()).isEqualTo(EffortModel.PERCEIVED);
+        assertThat(asked.score()).isEqualTo(not.score());
+    }
+
+    @Test
+    void notAskingStillLetsTheHeartRateWinOverARating() {
+        EffortModel.Result result = EffortModel.compute(input(3600, 10, 3, 150.0, hourInZoneThree(3600), 2.0));
+
+        assertThat(result.source()).isEqualTo(EffortModel.HR_ZONES);
     }
 
     // --- average heart rate -----------------------------------------------------------------------------------

@@ -181,7 +181,13 @@ class TrainingMetricsImportFlowTests {
             start.countDown();
             for (var request : requests) assertThat(request.get(30, TimeUnit.SECONDS).volumeKm7d()).isZero();
             assertThat(coachStates.findAll().stream().filter(state -> state.getRunner().getId().equals(owner.getId()))).hasSize(1);
-            assertThat(coach.getTodayWithReadiness(owner).today().reasonCode()).isIn("onboarding", "scheduled_rest");
+            // First use creates usable state, but no run history cannot justify a workout prescription.
+            var response = coach.getTodayWithReadiness(owner);
+            var today = response.today();
+            assertThat(today.reasonCode()).isEqualTo("history_required");
+            assertThat(today.intent()).isEqualTo("unavailable");
+            assertThat(response.plan().targetWeeklyKm()).isZero();
+            assertThat(today.plannedDistanceKm()).isNull();
         } finally {
             start.countDown();
             executor.shutdownNow();

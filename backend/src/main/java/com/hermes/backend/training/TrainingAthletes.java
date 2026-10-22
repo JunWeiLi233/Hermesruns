@@ -12,9 +12,9 @@ import static com.hermes.backend.training.TrainingStore.*;
 import static com.hermes.backend.training.TrainingFailure.check;
 
 public final class TrainingAthletes {
-    final TrainingStore db;final TrainingAccess acl;final RunnerRepository runners;final ActivityRepository activities;final ActivityDataAccess data;
+    final TrainingStore db;final TrainingAccess acl;final RunnerRepository runners;final ActivityRepository activities;final ActivityDataAccess data;final ActivityEditService edits;
     final DailySleepDataRepository sleep;final DailyWellnessSummaryRepository wellness;final TrainingCalendarBridge calendar;final EntityManager em;final ApplicationEventPublisher events;
-    public TrainingAthletes(TrainingStore db,TrainingAccess acl,RunnerRepository runners,ActivityRepository activities,ActivityDataAccess data,DailySleepDataRepository sleep,DailyWellnessSummaryRepository wellness,TrainingCalendarBridge calendar,EntityManager em,ApplicationEventPublisher events){this.db=db;this.acl=acl;this.runners=runners;this.activities=activities;this.data=data;this.sleep=sleep;this.wellness=wellness;this.calendar=calendar;this.em=em;this.events=events;}
+    public TrainingAthletes(TrainingStore db,TrainingAccess acl,RunnerRepository runners,ActivityRepository activities,ActivityDataAccess data,DailySleepDataRepository sleep,DailyWellnessSummaryRepository wellness,TrainingCalendarBridge calendar,EntityManager em,ApplicationEventPublisher events,ActivityEditService edits){this.db=db;this.acl=acl;this.runners=runners;this.activities=activities;this.data=data;this.sleep=sleep;this.wellness=wellness;this.calendar=calendar;this.em=em;this.events=events;this.edits=edits;}
     Runner runner(String subject){return runners.findById(db.runner(subject)).filter(r->!r.isDeleted()).orElseThrow(()->new TrainingFailure(404,"NOT_FOUND"));}
     public Map<String,Object> me(String actor){return db.atomic(()->{
         db.lock(actor);var identity=runner(actor);var row=db.one("select settings from tw_profile where id=?",actor);var settings=db.object(row.get("settings"));var current=new LinkedHashMap<>(settings);
@@ -82,7 +82,14 @@ public final class TrainingAthletes {
         var a=new Activity();a.setRunner(runner(subject));a.setName(title);a.setActivityType(sport.equals("Running")?ActivityType.RUN:ActivityType.NON_RUN);a.setProvider(ImportProvider.MANUAL);a.setMovingTimeSeconds((int)Math.round(minutes*60));a.setDurationSeconds((long)Math.round(minutes*60));a.setPerceivedExertion(rpe);a.setStartTime(null);a.setStartDate(null);a.setStravaApiSourced(false);a=activities.saveAndFlush(a);String id=bind(a,subject);db.jdbc.update("update tw_activity set civil_date=?,sport=? where id=?",java.sql.Date.valueOf(date),sport,id);db.touch(subject);db.audit(actor,subject,"MANUAL_ACTIVITY_CREATED");events.publishEvent(new ActivityIngestedEvent(a.getRunner().getId(),a.getId()));return dto(actor,subject,a,id,true);
     });}
     public Map<String,Object> effort(String actor,String activity,Map<String,Object> body,long revision){return db.atomic(()->{
-        fields(body,"rpe");var b=binding(activity);String subject=(String)b.get("athlete_id");db.lock(subject);acl.require(actor,subject,true,null);b=binding(activity);match(revision,b,"revision");var a=canonical(b,subject);source(actor,subject,a);a.setPerceivedExertion((int)number(body,"rpe",1,10));data.saveMetadata(a);db.jdbc.update("update tw_activity set revision=revision+1 where id=?",activity);db.touch(subject);db.audit(actor,subject,"ACTIVITY_EFFORT_UPDATED");return dto(actor,subject,a,activity,true);
+        fields(body,"rpe");var b=binding(activity);String subject=(String)b.get("athlete_id");db.lock(subject);acl.require(actor,subject,true,null);b=binding(activity);match(revision,b,"revision");var a=canonical(b,subject);source(actor,subject,a);
+        int rating=(int)number(body,"rpe",1,10);
+        // The workspace owns its profile/revision lock first; native edits never take that lock.
+        // The shared service locks and refreshes the canonical row, and publishes metrics changes after commit.
+        var applied=edits.apply(a.getRunner(),a.getId(),new ActivityEditService.Request(
+                true,rating,false,false,false,null,false,null,false,null,false,List.of()))
+                .orElseThrow(()->new TrainingFailure(404,"NOT_FOUND"));
+        db.jdbc.update("update tw_activity set revision=revision+1 where id=?",activity);db.touch(subject);db.audit(actor,subject,"ACTIVITY_EFFORT_UPDATED");return dto(actor,subject,applied.activity(),activity,true);
     });}
     public Map<String,Object> intervals(String actor,String activity,List<Map<String,Object>> intervals,long revision){return db.atomic(()->{
         check(intervals!=null&&intervals.size()<=2000,422,"INTERVAL_LIMIT");var b=binding(activity);String subject=(String)b.get("athlete_id");db.lock(subject);acl.require(actor,subject,true,null);b=binding(activity);match(revision,b,"revision");var a=canonical(b,subject);source(actor,subject,a);double duration=a.getMovingTimeSeconds()>0?a.getMovingTimeSeconds():Objects.requireNonNullElse(a.getDurationSeconds(),0L);

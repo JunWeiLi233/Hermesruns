@@ -19,9 +19,10 @@ public record TrainingMetricsResponse(Long activityId, LocalDate localDate, Effo
                                       LocalDateTime computedAt) {
 
     /**
-     * @param source one of HR_ZONES, PERCEIVED, HR_AVERAGE, PACE_MODEL, PACE_CALIBRATED, or null with no score
+     * @param source          one of HR_ZONES, PERCEIVED, HR_AVERAGE, PACE_MODEL, PACE_CALIBRATED, or null with no score
+     * @param ratingPreferred the runner asked for the rating to be used even though the run has a heart rate
      */
-    public record Effort(Double score, String source, Integer perceivedExertion) {
+    public record Effort(Double score, String source, Integer perceivedExertion, boolean ratingPreferred) {
     }
 
     /**
@@ -68,7 +69,7 @@ public record TrainingMetricsResponse(Long activityId, LocalDate localDate, Effo
         return new TrainingMetricsResponse(
                 activity.getId(),
                 row.getLocalDate(),
-                new Effort(row.getEffortScore(), row.getEffortSource(), row.getPerceivedExertionUsed()),
+                new Effort(row.getEffortScore(), row.getEffortSource(), row.getPerceivedExertionUsed(), row.isRatingPreferred()),
                 new HeartRate(hasStream, activity.getAverageHeartRate(), activity.getMaxHeartRate(), covered,
                         coveragePercent, zoneList, zones.maxHeartRate(), resolved.maxHeartRateSource(),
                         resolved.boundarySource()),

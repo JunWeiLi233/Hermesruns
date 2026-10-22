@@ -12,7 +12,7 @@
 .comparison-modal .modal-form { display: flex; flex: 1; min-height: 0; padding: 0; gap: 0; overflow: hidden; }
 .comparison-modal :is(.athlete-tools-content,.hermes-training-integrated) { display: flex; flex: 1; min-width: 0; min-height: 0; gap: 0; }
 .session-comparison {
-  --cmp-ink: #1c1917; --cmp-muted: #625c56; --cmp-faint: #827b74; --cmp-surface: #fff;
+  --cmp-ink: #1c1917; --cmp-muted: #625c56; --cmp-faint: #716b65; --cmp-surface: #fff;
   --cmp-soft: #f5f5f4; --cmp-sidebar: #fbfbfb; --cmp-border: rgb(28 25 23 / 12%); --cmp-rule: rgb(28 25 23 / 8%); --cmp-accent: #a0392a;
   --cmp-trace-0: #a0392a; --cmp-trace-1: #1c1917; --cmp-trace-2: #5f8f7e; --cmp-trace-3: #aa741c; --cmp-check-ink: #fff;
   display: grid; grid-template-columns: minmax(280px, 38%) minmax(0, 1fr); flex: 1; min-width: 0; min-height: 0;

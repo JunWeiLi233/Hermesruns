@@ -60,7 +60,7 @@ public class RunPlanSelection {
     }
     /** Published targets for the complete account week, including completed and skipped workouts. */
     @Transactional(readOnly=true)
-    public List<PersonalizedRunningPlanner.PlannedSession> weekSessions(Runner runner) {
+    public List<PlannedSession> weekSessions(Runner runner) {
         var plan = legacy(runner, 1, true);
         return plan == null ? List.of() : plan.sessions();
     }
@@ -81,15 +81,15 @@ public class RunPlanSelection {
             if(previous==null||(main&&!previousMain))paces.put(step.workoutId,step);
         }
         double weeklyKm=0;int weeklySessions=0;Set<DayOfWeek> runDays=new LinkedHashSet<>();
-        var sessions=new ArrayList<PersonalizedRunningPlanner.PlannedSession>();
+        var sessions=new ArrayList<PlannedSession>();
         for(var w:days){CoachWorkoutType kind=switch(w.workoutType){case "LONG"->CoachWorkoutType.LONG_RUN;case "INTERVAL"->CoachWorkoutType.INTERVALS;case "STEADY"->CoachWorkoutType.TEMPO;case "REST"->CoachWorkoutType.REST;default->CoachWorkoutType.EASY;};
             if(!w.localDate.isBefore(weekStart)&&!w.localDate.isAfter(weekStart.plusDays(6))&&kind!=CoachWorkoutType.REST){
                 weeklyKm+=w.targetDistanceM==null?0:Math.max(0,w.targetDistanceM)/1000d;weeklySessions++;runDays.add(w.localDate.getDayOfWeek());
             }
             if(w.localDate.isBefore(completeWeek ? weekStart : date)||w.localDate.isAfter(completeWeek ? weekStart.plusDays(6) : horizonEnd))continue;
             var pace=paces.get(w.id);
-            sessions.add(new PersonalizedRunningPlanner.PlannedSession(w.localDate,kind,w.targetDistanceM==null?null:w.targetDistanceM/1000d,w.targetDurationS==null?null:(w.targetDurationS+59)/60,false,w.phase,w.workoutType,"VERSIONED_PLAN",pace==null?null:pace.paceMinSPerKm,pace==null?null:pace.paceMaxSPerKm,null,false));}
-        var today=sessions.stream().filter(s->s.date().equals(date)).findFirst().orElse(new PersonalizedRunningPlanner.PlannedSession(date,CoachWorkoutType.REST,null,null,false,"ADAPT","REST","VERSIONED_PLAN",null,null,null,false));
+            sessions.add(new PlannedSession(w.localDate,kind,w.targetDistanceM==null?null:w.targetDistanceM/1000d,w.targetDurationS==null?null:(w.targetDurationS+59)/60,false,w.phase,w.workoutType,"VERSIONED_PLAN",pace==null?null:pace.paceMinSPerKm,pace==null?null:pace.paceMaxSPerKm,null,false));}
+        var today=sessions.stream().filter(s->s.date().equals(date)).findFirst().orElse(new PlannedSession(date,CoachWorkoutType.REST,null,null,false,"ADAPT","REST","VERSIONED_PLAN",null,null,null,false));
         return new PersonalizedRunningPlanner.PersonalizedPlan(today.phase(),weeklyKm,weeklySessions,List.copyOf(runDays),100,List.of("VERSIONED_PLAN"),List.copyOf(sessions),today);
     }
 }

@@ -280,7 +280,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .today-run-session-page .tr
 #root .today-run-session-page .tr-v2-metric > p:first-of-type { margin-top: auto; padding-top: 18px; }
 #root .today-run-session-page .tr-v2-metric > p strong { color: var(--tr-ink); }
 #root .today-run-session-page .tr-v2-trend { font-size: 0.8rem; font-weight: 700; color: var(--tr-muted); }
-#root .today-run-session-page .tr-v2-trend.is-improving { color: #248a3d; }
+#root .today-run-session-page .tr-v2-trend.is-improving { color: #1e7a35; }
 #root .today-run-session-page .tr-v2-trend.is-declining { color: #d70015; }
 #root .today-run-session-page .tr-v2-acwr-scale { position: relative; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #ffd38a 0 27%, #9cd2aa 27% 73%, #ff9b87 73% 100%); }
 #root .today-run-session-page .tr-v2-acwr-scale i { position: absolute; top: -4px; width: 3px; height: 16px; border-radius: 2px; background: var(--tr-ink); transform: translateX(-50%); }

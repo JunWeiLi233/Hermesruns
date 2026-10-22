@@ -12,29 +12,32 @@
 // A named stack keeps its state in .auth/stack-<name>.json, so it and the first one do not overwrite each other.
 //
 // One Spring Boot process on a private port (default 18080) with a fresh H2 database in the OS temp folder, the built
-// frontend served from backend/target/classes/static, background syncs off and the local shared runner on. Nothing here
+// frontend served from an explicit build or backend/target-e2e/classes/static, provider syncs off and the local shared runner on. Nothing here
 // touches port 8080, your dev database or your Strava / Garmin links.
-// E2E_BACKEND_JAR verifies a packaged release instead of target/classes; E2E_FAILURE_LOG keeps a failed startup log.
+// E2E_BACKEND_JAR verifies a packaged release; E2E_FAILURE_LOG keeps a failed startup log.
+// E2E_TRAINING_IMPORT_JOBS=true opts into the private local-file importer for intervals tests; provider syncs stay off.
 //
-// Build first:   npm --prefix frontend run build   then   backend/mvnw compile
+// Build first into a unique Maven directory and set E2E_BACKEND_JAR or E2E_BACKEND_CLASSES_DIR.
 import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import { assertReleaseStackIdentity, releaseIdentity } from './stack-identity.mjs';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { assertDisposableStack, assertSafeBaseUrl, assertIsolatedBuildDirectory, isolatedBackendEnvironment, safeStackName } from '../fixtures/safety.mjs';
 
 const e2eDir = path.resolve(import.meta.dirname, '..');
 const repoRoot = path.resolve(e2eDir, '..');
 const backendDir = path.join(repoRoot, 'backend');
 const authDir = path.join(e2eDir, '.auth');
 const cacheDir = path.join(e2eDir, '.cache');
-const stackName = (process.env.E2E_STACK_NAME || '').replace(/[^A-Za-z0-9_-]/g, '');
+const stackName = safeStackName(process.env.E2E_STACK_NAME || '');
 const stateFile = path.join(authDir, stackName ? `stack-${stackName}.json` : 'stack.json');
 const isWin = process.platform === 'win32';
 const port = Number(process.env.E2E_PORT || 18080);
-const baseUrl = `http://127.0.0.1:${port}`;
+const baseUrl = assertSafeBaseUrl(`http://127.0.0.1:${port}`);
 const healthPath = '/api/auth/providers';
+const trainingImportJobs = process.env.E2E_TRAINING_IMPORT_JOBS === 'true';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -84,9 +87,10 @@ function killTree(pid) {
 }
 
 function backendClasspath() {
-  const classes = path.join(backendDir, 'target', 'classes');
+  const classes = assertIsolatedBuildDirectory(process.env.E2E_BACKEND_CLASSES_DIR
+    ? path.resolve(process.env.E2E_BACKEND_CLASSES_DIR) : path.join(backendDir, 'target-e2e', 'classes'));
   if (!fs.existsSync(path.join(classes, 'application.properties'))) {
-    throw new Error(`backend is not compiled: run ${isWin ? 'mvnw.cmd' : './mvnw'} -f backend/pom.xml compile`);
+    throw new Error('backend is not compiled: set E2E_BACKEND_JAR or E2E_BACKEND_CLASSES_DIR to an isolated build.');
   }
   // The frontend build writes to src/main/resources/static; Maven copies it only if it ran afterwards.
   const srcStatic = path.join(backendDir, 'src', 'main', 'resources', 'static');
@@ -103,7 +107,8 @@ function backendClasspath() {
   if (!fs.existsSync(cpFile)) {
     fs.mkdirSync(path.dirname(cpFile), { recursive: true });
     const mvn = path.join(backendDir, isWin ? 'mvnw.cmd' : 'mvnw');
-    const args = ['-f', path.join(backendDir, 'pom.xml'), '-q', 'dependency:build-classpath', `-Dmdep.outputFile=${cpFile}`];
+    const args = ['-f', path.join(backendDir, 'pom.xml'), '-q', 'dependency:build-classpath',
+      `-Dmaven.repo.local=${path.join(repoRoot, '.m2repo')}`, `-Dhermes.build.directory=${path.join(backendDir, 'target-e2e')}`, `-Dmdep.outputFile=${cpFile}`];
     const res = spawnSync(isWin ? 'cmd' : mvn, isWin ? ['/c', mvn, ...args] : args, { stdio: 'inherit' });
     if (res.status !== 0) throw new Error('could not resolve the backend classpath with Maven');
   }
@@ -117,6 +122,7 @@ function backendClasspath() {
 }
 
 async function serve() {
+  if (process.env.E2E_DB_URL) throw new Error('The disposable E2E stack only supports its own temporary H2 database.');
   if (await healthy()) {
     console.error(`something already answers on ${baseUrl}; stop it first (or set E2E_PORT)`);
     process.exit(1);
@@ -126,43 +132,24 @@ async function serve() {
   const backendArguments = releaseJar ? ['-jar', releaseJar] : ['-cp', backendClasspath(), 'com.hermes.backend.BackendApplication'];
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hermesruns-e2e-'));
   const runnerEmail = 'strava+140971747@hermes.local'; // the local shared runner's fixed address
-  const runnerPassword = process.env.E2E_RUNNER_PASSWORD || strongPassword();
-  // H2 in the temp folder unless E2E_DB_URL names a database of your own (a throwaway PostgreSQL, say). Whatever it names is
-  // filled with test runs: never point it at data you keep.
-  const external = process.env.E2E_DB_URL;
-  const dbUrl = external || `jdbc:h2:file:${dataDir.replace(/\\/g, '/')}/hermes;AUTO_SERVER=TRUE`;
+  const runnerPassword = strongPassword();
+  const admin = process.env.E2E_SYNTHETIC_ADMIN === 'true' ? {
+    email: `e2e-admin-${crypto.randomBytes(8).toString('hex')}@example.test`,
+    password: strongPassword(), bootstrapToken: crypto.randomBytes(32).toString('hex'),
+  } : undefined;
+  const instanceId = crypto.randomBytes(16).toString('hex');
+  const dbUrl = `jdbc:h2:file:${fs.realpathSync(dataDir).replace(/\\/g, '/')}/hermes;DB_CLOSE_ON_EXIT=FALSE`;
   const log = fs.openSync(path.join(dataDir, 'backend.log'), 'a');
-  const databaseEnv = external
-    ? {
-        APP_DB_DRIVER: external.startsWith('jdbc:postgresql:') ? 'org.postgresql.Driver' : process.env.APP_DB_DRIVER || '',
-        APP_DB_USERNAME: process.env.E2E_DB_USER ?? 'postgres',
-        APP_DB_PASSWORD: process.env.E2E_DB_PASSWORD ?? '',
-        APP_JPA_DDL_AUTO: process.env.E2E_JPA_DDL_AUTO || 'update',
-      }
-    : {};
-
-  const env = {
-    ...process.env,
-    PORT: String(port),
-    APP_SERVER_ADDRESS: '127.0.0.1',
-    APP_DB_URL: dbUrl,
-    ...databaseEnv,
-    HERMES_ENV: 'development',
-    STRAVA_SYNC_ENABLED: 'false',
-    GARMIN_WELLNESS_SYNC_ENABLED: 'false',
-    APP_COACH_NIGHTLY_ENABLED: 'false',
-    APP_OFFICIAL_COURSE_STARTUP_SEED_ENABLED: 'false',
-    APP_LOCAL_SHARED_RUNNER_ENABLED: 'true',
-    APP_LOCAL_SHARED_RUNNER_PASSWORD: runnerPassword,
-    APP_PUBLIC_BASE_URL: baseUrl,
-    APP_MAIL_PROVIDER: 'disabled',
-  };
+  const env = isolatedBackendEnvironment(process.env, { port, dataDir, dbUrl, runnerPassword, admin, trainingImportJobs });
   const java = process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, 'bin', isWin ? 'java.exe' : 'java') : 'java';
   const child = spawn(
     java,
     ['-XX:TieredStopAtLevel=1', '-Xmx768m', ...backendArguments],
-    { env, stdio: ['ignore', log, log], windowsHide: true },
+    { env, cwd: dataDir, stdio: ['ignore', log, log], windowsHide: true },
   );
+  const state = { isolation: 'ephemeral-h2', instanceId, repoRoot, dbUrl, baseUrl, port, pid: process.pid,
+    backendPid: child.pid, dataDir, runnerEmail, runnerPassword, trainingImportJobs, ...(admin ? { admin } : {}), ...releaseIdentity(releaseJar) };
+  assertDisposableStack(state);
 
   const cleanup = () => {
     killTree(child.pid);
@@ -172,7 +159,7 @@ async function serve() {
       /* the folder is in the OS temp dir, leaving it is harmless */
     }
     try {
-      fs.rmSync(stateFile, { force: true });
+      if (readState()?.instanceId === instanceId) fs.rmSync(stateFile, { force: true });
     } catch {
       /* ignore */
     }
@@ -185,7 +172,7 @@ async function serve() {
   fs.mkdirSync(authDir, { recursive: true });
   fs.writeFileSync(
     stateFile,
-    JSON.stringify({ baseUrl, port, pid: process.pid, backendPid: child.pid, dataDir, runnerEmail, runnerPassword, ...releaseIdentity(releaseJar) }, null, 2),
+    JSON.stringify(state, null, 2),
     { mode: 0o600 },
   );
   try {
@@ -206,12 +193,16 @@ async function serve() {
 
 async function start() {
   if (await healthy()) {
+    assertDisposableStack(readState());
     assertReleaseStackIdentity(readState(), process.env.E2E_BACKEND_JAR, baseUrl);
+    if (Boolean(readState().trainingImportJobs) !== trainingImportJobs) {
+      throw new Error('Disposable stack local-file worker setting changed; stop and start this named stack first.');
+    }
     console.log(`already running at ${baseUrl}`);
     return;
   }
   fs.mkdirSync(authDir, { recursive: true });
-  const out = fs.openSync(path.join(authDir, 'serve.log'), 'w');
+  const out = fs.openSync(path.join(authDir, stackName ? `serve-${stackName}.log` : 'serve.log'), 'w');
   const child = spawn(process.execPath, [import.meta.filename, 'serve'], {
     detached: true,
     stdio: ['ignore', out, out],
@@ -229,6 +220,7 @@ async function stop() {
     console.log('no stack recorded');
     return;
   }
+  assertDisposableStack(state);
   killTree(state.pid);
   killTree(state.backendPid);
   await sleep(1000);

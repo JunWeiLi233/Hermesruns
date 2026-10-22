@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
 import { formatDuration, formatPaceSeconds } from '../../utils/format';
+import { elapsedPaceSecPerKm } from '../../utils/paceAnalysis';
 import PaceChart from './PaceChart';
 import PaceDistribution from './PaceDistribution';
 import usePaceProfile from './usePaceProfile';
@@ -23,26 +24,34 @@ function markerRows(profile, adjusted, t) {
     .map((row) => ({ ...row, text: `${formatPaceSeconds(row.value)} ${unit}` }));
 }
 
+/** What the card says when there is no profile, by the reason the endpoint gives; anything else gets the plain line. */
+const NO_STREAM_COPY = {
+  no_points: 'run_detail.pace_no_stream_no_points',
+  no_times: 'run_detail.pace_no_stream_no_times',
+  too_short: 'run_detail.pace_no_stream_too_short',
+};
+
 /**
  * The pace analysis of one run (S02 and S03): a chart of pace along the run as kilometre splits or as a smoothed line,
  * with elevation behind it and an optional grade-adjusted pace, the fastest and slowest splits, and the time spent at
  * each pace zone. It fetches the profile once the run page has the run's stream (`streamReady`), so the section is
  * on the page, with its anchor for the run navigation, in every state.
  */
-export default function RunPaceAnalysis({ runId, streamReady, refreshToken = 0 }) {
+export default function RunPaceAnalysis({ runId, startTime, streamReady, refreshToken = 0 }) {
   const { t } = useI18n();
   const titleId = useId();
   const [view, setView] = useState('splits');
   const [gradeAdjusted, setGradeAdjusted] = useState(false);
   const { status, data, stale, reload } = usePaceProfile(runId, { enabled: streamReady, refreshToken });
   const hasProfile = Boolean(data?.hasStream);
-  const zones = usePaceZones(hasProfile);
+  const zones = usePaceZones(hasProfile, startTime);
   const adjusted = gradeAdjusted && Boolean(data?.hasElevation);
 
   let body;
   if (hasProfile) {
     const rows = markerRows(data, adjusted, t);
     const stopped = Math.round(data.summary.stoppedSeconds);
+    const withStops = elapsedPaceSecPerKm(data.summary);
     body = (
       <>
         {stale ? (
@@ -92,7 +101,9 @@ export default function RunPaceAnalysis({ runId, streamReady, refreshToken = 0 }
             {adjusted ? <p className="run-detail-v2__muted">{t('run_detail.pace_gap_note')}</p> : null}
             <p className="run-detail-v2__muted">
               {t('run_detail.pace_basis_moving')}
-              {stopped >= 5 ? ` ${t('run_detail.pace_stopped', { time: formatDuration(stopped) })}` : ''}
+              {stopped >= 5 && withStops != null
+                ? ` ${t(adjusted ? 'run_detail.pace_stopped_adjusted' : 'run_detail.pace_stopped', { time: formatDuration(stopped), pace: `${formatPaceSeconds(withStops)} ${t('run_detail.unit_pace')}` })}`
+                : ''}
             </p>
           </div>
           <PaceDistribution series={data.smoothed} adjusted={adjusted} zones={zones} />
@@ -100,7 +111,7 @@ export default function RunPaceAnalysis({ runId, streamReady, refreshToken = 0 }
       </>
     );
   } else if (status === 'ready') {
-    body = <p className="run-detail-v2__muted">{t('run_detail.pace_no_stream')}</p>;
+    body = <p className="run-detail-v2__muted">{t(NO_STREAM_COPY[data?.reason] || 'run_detail.pace_no_stream')}</p>;
   } else if (status === 'error') {
     body = (
       <div className="run-detail-v2__training-state">

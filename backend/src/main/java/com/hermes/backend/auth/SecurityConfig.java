@@ -1,7 +1,6 @@
 package com.hermes.backend.auth;
 
 import com.hermes.backend.infrastructure.web.SpaForwardingController;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -26,7 +25,12 @@ public class SecurityConfig {
         // CSRF protection is intentionally disabled because this API is fully
         // stateless and authenticates every mutating request with an
         // `Authorization: Bearer <jwt>` header (see JwtAuthenticationFilter and
-        // the frontend `apiFetch` helper), never a session cookie:
+        // the frontend `apiFetch` helper), never an ambient cookie:
+        //   - The only cookie the backend issues, the admin portal cookie
+        //     (AdminPortalSessionCookie), is HttpOnly + SameSite=Strict and is
+        //     honoured only on the admin SPA document routes that serve the HTML
+        //     shell. Every API, admin APIs included, ignores it and still needs
+        //     the Authorization header.
         //   - SessionCreationPolicy.STATELESS below means no HTTP session is
         //     ever created, so there is no session-bound credential to forge.
         //   - Browsers never attach an `Authorization` header automatically the
@@ -39,8 +43,8 @@ public class SecurityConfig {
         // (see https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html
         // and https://codeql.github.com/codeql-query-help/java/java-spring-disabled-csrf-protection/).
         // The CodeQL `java/spring-disabled-csrf-protection` alert is therefore a
-        // documented false positive for this architecture and is dismissed as
-        // such in the GitHub code-scanning UI.
+        // documented false positive for this architecture; dismiss it as such in
+        // the GitHub code-scanning UI.
         return http
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .csrf(AbstractHttpConfigurer::disable)
@@ -52,11 +56,7 @@ public class SecurityConfig {
                 .securityContext(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"error\":\"Invalid or expired session token.\"}");
-                        }))
+                        .authenticationEntryPoint(new PageAwareAuthenticationEntryPoint()))
                 .authorizeHttpRequests(auth -> auth
                         // CORS preflight requests never carry credentials (no Authorization
                         // header), so let OPTIONS on /api/** reach the MVC CORS processor when

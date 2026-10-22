@@ -78,7 +78,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2 {
   border-radius: 24px;
   background: var(--tl-card);
 }
-#root .training-log-v2__filters[aria-busy="true"] { opacity: 0.7; }
+#root .training-log-v2__filters[aria-busy="true"] { opacity: 1; }
 #root .training-log-v2__filters .training-log-v2__link { align-self: flex-start; }
 #root .training-log-v2__filter-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
 #root .training-log-v2__filter-label { flex: 0 0 5.5rem; color: var(--tl-muted); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -102,8 +102,10 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2 {
 }
 #root .training-log-v2__chips button:not(.training-log-v2__link):hover { background: var(--tl-accent-soft); }
 #root .training-log-v2__chips button:not(.training-log-v2__link)[aria-pressed="true"] { background: var(--tl-accent); color: var(--tl-on-accent); }
-#root .training-log-v2__chips small { color: inherit; font-size: 0.72rem; font-variant-numeric: tabular-nums; opacity: 0.7; }
-#root .training-log-v2__chip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The Runs shell assigns span/small colours with !important. Keep nested chip
+   text on its button's paired foreground, including the selected state. */
+#root .training-log-v2__chips small { color: inherit !important; font-size: 0.72rem; font-variant-numeric: tabular-nums; opacity: 1; }
+#root .training-log-v2__chip-text { min-width: 0; overflow: hidden; color: inherit !important; text-overflow: ellipsis; white-space: nowrap; }
 
 #root .training-log-v2__chips .training-log-v2__link { align-self: center; min-height: 34px; }
 
@@ -118,7 +120,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2 {
   border-radius: 24px;
   background: var(--tl-card);
 }
-#root .training-log-v2__view[aria-busy="true"] { opacity: 0.7; }
+#root .training-log-v2__view[aria-busy="true"] { opacity: 1; }
 #root .training-log-v2__view-group { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; min-width: 0; }
 #root .training-log-v2__view .training-log-v2__filter-label { flex: 0 0 auto; }
 #root .training-log-v2__jump .training-log-v2__note { flex-basis: 100%; }
@@ -144,7 +146,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2__date { co
 
 /* Weeks */
 #root .training-log-v2__weeks { display: flex; flex-direction: column; gap: 14px; }
-#root .training-log-v2__weeks[aria-busy="true"] { opacity: 0.6; }
+#root .training-log-v2__weeks[aria-busy="true"] { opacity: 1; }
 
 #root .training-log-v2__week {
   display: flex;
@@ -220,7 +222,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .training-log-v2__date { co
   font-weight: 800;
   letter-spacing: 0.03em;
 }
-#root .training-log-v2__type.is-race { background: var(--tl-accent); color: var(--tl-on-accent); }
+#root .training-log-v2__type.is-race { background: var(--tl-accent); color: var(--tl-on-accent) !important; }
 
 #root .training-log-v2__run-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.4rem, 1fr)); gap: 8px 16px; }
 #root .training-log-v2__run-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

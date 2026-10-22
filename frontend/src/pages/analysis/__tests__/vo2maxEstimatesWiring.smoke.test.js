@@ -57,4 +57,18 @@ for (const token of ['--ve-card', '--ve-ink', '--ve-muted', '--ve-faint', '--ve-
 }
 assert.ok(!css.includes('!important'), 'The page should not need !important.');
 
+// These captions must retain enough width when the root font grows at phone
+// sizes; fixed half-width tracks made "Average" overflow at 320 px / 200%.
+const mobileCss = css.slice(css.indexOf('@media (max-width: 760px)'));
+const readingColumns = mobileCss.match(/\.vo2max-estimates-v2__history-reads\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(min\(100%,\s*([\d.]+)rem\),\s*1fr\)\)[^}]*gap:\s*([\d.]+)px/);
+assert.ok(readingColumns, 'History readings must reflow by a font-relative minimum capped to their available width.');
+const minimumRem = Number(readingColumns[1]);
+const gap = Number(readingColumns[2]);
+// The real shell/reset leaves 275 px at a 375 px viewport and 220 px at 320 px.
+// Preserve two normal-sized readings per row while making enlarged text stack.
+const columnsAt = (availableWidth, rootFontPixels) => Math.max(1, Math.floor((availableWidth + gap) / (minimumRem * rootFontPixels + gap)));
+assert.equal(columnsAt(275, 16), 2, '375 px / normal text retains two readings per row.');
+assert.equal(columnsAt(220, 24), 1, '320 px / 150% text stacks the readings.');
+assert.equal(columnsAt(220, 32), 1, '320 px / 200% text stacks the readings.');
+
 console.log('[PASS] VO2max estimates wiring passed.');

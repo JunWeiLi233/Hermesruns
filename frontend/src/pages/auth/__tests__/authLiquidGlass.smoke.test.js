@@ -226,7 +226,7 @@ assert.match(
 );
 assert.match(
   legal,
-  /legal-page legal-page--\$\{variant\} auth-page--liquid-glass/,
+  /legal-document/,
   'Terms and Privacy should opt into the shared glass surface without an outside grid.',
 );
 

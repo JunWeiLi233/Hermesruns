@@ -1,6 +1,7 @@
 import {mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {test,expect,browserLogin,login,inputs,active,get,post,command,scan,addDays,today} from './helpers.mjs';
+import {expectNativeCalendar,openPlanManagement,openFullPlan,previewVersionId} from './native-plan.ui.mjs';
 
 const distanceInputs=()=>inputs({trainingMode:'DISTANCE',experience:'INTERMEDIATE',baselineWeeklyM:18000,baselineRunsPerWeek:3,longestRecentM:6000,difficulty:'STANDARD'});
 async function screenshot(page,name){const dir=resolve(import.meta.dirname,'../../replica/runna/clone-screens/website-parity');await mkdir(dir,{recursive:true});await page.screenshot({path:resolve(dir,`${name}.png`),fullPage:false});}
@@ -12,7 +13,7 @@ for(const [width,height,n] of [[390,844,41],[1440,900,42]])test(`S07 session cei
   await scan(page,`caps-${width}`,info);await screenshot(page,`S07-caps-${width}x${height}`);
   await page.getByRole('button',{name:'Continue',exact:true}).click();await page.getByLabel('I have checked these baseline values and my availability.').check();
   await page.getByRole('button',{name:'Generate full plan',exact:true}).click();await expect(page.getByRole('button',{name:'Ready to begin?'})).toBeVisible();
-  const pid=p.id;const vId=page.url().split('/').at(-1);const v=await get(request,auth,`/api/run-plans/${pid}/versions/${vId}`);
+  const pid=p.id;const vId=previewVersionId(page);const v=await get(request,auth,`/api/run-plans/${pid}/versions/${vId}`);
   expect(v.inputs.sessionCaps.easyM).toBe(4000);expect(v.warnings).toContain('SESSION_CAPS_APPLIED');
   for(const d of v.weeks.flatMap(w=>w.days))if(d.targetDistanceM!=null&&d.workoutType!=='EVENT')expect(d.targetDistanceM).toBeLessThanOrEqual(d.workoutType==='LONG'?5000:4000);
   expect((await get(request,auth,`/api/run-plans/${pid}`)).state).toBe('DRAFT');await scan(page,`caps-preview-${width}`,info);
@@ -25,12 +26,12 @@ for(const [width,height,n] of [[390,844,43],[1440,900,44]])test(`S11 move previe
   const dialog=page.getByRole('dialog');await dialog.getByLabel('New session date').fill(target);await scan(page,`move-${width}`,info);await screenshot(page,`S11-move-${width}x${height}`);
   await dialog.getByRole('button',{name:'Review changed calendar',exact:true}).click();await expect(page.getByText(`Session move for review: ${w.localDate} → ${target}. Your active plan is unchanged until activation.`)).toBeVisible();
   expect((await get(request,auth,`/api/run-plans/${c.p.id}/workouts/${w.id}`)).workout.localDate).toBe(w.localDate);
-  const next=await get(request,auth,`/api/run-plans/${c.p.id}/versions/${page.url().split('/').at(-1)}`);const moved=next.weeks.flatMap(w=>w.days).find(d=>d.localDate===target);
+  const next=await get(request,auth,`/api/run-plans/${c.p.id}/versions/${previewVersionId(page)}`);const moved=next.weeks.flatMap(w=>w.days).find(d=>d.localDate===target);
   expect(moved.steps).toEqual(w.steps);expect(moved.targetDistanceM).toBe(w.targetDistanceM);
   await page.getByRole('button',{name:'Ready to begin?'}).click();const activation=page.getByRole('dialog');
   for(const checkbox of await activation.getByRole('checkbox',{name:'I understand this note.',exact:true}).all())await checkbox.check();
   await activation.getByLabel('I have reviewed all weeks and the notes above.').check();await activation.getByRole('button',{name:'Activate this plan',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Full calendar'})).toBeVisible();await page.goto(`/training-plan/${c.p.id}/workouts/${moved.id}`);
+  await expectNativeCalendar(page,c.v.title);await page.goto(`/training-plan/${c.p.id}/workouts/${moved.id}`);
   await expect(page.getByRole('button',{name:'Move this session',exact:true})).toBeVisible();await scan(page,`moved-detail-${width}`,info);
 });
 
@@ -46,12 +47,13 @@ test('Caps reject unsupported units and moves reject occupied dates and stale re
 for(const [width,height,n] of [[390,844,46],[1440,900,47]])test(`S10 explicit pace recommendation review and decline ${width}`,async({page,request},info)=>{
   const auth=await browserLogin(page,request,n);await page.setViewportSize({width,height});await page.goto('/training-plan');
   const plans=await get(request,auth,'/api/run-plans');const p=plans.plans.find(p=>p.state==='ACTIVE');
+  await expectNativeCalendar(page,p.title);await openPlanManagement(page);
   await expect(page.getByRole('heading',{name:'Pace review',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Review pace change',exact:true})).toBeVisible();await scan(page,`pace-review-${width}`,info);
   await page.getByRole('heading',{name:'Pace review',exact:true}).evaluate(el=>el.scrollIntoView({block:'start',behavior:'instant'}));await screenshot(page,`S10-pace-${width}x${height}`);
   if(width===1440){
     await page.getByRole('button',{name:'Keep current guidance',exact:true}).click();await expect(page.getByText('You chose to keep your current guidance. This evidence will not change your plan.')).toBeVisible();await page.reload();
-    await expect(page.getByText('You chose to keep your current guidance. This evidence will not change your plan.')).toBeVisible();
+    await openPlanManagement(page);await expect(page.getByText('You chose to keep your current guidance. This evidence will not change your plan.')).toBeVisible();
     expect((await get(request,auth,`/api/run-plans/${p.id}`)).inputs.paceScaleBps).toBeNull();
   }else{
     await page.getByRole('button',{name:'Review pace change',exact:true}).click();await expect(page.getByText(/Pace change for review:/)).toBeVisible();
@@ -59,7 +61,7 @@ for(const [width,height,n] of [[390,844,46],[1440,900,47]])test(`S10 explicit pa
     await page.getByRole('button',{name:'Ready to begin?'}).click();const dialog=page.getByRole('dialog');
     for(const checkbox of await dialog.getByRole('checkbox',{name:'I understand this note.',exact:true}).all())await checkbox.check();
     await dialog.getByLabel('I have reviewed all weeks and the notes above.').check();await dialog.getByRole('button',{name:'Activate this plan',exact:true}).click();
-    await expect(page.getByRole('heading',{name:'Full calendar'})).toBeVisible();expect((await get(request,auth,`/api/run-plans/${p.id}`)).inputs.paceScaleBps).toBe(9800);
+    await expectNativeCalendar(page,p.title);await openPlanManagement(page);expect((await get(request,auth,`/api/run-plans/${p.id}`)).inputs.paceScaleBps).toBe(9800);
     await expect(page.getByRole('button',{name:'Review pace change',exact:true})).toHaveCount(0);
   }
 });
@@ -67,10 +69,10 @@ for(const [width,height,n] of [[390,844,46],[1440,900,47]])test(`S10 explicit pa
 for(const [width,height,n] of [[390,844,49],[1440,900,51]])test(`S10 offline shell reload reads owned plan and blocks writes ${width}`,async({page,request,context},info)=>{
   info.annotations.push({type:'expected-network-fault',description:'Network is disabled after caching the owned shell and snapshots'});
   const auth=await browserLogin(page,request,n);await page.setViewportSize({width,height});const c=await active(request,auth,distanceInputs());await page.goto('/training-plan');
-  await expect(page.getByRole('heading',{name:'Full calendar'})).toBeVisible();
+  await expectNativeCalendar(page,c.v.title);await openPlanManagement(page);
   await page.evaluate(async()=>{await navigator.serviceWorker.ready;});
   await expect.poll(()=>page.evaluate(()=>navigator.serviceWorker.controller!=null)).toBe(true);
-  await page.getByRole('button',{name:'Review full plan',exact:true}).click();await expect(page.getByRole('heading',{name:'Your whole plan, before you begin.'})).toBeVisible();
+  await openFullPlan(page);
   await page.evaluate(async()=>{
     const registration=await navigator.serviceWorker.ready;
     const urls=performance.getEntriesByType('resource').map(x=>x.name).filter(x=>new URL(x).pathname.startsWith('/assets/'));
@@ -83,8 +85,8 @@ for(const [width,height,n] of [[390,844,49],[1440,900,51]])test(`S10 offline she
   await context.setOffline(true);await page.reload();
   await expect(page.getByText(/Saved plan view from/)).toBeVisible();await expect(page.getByRole('button',{name:'Edit and review a new version',exact:true})).toBeDisabled();
   await expect(page.getByRole('heading',{name:/Week of/}).first()).toBeVisible();await scan(page,'offline-full-plan',info);await screenshot(page,`S08-offline-${width}x${height}`);
-  await context.setOffline(false);await page.goto('/training-plan');await expect(page.getByRole('heading',{name:'Full calendar'})).toBeVisible();
-  const other=await browserLogin(page,request,n+1);await page.goto('/training-plan');await expect(page.getByRole('button',{name:'Create a plan'}).first()).toBeVisible();
+  await context.setOffline(false);await page.goto('/training-plan');await expectNativeCalendar(page,c.v.title);
+  const other=await browserLogin(page,request,n+1);await page.goto('/training-plan');await expectNativeCalendar(page);await openPlanManagement(page);await expect(page.getByRole('button',{name:'Create a plan'}).first()).toBeVisible();
   await context.setOffline(true);await page.goto(`/training-plan/${c.p.id}/preview/${c.v.id}`);await expect(page.getByRole('heading',{name:'Your whole plan, before you begin.'})).toBeVisible();
   await expect(page.getByText(/This page has not been saved for offline reading/)).toBeVisible();await expect(page.getByText(c.v.title,{exact:true})).toHaveCount(0);
   expect(other.email).not.toBe(auth.email);
@@ -100,8 +102,8 @@ test('Pace preview cannot bypass the unapproved ruleset gate',async({request})=>
 });
 
 for(const [width,height,n] of [[390,844,53],[1440,900,54]])test(`S12 extra run remains unassigned ${width}`,async({page,request},info)=>{
-  const auth=await browserLogin(page,request,n);await page.setViewportSize({width,height});const c=await active(request,auth,distanceInputs());const before=await get(request,auth,`/api/run-plans/${c.p.id}`);await page.goto('/training-plan');
-  await page.getByRole('button',{name:'Log an extra run',exact:true}).click();const dialog=page.getByRole('dialog');
+  const auth=await browserLogin(page,request,n);await page.setViewportSize({width,height});const c=await active(request,auth,distanceInputs());const before=await get(request,auth,`/api/run-plans/${c.p.id}`);await page.goto('/runs');
+  await page.getByRole('button',{name:'Log a completed run',exact:true}).click();const dialog=page.getByRole('dialog');
   await dialog.getByRole('textbox',{name:'Run name',exact:true}).fill('Unscheduled actual run');await dialog.getByRole('spinbutton',{name:'Actual distance (km)',exact:true}).fill('2.3');
   await dialog.getByRole('spinbutton',{name:'Duration (minutes)',exact:true}).fill('18');await scan(page,'extra-run-entry',info);await screenshot(page,`S12-extra-run-${width}x${height}`);
   await dialog.getByRole('button',{name:'Save run',exact:true}).click();await expect(dialog.getByText('Run saved in your history.',{exact:true})).toBeVisible();

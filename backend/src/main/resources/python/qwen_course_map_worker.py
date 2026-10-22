@@ -6,10 +6,6 @@ from contextlib import redirect_stdout
 from functools import lru_cache
 from pathlib import Path
 
-import torch
-from qwen_vl_utils import process_vision_info
-from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
-
 DEFAULT_IMAGE_MAX_PIXELS = 1024 * 1024
 
 
@@ -22,6 +18,10 @@ def _normalize_cache_dir(cache_dir: str | None) -> str | None:
 
 @lru_cache(maxsize=2)
 def _load_bundle(model_id: str, device_map: str, cache_dir: str | None):
+    # Protocol parsing and validation also run in installations without the inference stack.
+    import torch
+    from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
+
     kwargs = {
         "torch_dtype": torch.bfloat16,
         "device_map": device_map,
@@ -56,6 +56,9 @@ def build_image_content(image_path: str) -> dict:
 
 
 def _response_text(model, processor, image_path: Path, prompt: str, max_new_tokens: int) -> str:
+    import torch
+    from qwen_vl_utils import process_vision_info
+
     messages = [
         {
             "role": "user",

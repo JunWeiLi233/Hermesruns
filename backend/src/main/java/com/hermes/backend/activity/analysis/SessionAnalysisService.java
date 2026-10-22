@@ -161,8 +161,13 @@ public class SessionAnalysisService {
         return end;
     }
     private static Double sourceDuration(Activity activity) {
-        return activity.getDurationSeconds() != null && activity.getDurationSeconds() >= 0 ? activity.getDurationSeconds().doubleValue()
-                : activity.getMovingTimeSeconds() > 0 ? (double)activity.getMovingTimeSeconds() : null;
+        if (activity.getDurationSeconds() != null && activity.getDurationSeconds() >= 0) {
+            return activity.getDurationSeconds().doubleValue();
+        }
+        if (activity.getMovingTimeSeconds() > 0) {
+            return (double) activity.getMovingTimeSeconds();
+        }
+        return null;
     }
     private static Double sourceDistance(Activity activity) {
         Double distance = finite(activity.getDistanceMeters());

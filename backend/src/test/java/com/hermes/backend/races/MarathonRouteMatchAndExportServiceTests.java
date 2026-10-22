@@ -6,21 +6,32 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class MarathonRouteMatchAndExportServiceTests {
 
     @Test
-    void jobResultSerializesGpxWithoutTraversingPersistenceEntities() throws Exception {
+    void jobResultSerializesGpxAndSafeAssetMetadataWithoutTraversingTheLazyRunner() throws Exception {
         GeneratedRaceGpxAsset asset = mock(GeneratedRaceGpxAsset.class);
-        when(asset.getRunner()).thenThrow(new IllegalStateException("Lazy runner must not be serialized"));
+        when(asset.getRunner()).thenThrow(new IllegalStateException("Private runner data must not be serialized"));
+        when(asset.getRaceId()).thenReturn("synthetic-course");
+        when(asset.getRaceName()).thenReturn("Synthetic course");
+        when(asset.getGpxXml()).thenReturn("<gpx/>");
         var result = new MarathonRouteMatchAndExportService.MarathonRouteMatchAndExportResult(
                 List.of(new MatchedBreadcrumbPointDTO(35.69, 139.69)), "<gpx/>", asset, "Verified course");
 
         String json = new tools.jackson.databind.ObjectMapper().writeValueAsString(result);
 
-        assertThat(json).contains("gpxXml", "<gpx/>").doesNotContain("persistedAsset", "runner");
+        var tree = new tools.jackson.databind.ObjectMapper().readTree(json);
+        assertThat(tree.path("gpxXml").asText()).isEqualTo("<gpx/>");
+        assertThat(tree.at("/persistedAsset/raceId").asText()).isEqualTo("synthetic-course");
+        assertThat(tree.at("/persistedAsset/raceName").asText()).isEqualTo("Synthetic course");
+        assertThat(tree.at("/persistedAsset/gpxXml").asText()).isEqualTo("<gpx/>");
+        assertThat(tree.path("persistedAsset").has("runner")).isFalse();
+        assertThat(json).doesNotContain("mockito", "Private runner data", "sessionToken", "password");
+        verify(asset, never()).getRunner();
     }
 
     @Test

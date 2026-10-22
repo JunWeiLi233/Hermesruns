@@ -1,3 +1,4 @@
+vi.mock('../../../contexts/UnitContext', () => ({ useUnit: () => ({ unit: 'km', isMile: false }) }));
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';

@@ -7,7 +7,7 @@ import java.time.Instant;
 
 /** Session metadata remains on the activity row, without entity-local persistence boilerplate. */
 @MappedSuperclass
-public abstract class ActivitySessionAnalysisFields extends ActivityRelationshipFields {
+public abstract class ActivitySessionAnalysisFields extends ActivityEditableFields {
     /** Immutable imported lap boundaries/labels; never overwritten by runner declarations. */
     @Column(columnDefinition = "text")
     private String sourceImportedLapsJson;

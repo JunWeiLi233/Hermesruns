@@ -19,7 +19,7 @@ class ActivityTimeRepresentationTests {
         return activity;
     }
 
-    @Test void fileFeedKeepsHistoryAndAddsUnambiguousInstantAndAccountDate() {
+    @Test void fileFeedKeepsStoredUtcHistoryAndShowsTheAccountClockAlongsideItsInstant() {
         Activity activity = run("2026-10-05T03:55:00", false);
         Map<String, Object> body = ActivityRoutePreviewHelper.toRunFeedItem(activity);
         assertThat(String.valueOf(body.get("activityInstant"))).isEqualTo("2026-10-05T03:55:00Z");
@@ -27,7 +27,8 @@ class ActivityTimeRepresentationTests {
         assertThat(String.valueOf(body.get("accountLocalTime"))).isEqualTo("23:55");
         assertThat(body.get("timeRepresentation")).isEqualTo("UTC_INSTANT");
         assertThat(activity.getStartTime()).isEqualTo(LocalDateTime.parse("2026-10-05T03:55:00"));
-        assertThat(body.get("startTime")).isEqualTo(activity.getStartTime());
+        assertThat(body.get("startTime")).isEqualTo(LocalDateTime.parse("2026-10-04T23:55:00"));
+        assertThat(body.get("startDate")).isEqualTo("2026-10-04T23:55");
         assertThat(body.get("distanceKm")).isEqualTo(1.0);
     }
 

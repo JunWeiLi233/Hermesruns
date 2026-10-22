@@ -1,5 +1,5 @@
 .sport-totals, .modal-card.sport-totals-modal {
-  --st-ink: #1c1917; --st-muted: #625c56; --st-faint: #827b74; --st-surface: #fff;
+  --st-ink: #1c1917; --st-muted: #625c56; --st-faint: #716b65; --st-surface: #fff;
   --st-soft: #f5f5f4; --st-rule: rgb(28 25 23 / 8%); --st-accent: #a0392a;
   color: var(--st-ink); background: var(--st-surface);
 }

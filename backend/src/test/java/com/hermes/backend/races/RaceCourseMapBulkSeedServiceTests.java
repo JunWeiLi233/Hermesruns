@@ -1109,6 +1109,24 @@ class RaceCourseMapBulkSeedServiceTests {
     }
 
     @Test
+    void parseGpxRoutePointsAcceptsAnyAttributeOrderAndNamespacedPoints() {
+        RaceCourseMapBulkSeedService service = newService(mock(RestTemplate.class), mock(RaceCourseMapAssetRepository.class));
+        String gpx = """
+                <gpx xmlns:g="http://www.topografix.com/GPX/1/1">
+                  <g:trkpt lon="23.962080" lat="38.151140"/>
+                  <rtept lat="38.116150" lon="23.969820"></rtept>
+                  <trkpt lat="not-a-number" lon="23.0"/>
+                  <trkpt lat="38.105260"/>
+                </gpx>
+                """;
+
+        List<RoutePoint> route = service.parseGpxRoutePoints(gpx);
+
+        assertThat(route).extracting(RoutePoint::lat).containsExactly(38.151140, 38.116150);
+        assertThat(route).extracting(RoutePoint::lng).containsExactly(23.962080, 23.969820);
+    }
+
+    @Test
     void seedRacePersistsAthensOfficialGpxRoute() throws Exception {
         RestTemplate restTemplate = mockElevationRestTemplate();
         when(restTemplate.exchange(any(RequestEntity.class), eq(byte[].class)))

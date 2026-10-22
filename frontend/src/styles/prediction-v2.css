@@ -9,7 +9,7 @@ body #root .prediction-v2-page .runner-shell-main { background: transparent !imp
   --pv-card: #fff;
   --pv-ink: #1c1917;
   --pv-muted: #625c56;
-  --pv-faint: #8a837c;
+  --pv-faint: #766d64;
   --pv-line: rgba(28, 25, 23, 0.08);
   --pv-fill: rgba(28, 25, 23, 0.05);
   --pv-accent: #a0392a;
@@ -52,7 +52,7 @@ body:is(.theme-midnight, .theme-high-contrast) #root .prediction-v2 {
 
 #root .prediction-v2-time-meta { display: flex; flex-direction: column; gap: 6px; max-width: 42ch; padding-bottom: 8px; color: var(--pv-muted); font-size: 0.85rem; line-height: 1.45; }
 #root .prediction-v2-delta { align-self: flex-start; padding: 5px 11px; border-radius: 999px; background: var(--pv-fill); color: var(--pv-ink); font-size: 0.8rem; font-weight: 700; }
-#root .prediction-v2-delta.is-faster { background: rgba(52, 199, 89, 0.12); color: #248a3d; }
+#root .prediction-v2-delta.is-faster { background: rgba(52, 199, 89, 0.12); color: #1e7a35; }
 #root .prediction-v2-confidence { display: flex; flex-direction: column; gap: 6px; }
 #root .prediction-v2-confidence > div { display: flex; justify-content: space-between; color: var(--pv-muted); font-size: 0.78rem; font-weight: 600; }
 #root .prediction-v2-confidence strong { color: var(--pv-ink); }
@@ -120,3 +120,10 @@ body:is(.theme-midnight, .theme-high-contrast) #root .prediction-v2-weather > sp
   body #root .prediction-v2-page .prediction-v2 .prediction-trend-card { padding: 20px; border-radius: 20px !important; }
   #root .prediction-v2 .prediction-trend-chart { height: 280px; }
 }
+
+/* The prediction history can be switched between 1, 3 and 6 months. */
+#root .prediction-v2 .prediction-trend-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+#root .prediction-v2 .prediction-trend-ranges { display: flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--pv-fill); }
+#root .prediction-v2 .prediction-trend-ranges button { min-height: 32px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: var(--pv-muted); font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; }
+#root .prediction-v2 .prediction-trend-ranges button[aria-pressed="true"] { background: var(--pv-card); color: var(--pv-ink); box-shadow: 0 1px 4px var(--pv-line); }
+#root .prediction-v2 .prediction-trend-ranges button:focus-visible { outline: 2px solid var(--pv-accent); outline-offset: 2px; }

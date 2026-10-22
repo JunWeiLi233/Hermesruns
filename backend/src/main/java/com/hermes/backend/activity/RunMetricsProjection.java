@@ -14,5 +14,8 @@ public interface RunMetricsProjection {
     Double getDistanceMeters();
     LocalDateTime getEffectiveStartTime();
     LocalDateTime getStartTime();
+
     Boolean getStravaApiSourced();
+
+    Boolean getUndated();
 }

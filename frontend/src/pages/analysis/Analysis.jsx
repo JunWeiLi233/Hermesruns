@@ -22,6 +22,7 @@ import { preloadRoute } from '../../utils/routePreload';
 import { buildOrderedRacePredictions, computeVdotTrend, estimateCurrentVdot } from '../../utils/vdot';
 import { buildAnalysisSnapshot, buildVo2Bars, normalizeAnalysisList } from '../../utils/analysisInsights';
 import { formatDuration } from '../../utils/format';
+import { formatTrainingZoneBasisUpdated } from '../../utils/zoneBasisAge';
 import PageSkeleton from '../../components/PageSkeleton';
 import MeasuredHrZoneBlock from './MeasuredHrZoneBlock';
 import AnalysisFeatures from './AnalysisFeatures';
@@ -42,14 +43,6 @@ function orderedZonePace(label) {
     const seconds = (pace) => pace.split(':').reduce((total, value) => total * 60 + Number(value), 0);
     return seconds(a) - seconds(b);
   }).join('–');
-}
-
-function formatTrainingZoneBasisUpdated(value, t) {
-  const date = value instanceof Date ? value : new Date(value || 0);
-  if (!Number.isFinite(date.getTime())) return t('analysis.stitch_zone_basis_updated_recently');
-  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / ANALYSIS_DAY_MS));
-  if (days <= 0) return t('analysis.stitch_zone_basis_updated_today');
-  return t('analysis.stitch_zone_basis_updated_days', { count: days });
 }
 
 function buildTrainingZoneBasisLabel(snapshot, t) {
@@ -469,7 +462,6 @@ export default function Analysis() {
                   <AppIcon name="insights" className="runner-dashboard-side-link-icon" />
                 </div>
                 <h2 className="premium-empty-state__heading">{t('analysis.stitch_load_error')}</h2>
-                <p className="premium-empty-state__copy">{t('analysis.stitch_empty_helper')}</p>
                 <div className="analysis-overview-empty-actions">
                   <button type="button" className="runner-shell-inline-btn analysis-overview-empty-action is-primary" onClick={loadAnalysisData}>
                     {t('analysis.stitch_load_retry')}
@@ -503,7 +495,9 @@ export default function Analysis() {
                 <h1>{t(fitnessHeadline === 'improving' && loadZone.key === 'optimal' ? 'analysis.v2_headline_improving_balanced' : `analysis.v2_headline_${fitnessHeadline}`)}</h1>
                 <p>
                   {[
-                    vdotTrend.hasData ? t('analysis.v2_status_vo2_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` }) : null,
+                    vdotTrend.hasData ? (vdotTrend.delta === 0
+                      ? t('analysis.v2_status_vo2_unchanged')
+                      : t('analysis.v2_status_vo2_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` })) : null,
                     trainingLoad?.lastAcwr != null ? `ACWR ${trainingLoad.lastAcwr.toFixed(2)}` : null,
                     t(`analysis.v2_status_injury_${injury.level || 'low'}`),
                   ].filter(Boolean).join(' · ')}
@@ -523,7 +517,9 @@ export default function Analysis() {
                         {vdotTrend.hasData ? (
                           <span className={cx('analysis-v2-delta', vdotTrend.direction === 'improving' && 'is-positive', vdotTrend.direction === 'declining' && 'is-negative')}>
                             <AppIcon name={vdotTrend.direction === 'improving' ? 'trending_up' : vdotTrend.direction === 'declining' ? 'trending_down' : 'trending_flat'} />
-                            {t('analysis.v2_delta_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` })}
+                            {vdotTrend.delta === 0
+                              ? t('analysis.v2_delta_unchanged')
+                              : t('analysis.v2_delta_period', { delta: `${vdotTrend.delta > 0 ? '+' : ''}${vdotTrend.delta.toFixed(1)}` })}
                           </span>
                         ) : null}
                       </div>

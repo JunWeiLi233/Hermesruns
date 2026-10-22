@@ -1426,7 +1426,7 @@
 .admin-audit-terminal__summary small {
   display: block;
   margin-top: 4px;
-  color: #78716c;
+  color: #6f6862;
 }
 
 .admin-audit-terminal__summary span {
@@ -1556,7 +1556,7 @@
 
 .admin-audit-terminal__cta-arrow {
   margin-left: auto;
-  color: #78716c;
+  color: #6f6862;
 }
 
 @media (max-width: 1080px) {

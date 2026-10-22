@@ -34,16 +34,22 @@ class ExplorerProductE2eTests {
     @Autowired ExplorerBrowserFixtures.State state;
     @MockitoBean TransactionalMailSender sender;
     @Test void integratedProductFlows()throws Exception {
+        assertThat(System.getenv("EXPLORER_TEST_JDBC_URL")).matches("jdbc:postgresql://127\\.0\\.0\\.1:[0-9]+/explorer_backend_test");
+        new org.springframework.jdbc.core.JdbcTemplate(dataSource).execute("DROP SCHEMA IF EXISTS statshunters CASCADE");
         new ResourceDatabasePopulator(new ClassPathResource("explorer-migrations/V001__explorer_r0_r1.sql")).execute(dataSource);
-        boolean nativeMode=Boolean.getBoolean("explorer.e2e.native");
+        // The native Hermes workspace is the shipped product. The separately built prototype remains opt-in.
+        boolean nativeMode=Boolean.parseBoolean(System.getProperty("explorer.e2e.native","true"));
         Path repo=Path.of("..").toAbsolutePath().normalize(),e2e=repo.resolve("replica/statshunters/app/e2e"),log=repo.resolve("replica/statshunters/validation/"+(nativeMode?"native-playwright.log":"product-playwright.log"));
+        Files.createDirectories(log.getParent());
         Path testIndex=null;byte[] previousIndex=null;
         if(nativeMode) {
             // MVC unit tests intentionally ship a tiny, script-free SPA fixture.
             // Browser acceptance must serve the actual production shell instead.
             testIndex=Path.of(getClass().getResource("/static/index.html").toURI()).toAbsolutePath().normalize();
-            assertThat(testIndex).startsWith(repo.resolve("backend/target/explorer-backend/test-classes"));
-            Path productionIndex=repo.resolve("backend/target/explorer-backend/classes/static/index.html");
+            Path testClasses=Path.of(ExplorerProductE2eTests.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toAbsolutePath().normalize();
+            assertThat(testIndex).startsWith(testClasses);
+            Path productionClasses=Path.of(com.hermes.backend.BackendApplication.class.getProtectionDomain().getCodeSource().getLocation().toURI()).toAbsolutePath().normalize();
+            Path productionIndex=productionClasses.resolve("static/index.html");
             assertThat(Files.readString(productionIndex)).contains("/assets/");
             previousIndex=Files.readAllBytes(testIndex);
             Files.copy(productionIndex,testIndex,StandardCopyOption.REPLACE_EXISTING);

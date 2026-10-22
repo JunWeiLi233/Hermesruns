@@ -144,6 +144,7 @@ class ActivityPaceProfileMvcTests {
         mockMvc.perform(get("/api/activities/{id}/pace-profile", run.getId()).header("Authorization", bearer(owner)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasStream").value(false))
+                .andExpect(jsonPath("$.reason").value("no_points"))
                 .andExpect(jsonPath("$.hasElevation").value(false))
                 .andExpect(jsonPath("$.splits", hasSize(0)))
                 .andExpect(jsonPath("$.summary").doesNotExist())
@@ -197,9 +198,9 @@ class ActivityPaceProfileMvcTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasElevation").value(true))
                 .andExpect(jsonPath("$.splits[0].paceSecPerKm", closeTo(300.0, 0.5)))
-                .andExpect(jsonPath("$.splits[0].gapSecPerKm", closeTo(230.5, 2.0)))
+                .andExpect(jsonPath("$.splits[0].gapSecPerKm", closeTo(253.7, 2.0)))
                 .andExpect(jsonPath("$.splits[0].elevationChangeMeters", closeTo(50.0, 1.5)))
-                .andExpect(jsonPath("$.summary.gapSecPerKm", lessThan(250.0)));
+                .andExpect(jsonPath("$.summary.gapSecPerKm", lessThan(260.0)));
     }
 
     @Test
@@ -228,6 +229,7 @@ class ActivityPaceProfileMvcTests {
         mockMvc.perform(get("/api/activities/{id}/pace-profile", run.getId()).header("Authorization", bearer(owner)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasStream").value(false))
+                .andExpect(jsonPath("$.reason").value("no_times"))
                 .andExpect(jsonPath("$.splits", hasSize(0)));
     }
 
@@ -241,7 +243,33 @@ class ActivityPaceProfileMvcTests {
         mockMvc.perform(get("/api/activities/{id}/pace-profile", run.getId()).header("Authorization", bearer(owner)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.hasStream").value(false))
+                .andExpect(jsonPath("$.reason").value("no_times"))
                 .andExpect(jsonPath("$.splits", hasSize(0)));
+    }
+
+    @Test
+    void aStreamTooShortForAProfileSaysSo() throws Exception {
+        Runner owner = runner();
+        Activity run = run(owner, 20);
+        // 20 s and 50 m: there is a stream, but a profile needs at least 100 m and 10 s.
+        stream(run, 20, 2.5, 0, true, true, false);
+
+        mockMvc.perform(get("/api/activities/{id}/pace-profile", run.getId()).header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hasStream").value(false))
+                .andExpect(jsonPath("$.reason").value("too_short"));
+    }
+
+    @Test
+    void aProfileHasNoReasonProperty() throws Exception {
+        Runner owner = runner();
+        Activity run = run(owner, 600);
+        stream(run, 600, 1000.0 / 300, 0, true, true, false);
+
+        mockMvc.perform(get("/api/activities/{id}/pace-profile", run.getId()).header("Authorization", bearer(owner)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hasStream").value(true))
+                .andExpect(jsonPath("$.reason").doesNotExist());
     }
 
     @Test

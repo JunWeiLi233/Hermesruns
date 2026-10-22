@@ -67,14 +67,12 @@ it('renders both languages and changes distance units without changing the presc
   expect(screen.getByRole('img')).toHaveAccessibleName(/周预算 15.5 英里/);
   expect(screen.queryByText(/recommendation_evidence\./)).not.toBeInTheDocument();
 });
-it('starts collapsed and keeps the calculation and supporting evidence independently expandable', async () => {
+it('shows the calculation and keeps the calculation and supporting evidence independently expandable', async () => {
   render(<RecommendationEvidence payload={payload} />);
   const calculation = screen.getByText('How this is calculated').closest('details');
   const supporting = screen.getByText('History & recovery details').closest('details');
-  expect(calculation).not.toHaveAttribute('open');
-  expect(supporting).not.toHaveAttribute('open');
-  await userEvent.click(within(calculation).getByText('How this is calculated'));
   expect(calculation).toHaveAttribute('open');
+  expect(supporting).not.toHaveAttribute('open');
   await userEvent.click(within(supporting).getByText('History & recovery details'));
   expect(supporting).toHaveAttribute('open');
   expect(calculation).toHaveAttribute('open');

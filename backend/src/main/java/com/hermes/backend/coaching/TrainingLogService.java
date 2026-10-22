@@ -259,4 +259,7 @@ public class TrainingLogService {
         return Math.round(value * 10.0) / 10.0;
     }
 
+    private static double round2(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
 }

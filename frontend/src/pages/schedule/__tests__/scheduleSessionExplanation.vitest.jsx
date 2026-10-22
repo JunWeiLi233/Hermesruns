@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import Schedule from '../Schedule';
@@ -8,6 +8,7 @@ import { apiJson } from '../../../api';
 import { cachedApiJson } from '../../../api/resourceCache';
 
 const preferences = vi.hoisted(() => ({ unit: 'km', lang: 'en' }));
+vi.mock('../../../contexts/ThemeContext', () => ({ useTheme: () => ({ isDark: false }) }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: true, email: 'runner@example.test' }) }));
 vi.mock('../../../contexts/I18nContext', () => ({ useI18n: () => ({ lang: preferences.lang, t: (key, values = {}) => {
   const dictionary = preferences.lang === 'zh-CN' ? zh : en;
@@ -152,7 +153,7 @@ it('keeps today\'s fallback when there is no upcoming session', async () => {
   schedule = [today];
   const { container } = await openPage();
   const nextCard = container.querySelector('.schedule-plan-next-card');
-  expect(within(nextCard).getByRole('heading')).toHaveTextContent(en.today_run.personalized_title_rest);
+  await waitFor(() => expect(within(nextCard).getByRole('heading')).toHaveTextContent(en.profile.dashboard_workout_rest));
   expect(nextCard).toHaveTextContent(en.today_run.personalized_reason_scheduled_rest);
 });
 
@@ -183,6 +184,8 @@ it('browses weeks, updates completion, and returns to the account current week',
 it('keeps an upcoming session outside the visible week on its own date', async () => {
   upcoming.scheduledDate = '2026-10-12';
   const { container } = await openPage();
+  expect(container.querySelector('.schedule-plan-next-card')).not.toHaveTextContent(en.profile.dashboard_workout_long_run);
+  fireEvent.click(screen.getByRole('button', { name: en.training_plan.nextWeek }));
   const card = container.querySelector('.schedule-plan-next-card');
   expect(card.querySelector('.schedule-plan-next-content > span')).toHaveTextContent('Monday, Oct 12');
   expect(within(card).queryByRole('button', { name: en.schedule.view_drills })).not.toBeInTheDocument();

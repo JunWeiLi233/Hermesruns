@@ -1,7 +1,7 @@
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import messages from '../../i18n/locales/en/trainingWorkspace.js';
+import messages from '../../i18n/locales/en.js';
 import TrainingWorkspace from './TrainingWorkspace.jsx';
 import { apiFetch } from '../../api';
 
@@ -33,6 +33,7 @@ it('opens the native cookie workspace from Hermes auth and creates a team withou
   expect(screen.getByTestId('hermes-shell')).toBeInTheDocument();expect(screen.queryByLabelText('Sample account')).not.toBeInTheDocument();expect(screen.queryByText('Screen state review')).not.toBeInTheDocument();
   fireEvent.click(screen.getByText('Coaching & teams'));
   fireEvent.click(screen.getByRole('link',{name:'Team management'}));
+  fireEvent.click(await screen.findByRole('button',{name:'Create a team'}));
   const name=await screen.findByLabelText('New team name');fireEvent.change(name,{target:{value:'Synthetic coaching team'}});fireEvent.click(screen.getByRole('button',{name:'Create team'}));
   await waitFor(()=>expect(calls.some(call=>call.url==='/api/training/teams'&&call.options.method==='POST')).toBe(true));
   const create=calls.find(call=>call.url==='/api/training/teams'&&call.options.method==='POST');expect(create.options.credentials).toBe('same-origin');expect(create.options.headers['X-TRAINING-CSRF']).toBe('csrf-test');expect(JSON.parse(create.options.body)).toEqual({name:'Synthetic coaching team'});

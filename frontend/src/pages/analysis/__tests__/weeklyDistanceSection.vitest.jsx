@@ -55,6 +55,28 @@ const boxed = (element) => {
 };
 
 describe('the card', () => {
+  it('grows the phone chart to contain a measured readout taller than its initial height', () => {
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(390);
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    const measurement = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function () {
+      return this.matches('.analysis-wd-tooltip')
+        ? { x: 0, y: 0, left: 0, top: 0, right: 300, bottom: 240, width: 300, height: 240, toJSON() {} }
+        : original.call(this);
+    });
+    try {
+      const { container } = render(<WeeklyDistanceSection runs={runs()} />);
+      act(() => slider().focus());
+      fireEvent.keyDown(slider(), { key: 'Home' });
+      expect(readout(container)).toHaveTextContent('4-week average');
+      const height = Number(container.querySelector('svg.analysis-fit-v2-svg').getAttribute('height'));
+      expect(height).toBeGreaterThanOrEqual(248);
+      expect(parseFloat(readout(container).style.top) + 240).toBeLessThanOrEqual(height - 4);
+    } finally {
+      width.mockRestore();
+      measurement.mockRestore();
+    }
+  });
+
   it('has the weeks of the range as bars, the week still going lighter, and a line through the averages', () => {
     const { container } = render(<WeeklyDistanceSection runs={runs()} />);
 

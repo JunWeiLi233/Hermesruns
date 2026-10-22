@@ -158,25 +158,37 @@ class AutomatedCoachPersonaBoundaryTests {
     }
 
     @ParameterizedTest
-    @CsvSource({"0.0,comeback", "0.05,comeback", "0.050001,active"})
-    void effectivelyZeroPersistedVolumeGuardIsInclusive(double persistedVolume, String expectedPersona)
+    @CsvSource({"0.0,active", "0.05,active", "0.050001,active"})
+    void todayRefreshesAnOldPersistedVolumeBeforeChoosingAPersona(double persistedVolume, String expectedPersona)
             throws Exception {
         Fixture f = fixture(List.of(run(ORDINARY.minusSeconds(DAY_SECONDS), 5),
                 run(ORDINARY.minusSeconds(20 * DAY_SECONDS), 5), run(ORDINARY.minusSeconds(27 * DAY_SECONDS), 5)));
-        // Explicit existing-state fixture: bypass aggregate rounding to test the exact stored guard.
+        // Old persisted values are refreshed from the same recent history that drives the prescription.
         CoachRunnerState state = new CoachRunnerState();
         state.setRunner(f.runner());
         state.setVolumeKm28d(persistedVolume);
         state.setLastAggregatedAt(LocalDateTime.ofInstant(ORDINARY, ZoneOffset.UTC));
         states.saveAndFlush(state);
         Observation actual = observe(f, ORDINARY, "volume-guard-" + Double.toString(persistedVolume), false);
-        assertThat(actual.body().path("state").path("volumeKm28d").asDouble()).isEqualTo(persistedVolume);
+        assertThat(actual.body().path("state").path("volumeKm28d").asDouble()).isEqualTo(15);
+        assertThat(states.findByRunner(f.runner()).orElseThrow().getVolumeKm28d()).isEqualTo(15);
+        assertThat(actual.body().path("runnerState").asText()).isEqualTo(expectedPersona);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"0.0,0.0,comeback", "0.049999,0.0,comeback", "0.05,0.1,active", "0.050001,0.1,active"})
+    void measuredVolumeUsesExistingAggregateRoundingBeforePersonaClassification(
+            double measuredVolume, double roundedVolume, String expectedPersona) throws Exception {
+        Fixture f = fixture(List.of(run(ORDINARY.minusSeconds(DAY_SECONDS), measuredVolume),
+                run(ORDINARY.minusSeconds(40 * DAY_SECONDS), 5), run(ORDINARY.minusSeconds(47 * DAY_SECONDS), 5)));
+        Observation actual = observe(f, ORDINARY, "measured-volume-" + Double.toString(measuredVolume), true);
+        assertThat(actual.body().path("state").path("volumeKm28d").asDouble()).isEqualTo(roundedVolume);
         assertThat(actual.body().path("runnerState").asText()).isEqualTo(expectedPersona);
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"2026-10-11T04:00:00Z", "2026-03-09T04:30:00Z", "2026-11-02T04:30:00Z"})
-    void historyCalendarWindowsAreCheckedSeparatelyFromElapsedAggregates(String timestamp) throws Exception {
+    void historyAndStateShareCalendarWindowsWhilePersonaUsesElapsedAge(String timestamp) throws Exception {
         Instant now = Instant.parse(timestamp);
         clock.setInstant(now);
         Fixture f = fixture(List.of(
@@ -188,10 +200,10 @@ class AutomatedCoachPersonaBoundaryTests {
                 run(now.minusSeconds(28 * DAY_SECONDS - 1), 6),
                 run(now, 7), run(now.plusSeconds(1), 8)));
         Observation actual = observe(f, now, "history-windows-" + now.getEpochSecond(), true);
-        assertThat(actual.body().path("state").path("volumeKm7d").asDouble()).isEqualTo(12);
-        assertThat(actual.body().path("state").path("volumeKm28d").asDouble()).isEqualTo(24);
-        assertThat(actual.history().volume7Km()).isNotEqualTo(12);
-        assertThat(actual.history().volume28Km()).isNotEqualTo(24);
+        assertThat(actual.body().path("state").path("volumeKm7d").asDouble()).isEqualTo(actual.history().volume7Km());
+        assertThat(actual.body().path("state").path("volumeKm28d").asDouble()).isEqualTo(actual.history().volume28Km());
+        assertThat(actual.history().volume7Km()).isNotEqualTo(elapsedKm(f.seeds(), now, 7));
+        assertThat(actual.history().volume28Km()).isNotEqualTo(elapsedKm(f.seeds(), now, 28));
     }
 
     @Test
@@ -265,8 +277,8 @@ class AutomatedCoachPersonaBoundaryTests {
         assertThat(body.path("runnerState").asText())
                 .isEqualTo(expectedPersona(f.seeds(), now, body.path("state").path("volumeKm28d").asDouble()));
         if (checkAggregates) {
-            assertThat(body.path("state").path("volumeKm7d").asDouble()).isEqualTo(elapsedKm(f.seeds(), now, 7));
-            assertThat(body.path("state").path("volumeKm28d").asDouble()).isEqualTo(elapsedKm(f.seeds(), now, 28));
+            assertThat(body.path("state").path("volumeKm7d").asDouble()).isEqualTo(calendarKm(f.seeds(), now, 7));
+            assertThat(body.path("state").path("volumeKm28d").asDouble()).isEqualTo(calendarKm(f.seeds(), now, 28));
         }
         return new Observation(body, history);
     }
@@ -276,6 +288,7 @@ class AutomatedCoachPersonaBoundaryTests {
     private static Map<String, Object> expectedHistory(List<Seed> seeds, Instant now) {
         LocalDate today = now.atZone(ACCOUNT_ZONE).toLocalDate();
         List<Seed> elapsed90 = seeds.stream().filter(seed -> seed.type() == ActivityType.RUN)
+                .filter(seed -> seed.km() > 0)
                 .filter(seed -> now.getEpochSecond() - seed.instant().getEpochSecond() >= 0)
                 .filter(seed -> now.getEpochSecond() - seed.instant().getEpochSecond() <= 90 * DAY_SECONDS).toList();
         List<Seed> calendar28 = elapsed90.stream()
@@ -291,10 +304,10 @@ class AutomatedCoachPersonaBoundaryTests {
         Map<String, Object> expected = new LinkedHashMap<>();
         expected.put("totalRuns", (int) seeds.stream().filter(seed -> seed.type() == ActivityType.RUN).count());
         expected.put("runDays28", (int) calendar28.stream().map(seed -> seed.instant().atZone(ACCOUNT_ZONE).toLocalDate()).distinct().count());
-        expected.put("volume7Km", round1(km7 > 0 ? km7 : elapsedKm(seeds, now, 7)));
-        expected.put("volume28Km", round1(km28 > 0 ? km28 : elapsedKm(seeds, now, 28)));
+        expected.put("volume7Km", round1(km7));
+        expected.put("volume28Km", round1(km28));
         expected.put("averageRunKm", calendar28.isEmpty() ? 0.0 : round1(km28 / calendar28.size()));
-        expected.put("longestRunKm28", calendar28.stream().mapToDouble(Seed::km).max().orElse(0.0));
+        expected.put("longestRunKm28", round1(calendar28.stream().mapToDouble(Seed::km).max().orElse(0.0)));
         expected.put("averagePaceSecondsPerKm", km28 == 0 ? 0.0 : round1(calendar28.stream().mapToInt(Seed::seconds).sum() / km28));
         expected.put("highIntensityRatio7d", 0.0);
         expected.put("hoursSinceHardRun", hard == null ? null : (int) ((now.getEpochSecond() - hard.getEpochSecond()) / 3600));
@@ -305,6 +318,14 @@ class AutomatedCoachPersonaBoundaryTests {
 
     private static long calendarAge(Seed seed, LocalDate today) {
         return ChronoUnit.DAYS.between(seed.instant().atZone(ACCOUNT_ZONE).toLocalDate(), today);
+    }
+
+    private static double calendarKm(List<Seed> seeds, Instant now, int days) {
+        LocalDate today = now.atZone(ACCOUNT_ZONE).toLocalDate();
+        return round1(seeds.stream().filter(seed -> seed.type() == ActivityType.RUN)
+                .filter(seed -> !seed.instant().isAfter(now))
+                .filter(seed -> calendarAge(seed, today) >= 0 && calendarAge(seed, today) < days)
+                .mapToDouble(Seed::km).sum());
     }
 
     private static double elapsedKm(List<Seed> seeds, Instant now, int days) {

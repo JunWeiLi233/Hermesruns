@@ -1,8 +1,7 @@
 // Small API client for the e2e suite: sign in, sign up, import a GPX file, call any route.
 // Specs use it to arrange data and to check what the UI did, never to replace the UI step under test.
 import { randomBytes } from 'node:crypto';
-import fs from 'node:fs';
-import path from 'node:path';
+import { assertSafeBaseUrl, readDisposableStack } from './safety.mjs';
 
 export interface StackState {
   baseUrl: string;
@@ -17,21 +16,10 @@ export interface ApiResult<T = any> {
   headers: Headers;
 }
 
-const stackName = (process.env.E2E_STACK_NAME || '').replace(/[^A-Za-z0-9_-]/g, '');
-const stateFile = path.resolve(import.meta.dirname, '..', '.auth', stackName ? `stack-${stackName}.json` : 'stack.json');
-
-/** Where the stack is and who the seeded runner is: environment first, then the file stack.mjs wrote. */
+/** Only the recorded temporary H2 stack may supply an endpoint or seeded credentials. */
 export function stackState(): StackState {
   const baseUrl = process.env.E2E_BASE_URL;
-  if (baseUrl) {
-    const runnerEmail = process.env.E2E_RUNNER_EMAIL;
-    const runnerPassword = process.env.E2E_RUNNER_PASSWORD;
-    if (!runnerEmail || !runnerPassword) {
-      throw new Error('E2E_BASE_URL needs E2E_RUNNER_EMAIL and E2E_RUNNER_PASSWORD (a runner the suite may fill with test runs)');
-    }
-    return { baseUrl: baseUrl.replace(/\/$/, ''), runnerEmail, runnerPassword };
-  }
-  return JSON.parse(fs.readFileSync(stateFile, 'utf8')) as StackState;
+  return readDisposableStack(baseUrl ? { baseUrl } : {}) as StackState;
 }
 
 // On Windows a new local connection is sometimes refused with ENOBUFS (or EADDRNOTAVAIL) while the machine is short of socket
@@ -61,10 +49,9 @@ let nextAddress = Math.floor(Math.random() * 0xfffff);
 /**
  * A made-up client address, different on every call.
  *
- * The backend keys its rate limits (60 a minute per auth route, the 10-failure login lock, 8 sign-ups an hour) on the
- * first X-Forwarded-For value, which any client can set (BUG-001). The suite sends its own address on every browser
- * context and API client, so one test's page loads do not eat another test's budget. If that header stops being
- * trusted, run the stack behind a proxy that sets it, or restart the stack between runs.
+ * The disposable stack trusts its loopback connection as a proxy and resolves the supplied address using TrustedProxies.
+ * A fresh synthetic address keeps independent test budgets separate; the named strict stack deliberately trusts no proxy
+ * and exercises the connection-based limits with the same client setup.
  */
 export function freshClientAddress(): string {
   nextAddress = (nextAddress + 1) & 0xffffff;
@@ -78,7 +65,7 @@ export class Api {
   clientIp: string | null = freshClientAddress();
 
   constructor(baseUrl: string, token: string | null = null) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = assertSafeBaseUrl(baseUrl);
     this.token = token;
   }
 
@@ -87,6 +74,7 @@ export class Api {
     route: string,
     options: { body?: unknown; form?: FormData; token?: string | null; headers?: Record<string, string> } = {},
   ): Promise<ApiResult<T>> {
+    readDisposableStack({ baseUrl: this.baseUrl });
     const token = options.token === undefined ? this.token : options.token;
     const headers: Record<string, string> = { ...(options.headers ?? {}) };
     if (token) headers.Authorization = `Bearer ${token}`;

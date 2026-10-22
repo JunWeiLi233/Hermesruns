@@ -6,11 +6,16 @@ export default function ProgressionChart({ atlas, lang, unit, t }) {
   const chartId = useId();
   const [activeIndex, setActiveIndex] = useState(null);
   const point = activeIndex == null ? null : atlas.chartSeries[Math.min(activeIndex, atlas.chartSeries.length - 1)];
+  // The stretch before, when it is being compared: its line, and what it had added up to by the same day of its own stretch.
+  const comparison = atlas.comparison?.hasData ? atlas.comparison : null;
+  const previousPoint = comparison && point
+    ? comparison.chartSeries[Math.min(activeIndex, comparison.chartSeries.length - 1)] || null
+    : null;
   const locale = lang === 'zh-CN' ? 'zh-CN' : 'en-US';
   const pointDate = point?.date.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
   const selectedWeek = point && atlas.weeklyBars.find((bar) => point.date >= bar.start && point.date <= bar.end);
   const valueText = point
-    ? `${pointDate}, ${t('profile.dashboard_progression_distance')}: ${formatDistance(point.cumulativeDistance, 1, lang, unit)}, ${t('profile.dashboard_redesign.progression_day_distance')}: ${formatDistance(point.distanceKm, 1, lang, unit)}`
+    ? `${pointDate}, ${t('profile.dashboard_progression_distance')}: ${formatDistance(point.cumulativeDistance, 1, lang, unit)}, ${t('profile.dashboard_redesign.progression_day_distance')}: ${formatDistance(point.distanceKm, 1, lang, unit)}${previousPoint ? `, ${t('profile.dashboard_redesign.progression_compare_readout', { value: formatDistance(previousPoint.cumulativeDistance, 1, lang, unit) })}` : ''}`
     : '';
   const selectPoint = (event) => {
     if (!atlas.hasData || event.pointerType === 'touch') return;
@@ -22,6 +27,9 @@ export default function ProgressionChart({ atlas, lang, unit, t }) {
     <figure className="hd-progression-chart-area" aria-labelledby={`${chartId}-caption`}>
       <figcaption className="hd-progression-chart-caption" id={`${chartId}-caption`}>
         <span className="hd-progression-legend"><i aria-hidden="true" />{t('profile.dashboard_progression_distance')}</span>
+        {atlas.comparison ? (
+          <span className="hd-progression-legend is-compare"><i aria-hidden="true" />{t('profile.dashboard_redesign.progression_compare_legend', { range: atlas.comparison.rangeLabel })}</span>
+        ) : null}
         <span>{pointDate || atlas.rangeLabel}</span>
       </figcaption>
       <div className="hd-progression-readout">
@@ -29,6 +37,7 @@ export default function ProgressionChart({ atlas, lang, unit, t }) {
           <span>
             <strong>{formatDistance(point.cumulativeDistance, 1, lang, unit)}</strong>
             <span>{t('profile.dashboard_redesign.progression_day_distance')} <b>+{formatDistance(point.distanceKm, 1, lang, unit)}</b></span>
+            {previousPoint ? <span className="hd-progression-readout-previous">{t('profile.dashboard_redesign.progression_compare_readout', { value: formatDistance(previousPoint.cumulativeDistance, 1, lang, unit) })}</span> : null}
           </span>
         ) : <span>{t('profile.dashboard_redesign.progression_slope_hint')}</span>}
       </div>
@@ -44,7 +53,7 @@ export default function ProgressionChart({ atlas, lang, unit, t }) {
         <div className="hd-progression-plot" onPointerMove={selectPoint} onPointerLeave={() => setActiveIndex(null)}>
           <svg viewBox="0 0 400 220" className="hd-progression-svg" preserveAspectRatio="none" role="img" aria-labelledby={`${chartId}-title ${chartId}-description`}>
             <title id={`${chartId}-title`}>{t('profile.dashboard_progression_distance')}: {formatDistance(atlas.totalDistanceKm, 1, lang, unit)}</title>
-            <desc id={`${chartId}-description`}>{atlas.rangeLabel}. {t('profile.dashboard_redesign.progression_slope_hint')}</desc>
+            <desc id={`${chartId}-description`}>{atlas.rangeLabel}. {t('profile.dashboard_redesign.progression_slope_hint')}{atlas.comparison ? ` ${t('profile.dashboard_redesign.progression_compare_summary', { range: atlas.comparison.rangeLabel, value: formatDistance(atlas.comparison.totalDistanceKm, 1, lang, unit) })}` : ''}</desc>
             <defs>
               <linearGradient id={`${chartId}-fill`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--hd-coral)" stopOpacity="0.2" />
@@ -53,6 +62,7 @@ export default function ProgressionChart({ atlas, lang, unit, t }) {
             </defs>
             {atlas.yTicks.map((tick) => <line key={tick.y} x1="0" x2="400" y1={tick.y} y2={tick.y} className="hd-progression-grid-line" vectorEffect="non-scaling-stroke" />)}
             {atlas.xTicks.map((tick) => <line key={tick.x} x1={tick.x} x2={tick.x} y1="10" y2="210" className="hd-progression-grid-line is-vertical" vectorEffect="non-scaling-stroke" />)}
+            {comparison && <path d={comparison.chartLine} fill="none" className="hd-progression-line is-previous" strokeWidth="2" strokeLinejoin="round" strokeDasharray="6 5" vectorEffect="non-scaling-stroke" />}
             {atlas.hasData && <path d={atlas.chartArea} fill={`url(#${chartId}-fill)`} />}
             {atlas.hasData && <path d={atlas.chartLine} fill="none" className="hd-progression-line" strokeWidth="2.5" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />}
             {point && <line x1={point.x} x2={point.x} y1="10" y2="210" className="hd-progression-cursor" vectorEffect="non-scaling-stroke" />}
@@ -60,6 +70,7 @@ export default function ProgressionChart({ atlas, lang, unit, t }) {
           {atlas.hasData ? (
             <>
               <span className="hd-progression-dot" aria-hidden="true" style={{ left: `${(point || atlas.chartSeries.at(-1)).x / 4}%`, top: `${(point || atlas.chartSeries.at(-1)).y / 220 * 100}%` }} />
+              {previousPoint ? <span className="hd-progression-dot is-previous" aria-hidden="true" style={{ left: `${previousPoint.x / 4}%`, top: `${previousPoint.y / 220 * 100}%` }} /> : null}
               <input
                 className="hd-progression-scrubber"
                 type="range"

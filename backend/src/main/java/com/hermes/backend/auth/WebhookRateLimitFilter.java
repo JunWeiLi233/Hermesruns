@@ -1,5 +1,6 @@
 package com.hermes.backend.auth;
 
+import com.hermes.backend.infrastructure.web.RequestIpResolver;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -51,7 +52,7 @@ public class WebhookRateLimitFilter implements Filter {
             return;
         }
 
-        String ip = req.getRemoteAddr();
+        String ip = RequestIpResolver.clientIp(req);
         if (!webhookRateLimiter.allow(ip)) {
             HttpServletResponse resp = (HttpServletResponse) response;
             resp.setStatus(429);

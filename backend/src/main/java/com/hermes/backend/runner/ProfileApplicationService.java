@@ -1,6 +1,7 @@
 package com.hermes.backend.runner;
 
 import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.activity.ActivityRepository;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.coaching.AutomatedCoachService;
@@ -168,9 +169,10 @@ public class ProfileApplicationService {
         body.put("name", activity.getName());
         body.put("distanceKm", activity.getDistanceKm());
         body.put("movingTimeSeconds", activity.getMovingTimeSeconds());
-        body.put("startDate", activity.getStartDate());
-        body.put("startTime", activity.getStartTime());
-        body.putAll(com.hermes.backend.activity.ActivityLocalDates.responseFields(activity.getStartTime(), Boolean.TRUE.equals(activity.getStravaApiSourced()), runner));
+        java.time.ZoneId zone = ActivityLocalDates.zoneOf(runner);
+        body.put("startDate", ActivityLocalDates.localStartDate(activity.getStartDate(), activity.getStartTime(), activity.getStravaApiSourced(), zone));
+        body.put("startTime", ActivityLocalDates.localStart(activity.getStartTime(), activity.getStravaApiSourced(), zone));
+        body.putAll(ActivityLocalDates.responseFields(activity.getStartTime(), Boolean.TRUE.equals(activity.getStravaApiSourced()), runner));
         body.put("distanceMeters", activity.getDistanceMeters());
         body.put("durationSeconds", activity.getDurationSeconds());
         body.put("averageHeartRate", activity.getAverageHeartRate());
@@ -201,10 +203,11 @@ public class ProfileApplicationService {
             return List.of();
         }
         List<Activity> activities = findRunnerRuns(runner);
-        return races.stream().map(race -> toRaceResponse(race, activities)).toList();
+        java.time.ZoneId zone = ActivityLocalDates.zoneOf(runner);
+        return races.stream().map(race -> toRaceResponse(race, activities, zone)).toList();
     }
 
-    private RaceEventResponse toRaceResponse(RaceEvent raceEvent, List<Activity> runActivities) {
+    private RaceEventResponse toRaceResponse(RaceEvent raceEvent, List<Activity> runActivities, java.time.ZoneId zone) {
         Activity matchedActivity = resolveMatchedActivity(raceEvent, runActivities);
         boolean completed = matchedActivity != null
                 || raceEvent.getRegistrationStatus() == RaceRegistrationStatus.COMPLETED;
@@ -229,8 +232,8 @@ public class ProfileApplicationService {
                 matchedActivity == null ? null : new LinkedActivitySummary(
                         matchedActivity.getId(),
                         matchedActivity.getName(),
-                        matchedActivity.getStartTime(),
-                        matchedActivity.getStartDate(),
+                        ActivityLocalDates.startTimeOf(matchedActivity, zone),
+                        ActivityLocalDates.startDateOf(matchedActivity, zone),
                         matchedActivity.getDistanceKm(),
                         matchedActivity.getMovingTimeSeconds()
                 )

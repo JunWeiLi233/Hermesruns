@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import Analysis from '../Analysis';
 import en from '../../../i18n/locales/en';
 import { apiJson } from '../../../api';
@@ -17,6 +17,10 @@ vi.mock('../../../api/resourceCache', () => ({ cachedApiJson: vi.fn(), invalidat
 vi.mock('../../../api', async importOriginal => ({ ...await importOriginal(), apiJson: vi.fn() }));
 vi.mock('../../../components/TopbarUserMenu', () => ({ default: () => null }));
 vi.mock('../../../components/TopbarNotifications', () => ({ default: () => null }));
+
+// Compile the real lazy leaf before the interaction: the assertion measures
+// disclosure behavior, not cold Vite transforms competing with the full suite.
+beforeAll(async () => { await import('../MetricTrend'); });
 
 let activities;
 beforeEach(() => {

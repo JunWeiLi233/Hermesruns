@@ -26,7 +26,8 @@ function DistanceChart({ weeks, label, unit }) {
   const measured = useElementWidth(plotRef);
   const tableId = useId();
   const [selectedIndex, setSelectedIndex] = useState(null);
-  const geometry = useMemo(() => buildDistanceChart(weeks, { width: measured, height: measured < 520 ? 200 : 230, unit }), [weeks, measured, unit]);
+  const height = Math.max(measured < 520 ? 200 : 230, Math.ceil(readoutBox?.height ?? 0) + 16);
+  const geometry = useMemo(() => buildDistanceChart(weeks, { width: measured, height, unit }), [weeks, measured, height, unit]);
   const positions = useMemo(() => (geometry ? geometry.bars.map((bar) => bar.centre) : []), [geometry]);
   const last = geometry ? geometry.bars.length - 1 : 0;
   const scrub = useScrubber({

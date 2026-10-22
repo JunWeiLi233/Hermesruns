@@ -76,7 +76,7 @@ describe('the methods document and the links to it', () => {
 
     it('exist in English and in Chinese for every textKey the app uses', () => {
       const keys = collect(/\btextKey="(methods\.[a-z_]+)"/g);
-      expect(keys.length).toBeGreaterThanOrEqual(5);
+      expect(new Set(keys.map(({ value }) => value))).toEqual(new Set(['methods.prediction_detail', 'methods.load']));
       const missing = [];
       for (const { value } of keys) {
         for (const language of ['en', 'zh-CN']) {

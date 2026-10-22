@@ -6,7 +6,7 @@ import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import com.hermes.backend.coaching.PersonalizedRunningPlanner.PlannedSession;
+import com.hermes.backend.coaching.PlannedSession;
 
 /** Debit actual mileage before capping the remaining automatic prescriptions, one Monday–Sunday week at a time. */
 public final class WeeklyMileageBudget {

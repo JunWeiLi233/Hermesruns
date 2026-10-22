@@ -27,7 +27,7 @@ class AmsterdamCourseMapWorkflowTests {
             when(persistence.save(any(), anyString(), anyString(), anyString(), anyString(), anyString(), any(), anyString()))
                     .thenAnswer(invocation -> new GeneratedRaceGpxAsset());
             var pipeline = new MarathonRoutePipelineService(extraction, georeferencing,
-                    new MarathonRouteMatchAndExportService(matching, new GpxExportService(), persistence));
+                    new MarathonRouteMatchAndExportService(matching, new GpxExportService(), persistence), mock(RaceCourseMapImageService.class));
             var result = pipeline.runPipeline(new Runner(), "amsterdam-marathon", "Amsterdam Marathon", "Amsterdam", "Netherlands",
                     AmsterdamMarathonOfficialCourse.OFFICIAL_COURSE_URL, 52.3676, 4.9041, 42.195, image);
             var points = result.matchExportResult().matchedBreadcrumbs();
@@ -43,7 +43,7 @@ class AmsterdamCourseMapWorkflowTests {
         byte[] bytes = getClass().getResourceAsStream("/course-maps/amsterdam-2025.jpg").readAllBytes();
         String source = "data:image/jpeg;base64," + Base64.getEncoder().encodeToString(bytes);
         var pipeline = new MarathonRoutePipelineService(mock(MarathonRouteExtractionService.class),
-                mock(MarathonRouteGeoreferencingService.class), mock(MarathonRouteMatchAndExportService.class));
+                mock(MarathonRouteGeoreferencingService.class), mock(MarathonRouteMatchAndExportService.class), mock(RaceCourseMapImageService.class));
         assertThatThrownBy(() -> pipeline.runPipeline(new Runner(), "tokyo-marathon", "Tokyo Marathon", "Tokyo", "Japan", "", 42.195, source)).hasMessageContaining("disabled");
         assertThatThrownBy(() -> pipeline.runPipeline(new Runner(), "amsterdam-marathon", "Amsterdam Marathon", "Amsterdam", "Netherlands", "", 21.1, source)).hasMessageContaining("disabled");
     }

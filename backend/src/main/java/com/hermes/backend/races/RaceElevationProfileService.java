@@ -3,6 +3,7 @@ package com.hermes.backend.races;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.infrastructure.cache.TtlCacheStore;
 import com.hermes.backend.infrastructure.web.HtmlScanLimiter;
+import com.hermes.backend.infrastructure.web.HtmlTagScanner;
 import com.hermes.backend.infrastructure.web.SafeUrlExecutor;
 import com.hermes.backend.infrastructure.web.SafeUrlValidator;
 import java.awt.image.BufferedImage;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
@@ -34,14 +36,9 @@ public class RaceElevationProfileService {
     private static final int MAX_URL_LENGTH = 500;
     private static final int PROFILE_SAMPLE_COUNT = 25;
     private static final Pattern MEDIA_URL_PATTERN = Pattern.compile("murl&quot;:&quot;([^&]+?)&quot;", Pattern.CASE_INSENSITIVE);
-    private static final Pattern IMG_PATTERN = Pattern.compile(
-            "<img[^>]+(?:src|data-src|data-lazy-src)=[\"']([^\"']+)[\"'][^>]*>",
-            Pattern.CASE_INSENSITIVE
-    );
-    private static final Pattern HREF_PATTERN = Pattern.compile(
-            "<a[^>]+href=[\"']([^\"']+)[\"'][^>]*>",
-            Pattern.CASE_INSENSITIVE
-    );
+    // Attribute patterns run per tag (see HtmlTagScanner); "src=" also covers data-src / data-lazy-src.
+    private static final Pattern IMG_SRC_PATTERN = Pattern.compile("src=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
+    private static final Pattern HREF_PATTERN = Pattern.compile("href=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
     private static final List<String> IMAGE_HINTS = List.of(
             "elevation", "profile", "course", "altimetr", "altitude", "mapa", "graf", "高低", "海拔", "標高", "高度", "elevacion"
     );
@@ -160,18 +157,13 @@ public class RaceElevationProfileService {
             if (html == null || html.isBlank()) return null;
 
             URI baseUri = URI.create(pageUrl);
-            String boundedHtml = HtmlScanLimiter.bounded(html);
-            Matcher matcher = IMG_PATTERN.matcher(boundedHtml);
-            while (matcher.find()) {
-                String raw = matcher.group(1);
-                String candidate = sanitizeImageCandidate(raw, baseUri);
+            for (String tag : HtmlTagScanner.startTags(html, Set.of("img"))) {
+                String candidate = sanitizeImageCandidate(HtmlTagScanner.lastAttribute(tag, IMG_SRC_PATTERN), baseUri);
                 if (candidate != null) return candidate;
             }
 
-            Matcher hrefMatcher = HREF_PATTERN.matcher(boundedHtml);
-            while (hrefMatcher.find()) {
-                String raw = hrefMatcher.group(1);
-                String candidate = sanitizeLinkedProfileCandidate(raw, baseUri);
+            for (String tag : HtmlTagScanner.startTags(html, Set.of("a", "area"))) {
+                String candidate = sanitizeLinkedProfileCandidate(HtmlTagScanner.lastAttribute(tag, HREF_PATTERN), baseUri);
                 if (candidate != null) return candidate;
             }
         } catch (Exception ignored) {
