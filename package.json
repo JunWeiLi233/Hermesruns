@@ -12,7 +12,7 @@
     "test:e2e": "npm --prefix e2e test"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.1",
     "railway": "3.13.0"
   }
 }
