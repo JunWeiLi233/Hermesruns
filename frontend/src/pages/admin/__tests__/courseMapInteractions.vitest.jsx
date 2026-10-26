@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter, useNavigate } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import en from '../../../i18n/locales/en.js';
 import { apiJson } from '../../../api';
@@ -26,8 +26,12 @@ let timelineRequests;
 const workspace = () => screen.getByRole('region', { name: t('dashboard.review_workspace_kicker') });
 const rail = () => screen.getByRole('region', { name: t('dashboard.tab_course_maps') });
 const click = (key) => fireEvent.click(screen.getByRole('button', { name: t(key), exact: true }));
-async function openDashboard() {
-  render(<MemoryRouter initialEntries={['/dashboard/course-maps']}><Dashboard /></MemoryRouter>);
+function RouteControls() {
+  const navigate = useNavigate();
+  return <><button onClick={() => navigate('/dashboard')}>Navigate to overview</button><button onClick={() => navigate('/dashboard/course-maps')}>Navigate to maps</button></>;
+}
+async function openDashboard(withRouteControls = false) {
+  render(<MemoryRouter initialEntries={['/dashboard/course-maps']}>{withRouteControls && <RouteControls />}<Dashboard /></MemoryRouter>);
   await screen.findByRole('button', { name: /Alpha Marathon/ });
   await waitFor(() => expect(within(workspace()).getByTestId('map')).toHaveTextContent('Pending source summary'));
 }
@@ -63,6 +67,93 @@ beforeEach(() => {
 });
 
 describe('course map dashboard interactions', () => {
+  it.each([true, false])('keeps the latest inventory result when older requests finish later (latest failure: %s)', async latestFails => {
+    await openDashboard(true);
+    const original = apiJson.getMockImplementation();
+    const requests = [];
+    apiJson.mockImplementation((path, options) => path === '/api/admin/race-course-maps'
+      ? new Promise((resolve, reject) => requests.push({ resolve, reject })) : original(path, options));
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to overview', exact: true }));
+    await screen.findByRole('heading', { name: 'Overview', exact: true });
+    await waitFor(() => expect(requests.length).toBeGreaterThan(0));
+    const olderCount = requests.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Navigate to maps', exact: true }));
+    await waitFor(() => expect(requests.length).toBeGreaterThan(olderCount));
+
+    await act(async () => {
+      if (latestFails) requests.at(-1).reject(new TypeError('Failed to fetch'));
+      else requests.at(-1).resolve(records);
+    });
+    await act(async () => {
+      for (const request of requests.slice(0, -1)) {
+        if (latestFails) request.resolve(records);
+        else request.reject(new TypeError('Failed to fetch'));
+      }
+    });
+
+    if (latestFails) {
+      expect(within(workspace()).getByRole('alert')).toHaveTextContent(t('dashboard.course_maps_load_error'));
+      expect(within(workspace()).getByRole('button', { name: t('admin.console.publish_map') })).toBeDisabled();
+    } else {
+      expect(within(workspace()).queryByRole('alert')).not.toBeInTheDocument();
+      expect(within(workspace()).getByRole('button', { name: t('admin.console.publish_map') })).toBeEnabled();
+    }
+  });
+
+  it('retains a loaded preview and blocks actions when refreshing its detail fails', async () => {
+    await openDashboard();
+    const original = apiJson.getMockImplementation();
+    apiJson.mockImplementation((path, options) => path === '/api/admin/race-course-maps/alpha'
+      ? Promise.reject(new TypeError('Failed to fetch')) : original(path, options));
+    fireEvent.click(within(rail()).getByRole('button', { name: /Alpha Marathon/ }));
+
+    await waitFor(() => expect(within(workspace()).getByRole('alert')).toHaveTextContent(t('dashboard.course_maps_load_error')));
+    expect(within(workspace()).getByTestId('map')).toHaveTextContent('Pending source summary');
+    expect(within(workspace()).getByRole('button', { name: t('admin.console.publish_map') })).toBeDisabled();
+    fireEvent.click(within(workspace()).getByText(t('admin.console.source_and_tools')));
+    expect(within(workspace()).getByRole('button', { name: t('dashboard.course_maps_upload') })).toBeDisabled();
+
+    apiJson.mockImplementation(original);
+    fireEvent.click(within(rail()).getByRole('button', { name: /Alpha Marathon/ }));
+    await waitFor(() => expect(within(workspace()).queryByRole('alert')).not.toBeInTheDocument());
+    expect(within(workspace()).getByRole('button', { name: t('admin.console.publish_map') })).toBeEnabled();
+  });
+
+  it('keeps the saved queue preview when a newly selected record cannot load', async () => {
+    await openDashboard();
+    const original = apiJson.getMockImplementation();
+    apiJson.mockImplementation((path, options) => path === '/api/admin/race-course-maps/beta'
+      ? Promise.reject(new TypeError('Failed to fetch')) : original(path, options));
+    fireEvent.click(within(rail()).getByRole('button', { name: /Beta Marathon/ }));
+
+    await waitFor(() => expect(within(workspace()).getByRole('alert')).toHaveTextContent(t('dashboard.course_maps_load_error')));
+    expect(within(workspace()).getByTestId('map')).toHaveTextContent('Live source summary');
+    expect(within(workspace()).getAllByRole('definition').map(node => node.textContent))
+      .toEqual([t('dashboard.review_panel_live'), '3']);
+    expect(within(workspace()).getByRole('button', { name: t('dashboard.course_maps_source_scan') })).toBeDisabled();
+  });
+
+  it('keeps the inventory when its reload fails and clears the error after recovery', async () => {
+    await openDashboard();
+    const original = apiJson.getMockImplementation();
+    apiJson.mockImplementation((path, options) => path === '/api/admin/race-course-maps'
+      ? Promise.reject(new TypeError('Failed to fetch')) : original(path, options));
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Overview', exact: true }));
+    await screen.findByRole('heading', { name: 'Overview', exact: true });
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: /^Course maps/i }));
+
+    await waitFor(() => expect(within(workspace()).getByRole('alert')).toHaveTextContent(t('dashboard.course_maps_load_error')));
+    expect(within(rail()).getByRole('button', { name: /Alpha Marathon/ })).toHaveTextContent(t('dashboard.review_state_pending'));
+    expect(within(workspace()).getByRole('button', { name: t('admin.console.publish_map') })).toBeDisabled();
+
+    apiJson.mockImplementation(original);
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Overview', exact: true }));
+    await screen.findByRole('heading', { name: 'Overview', exact: true });
+    fireEvent.click(within(screen.getByRole('navigation')).getByRole('button', { name: /^Course maps/i }));
+    await waitFor(() => expect(within(workspace()).queryByRole('alert')).not.toBeInTheDocument());
+    expect(within(workspace()).getByRole('button', { name: t('admin.console.publish_map') })).toBeEnabled();
+  });
+
   it('offers sidebar sign-out rather than an exit into the runner application', async () => {
     await openDashboard();
     expect(screen.queryByRole('button', { name: t('admin.console.back_to_app') })).not.toBeInTheDocument();
