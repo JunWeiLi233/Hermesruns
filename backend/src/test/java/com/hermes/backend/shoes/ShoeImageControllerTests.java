@@ -266,7 +266,7 @@ class ShoeImageControllerTests {
         when(apiRateLimiter.allow(anyString(), anyInt(), anyLong())).thenReturn(true);
         when(systemConfigService.isAiConfigured()).thenReturn(true);
         when(quotaService.isPro(runner)).thenReturn(false);
-        when(quotaService.canUseFeature(runner, "shoe-scan")).thenReturn(false);
+        when(quotaService.tryConsumeFeature(runner, "shoe-scan")).thenReturn(false);
         when(quotaService.quotaExceededError(runner, "shoe-scan"))
                 .thenReturn(new LinkedHashMap<>(Map.of("error", "quota_exceeded", "feature", "shoe-scan", "limit", 3, "used", 3)));
         when(aiUsageService.getUsageStatus(runner)).thenReturn(dailyStatus);
@@ -387,7 +387,7 @@ class ShoeImageControllerTests {
         when(apiRateLimiter.allow(anyString(), anyInt(), anyLong())).thenReturn(true);
         when(systemConfigService.isAiConfigured()).thenReturn(true);
         when(quotaService.isPro(runner)).thenReturn(false);
-        when(quotaService.canUseFeature(runner, "shoe-scan")).thenReturn(true);
+        when(quotaService.tryConsumeFeature(runner, "shoe-scan")).thenReturn(true);
         when(aiUsageService.getUsageStatus(runner)).thenReturn(new LinkedHashMap<>());
         when(quotaService.getQuotaStatus(runner)).thenReturn(new LinkedHashMap<>());
         when(aiShoeScanService.callAi(any(String.class), any(String.class))).thenReturn("[{\"brand\":\"Nike\"}]");
@@ -407,7 +407,7 @@ class ShoeImageControllerTests {
         );
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        verify(quotaService).consumeFeature(runner, "shoe-scan");
+        verify(quotaService).tryConsumeFeature(runner, "shoe-scan");
         verify(aiShoeScanService).callAi(any(String.class), any(String.class));
     }
 }

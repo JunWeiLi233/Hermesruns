@@ -19,6 +19,14 @@ export default function AppIcon({ name, className = '', title }) {
   );
 
   switch (name) {
+    case 'list':
+      return titled(<><path d="M8 6h12M8 12h12M8 18h12" /><path d="M4 6h.01M4 12h.01M4 18h.01" /></>);
+    case 'filter':
+      return titled(<><path d="M4 6h16M4 12h16M4 18h16" /><circle cx="8" cy="6" r="2" fill="var(--hm-surface, white)" /><circle cx="16" cy="12" r="2" fill="var(--hm-surface, white)" /><circle cx="10" cy="18" r="2" fill="var(--hm-surface, white)" /></>);
+    case 'bar_chart':
+      return titled(<><path d="M4 20h16" /><path d="M7 16v-5M12 16V5M17 16V9" /></>);
+    case 'view_week':
+      return titled(<><rect x="3.5" y="5" width="7" height="14" rx="1" /><rect x="13.5" y="5" width="7" height="14" rx="1" /></>);
     case 'add':
       return titled(
         <>

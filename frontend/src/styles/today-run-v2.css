@@ -13,7 +13,7 @@ body #root .today-run-session-page .runner-shell-canvas.today-run-command-canvas
   --tr-card: #fff;
   --tr-ink: #1c1917;
   --tr-muted: #625c56;
-  --tr-faint: #766d64;
+  --tr-faint: #716a63;
   --tr-line: rgba(28, 25, 23, 0.08);
   --tr-fill: rgba(28, 25, 23, 0.04);
   --tr-accent: #a0392a;
@@ -136,6 +136,8 @@ body:is(.theme-midnight, .theme-high-contrast) #root .today-run-session-page .tr
 }
 
 #root .today-run-session-page .tr-v2-purpose { max-width: 58ch; color: var(--tr-muted) !important; font-size: 0.94rem; line-height: 1.5; }
+#root .today-run-session-page .tr-v2-reason-label { display: block; margin-bottom: 4px; color: var(--tr-ink); font-size: 0.78rem; font-weight: 650; }
+#root .today-run-session-page .tr-v2-reason-note { display: block; margin-top: 6px; font-size: 0.78rem; }
 
 #root .today-run-session-page .tr-v2-targets {
   display: grid;
@@ -331,3 +333,5 @@ body:is(.theme-midnight, .theme-high-contrast) #root .today-run-session-page .tr
   #root .today-run-session-page .tr-v2-support { grid-template-columns: minmax(0, 1fr); }
   #root .today-run-session-page .tr-v2-race { margin-left: 0; }
 }
+body.theme-light .today-run-command-page .runner-shell-footer { opacity: 1; }
+body.theme-light .today-run-command-page .runner-shell-footer a { color: #625c56; }

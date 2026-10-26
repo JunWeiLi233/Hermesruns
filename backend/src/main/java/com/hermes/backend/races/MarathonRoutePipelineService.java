@@ -50,6 +50,26 @@ public class MarathonRoutePipelineService {
             Double distanceKm,
             String imageReference
         ) {
+        // Recognise inline bytes only here: a request value is never a server file path.
+        var official = imageReference != null && imageReference.startsWith("data:image/")
+                ? VerifiedCourseMapReference.matchReference(imageReference, raceName, city, country, distanceKm)
+                : java.util.Optional.<VerifiedCourseMap>empty();
+        if (imageReference != null && imageReference.startsWith("local-course-map:")) {
+            ResolvedCandidateAsset stored = imageService.resolveUploadedReference(imageReference);
+            if (stored != null) {
+                official = VerifiedCourseMapReference.match(stored.imageBytes(), raceName, city, country, distanceKm);
+            }
+        }
+        if (official.isPresent() && (("tokyo-marathon".equals(raceId) && TokyoMarathonOfficialCourse.OFFICIAL_SOURCE.equals(official.get().source()))
+                || ("amsterdam-marathon".equals(raceId) && AmsterdamMarathonOfficialCourse.OFFICIAL_SOURCE.equals(official.get().source()))
+                || ("verified-official-map:"+raceId).equals(official.get().source())
+                || ("reviewed-source-map:"+raceId).equals(official.get().source()))) {
+            // A schematic cannot be projected by one affine transform. Its
+            // recognized official course already has verified street geometry.
+            var exported = matchAndExportService.exportVerifiedCourse(runner, raceId, raceName, city, country,
+                    officialWebsite, distanceKm, official.get());
+            return new PipelineResult(null, null, exported);
+        }
         if (!georeferencingService.isConfiguredForPipelineFallback()) {
             throw new IllegalStateException("Marathon route pipeline is disabled while Google geocoding is removed.");
         }

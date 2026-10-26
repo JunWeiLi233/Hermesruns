@@ -8,11 +8,12 @@ import { fileURLToPath } from 'node:url';
 const srcRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const read = (relative) => readFileSync(path.join(srcRoot, relative), 'utf8');
 const runs = read('pages/runs/Runs.jsx');
+assert.match(read('utils/timeZone.js'), /if \(!key\) return new Date\(NaN\)/);
 const en = read('i18n/locales/en/pages.js');
 const zh = read('i18n/locales/zh-CN/pages.js');
 
 // A run whose file had no timestamps has no start time: not 1 January 1970 (that was "December 1969" for a runner west of Greenwich).
-assert.match(runs, /const runDate = \(r\) => \{\s*const raw = r\.startTime \|\| r\.startDate;\s*return raw \? new Date\(raw\) : new Date\(Number\.NaN\);\s*\};/, 'a run with no start time has an invalid date');
+assert.match(runs, /const runDate = \(r\) => getActivityCalendarDate\(r\);/, 'a run with no start time has an invalid date');
 assert.doesNotMatch(runs, /r\.startTime \|\| r\.startDate \|\| 0/, 'no run is dated to the Unix epoch');
 assert.match(runs, /const UNDATED_KEY = 'undated';/);
 assert.match(runs, /t\('runs\.undated_group'\)/, 'runs with no date are listed under a name of their own');

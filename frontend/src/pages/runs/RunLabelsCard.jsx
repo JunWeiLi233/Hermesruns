@@ -17,7 +17,7 @@ const KNOWN_TYPES = ['RACE', 'LONG_RUN', 'WORKOUT'];
  * filters by them and the fitness chart flags races); nothing is computed from them. Each change is saved at once and
  * shown before the server answers (see useRunLabelEditor); if a save fails the earlier labels come back and the card says so.
  */
-export default function RunLabelsCard({ runId, refreshToken = 0 }) {
+export default function RunLabelsCard({ runId, refreshToken = 0, compact = false }) {
   const { t } = useI18n();
   const { status, data, reload } = useRunLabels(runId, { refreshToken });
   const { labels: current, saving, failed, announcement, setType, addTag: queueTag, removeTag: queueRemoval } = useRunLabelEditor(runId, data);
@@ -67,7 +67,7 @@ export default function RunLabelsCard({ runId, refreshToken = 0 }) {
 
   const header = (
     <div className="run-detail-v2__card-head">
-      <h3 id={titleId}>{t('run_labels.title')}</h3>
+      <h3 id={titleId}>{t(compact ? 'run_detail.labels_title' : 'run_labels.title')}</h3>
     </div>
   );
 
@@ -164,7 +164,7 @@ export default function RunLabelsCard({ runId, refreshToken = 0 }) {
 
         {failed ? <p className="run-detail-v2__muted is-error" role="alert">{t('run_labels.save_failed')}</p> : null}
         <p className="run-detail-v2__muted run-labels__foot">
-          <Link className="run-detail-v2__link" to="/training-log">{t('run_labels.log_link')}</Link>
+          <Link className="run-detail-v2__link" to="/runs#training-log">{t('run_labels.log_link')}</Link>
         </p>
         <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
       </>
@@ -196,7 +196,16 @@ export default function RunLabelsCard({ runId, refreshToken = 0 }) {
     >
       {header}
       {!current && status !== 'error' ? <p className="sr-only" role="status">{t('run_labels.loading')}</p> : null}
-      {body}
+      {compact && current ? (
+        <details className="run-labels__compact">
+          <summary>
+            {current.runType ? <span className="run-labels__preview-type">{typeName(current.runType)}</span> : null}
+            {current.tags.map(tag => <span key={tag} className="run-labels__preview-tag">{tag}</span>)}
+            <span className="run-labels__preview-add">+ {t('run_labels.tag_add')}</span>
+          </summary>
+          <div className="run-labels__compact-editor">{body}</div>
+        </details>
+      ) : body}
     </section>
   );
 }

@@ -15,3 +15,10 @@ export async function fetchActivitySummaries(
   const payload = await apiJson<unknown>('/api/activities', options);
   return normalizeActivitySummaries(payload);
 }
+
+/** Complete lightweight history for analysis; the ledger endpoint is capped at 500. */
+export async function fetchAnalysisActivitySummaries(options: RequestInit = {}): Promise<ActivitySummary[]> {
+  const payload = await apiJson<unknown>('/api/activities/analysis', options);
+  if (!Array.isArray(payload)) throw new Error('Invalid analysis activity response');
+  return normalizeActivitySummaries(payload);
+}

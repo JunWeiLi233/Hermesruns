@@ -566,6 +566,26 @@ body:is(.theme-midnight, .theme-high-contrast) #root .runs-dashboard-page.runs-l
   #root .runs-dashboard-page.runs-ledger-page .runs-profile-history.runs-ledger-redesign.runs-ledger-v2 .runs-ledger-row__delete { right: 8px; width: 44px; height: 44px; }
 }
 
+.runs-ledger-v2 .recent-runs-load-more-sentinel {
+  display: flex;
+  min-height: 72px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 12px;
+}
+
+.runs-ledger-v2 .recent-runs-pagination-status,
+.runs-ledger-v2 .recent-runs-pagination-error {
+  margin: 0;
+  color: var(--v2-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.runs-ledger-v2 .recent-runs-load-more:disabled { opacity: 0.65; cursor: wait; }
+.runs-ledger-v2 .recent-runs-load-more:focus-visible { outline: 2px solid currentColor; outline-offset: 4px; }
+
 @media (max-width: 640px) {
   #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__actions,
   #root .runs-dashboard-page.runs-ledger-page .runs-ledger-v2__btn { flex: 1 1 auto; justify-content: center; }

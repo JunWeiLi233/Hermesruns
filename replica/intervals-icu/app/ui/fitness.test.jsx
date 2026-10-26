@@ -1,0 +1,2 @@
+import React from 'react';import {it,expect} from 'vitest';import {render,screen,cleanup} from '@testing-library/react';import {MemoryRouter} from 'react-router';import {WorkspaceProvider} from './workspace.jsx';import Fitness from '../screens/S13.jsx';
+it('renders the form series exactly once',async()=>{render(<MemoryRouter><WorkspaceProvider><Fitness/></WorkspaceProvider></MemoryRouter>);await screen.findByRole('img',{name:/Fitness, fatigue and form/});expect(screen.getAllByText('Actual form · dashed',{exact:true})).toHaveLength(1);cleanup();});

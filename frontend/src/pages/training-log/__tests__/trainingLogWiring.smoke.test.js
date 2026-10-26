@@ -58,21 +58,20 @@ assert.doesNotMatch(labelsCss, rawColour, 'The run labels card must use the run 
 
 // The page is routed, preloaded and served: a refresh on /training-log must get the app, not the API's 401.
 const app = read('./App.jsx');
-assert.match(app, /const TrainingLog = React\.lazy\(routePreloaders\['\/training-log'\]\);/);
-assert.match(app, /<Route path="\/training-log" element=\{<UserOnlyRoute><TrainingLog \/><\/UserOnlyRoute>\} \/>/);
-assert.match(read('./utils/routePreload.js'), /'\/training-log': \(\) => import\('\.\.\/pages\/training-log\/TrainingLog\.jsx'\)/);
+assert.match(app, /path="\/training-log"[\s\S]*AnalysisFeatureRedirect pathname="\/runs" anchor="training-log"/);
+assert.match(read('./utils/routePreload.js'), /'\/training-log': \(\) => import\('\.\.\/pages\/runs\/Runs\.jsx'\)/);
 const spaController = readFileSync(path.join(repoRoot, 'backend/src/main/java/com/hermes/backend/infrastructure/web/SpaForwardingController.java'), 'utf8');
 assert.ok(spaController.includes('"/training-log"'), 'SpaForwardingController must serve the app for /training-log.');
 
 // The run page mounts the card once, for the run on screen, and the run page gained no request of its own for it.
 const runDetail = read('./pages/runs/RunDetail.jsx');
 assert.equal((runDetail.match(/<RunLabelsCard\b/g) ?? []).length, 1, 'RunDetail should mount the labels card once.');
-assert.match(runDetail, /<RunLabelsCard key=\{`labels-\$\{run\.id\}`\} runId=\{run\.id\} refreshToken=\{editVersion\} \/>/);
+assert.match(runDetail, /<RunLabelsCard key=\{`labels-\$\{run\.id\}`\} runId=\{run\.id\} compact refreshToken=\{editVersion\} \/>/);
 assert.doesNotMatch(runDetail, /\/labels/, 'RunDetail must not fetch the labels itself; the card does.');
 
 // The shared shell can be given a title and a parent without changing what Settings pages get.
 const chrome = read('./components/AuthenticatedPageChrome.jsx');
-assert.match(chrome, /parentLabel \|\| t\('settings\.heading'\)/);
-assert.match(chrome, /parentRoute \|\| '\/settings'/);
+assert.match(chrome, /parentLabel \|\| breadcrumbLabel \|\| \(title \? t\('profile\.dashboard_nav_dashboard'\)/);
+assert.match(chrome, /parentRoute \|\| \(title \? '\/profile' : '\/settings'\)/);
 
 console.log('[PASS] Training log and run labels wiring, styles and tokens.');

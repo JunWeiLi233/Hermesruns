@@ -243,6 +243,37 @@ public class RaceCourseMapService {
         return resolved;
     }
 
+    /**
+     * Runner-facing variant of {@link #resolveCourseMapWithStorage}: the caller may not determine
+     * catalog identity. An existing live row is served as-is; a race that still needs a seed is
+     * seeded only from the server-side catalog entry, and an unknown race id is resolved without
+     * writing a live catalog row.
+     */
+    public RaceCourseMapResult resolveCourseMapWithStorageForRunner(
+            String raceId, String raceName, String city, String country, String websiteUrl,
+            Double latitude, Double longitude, Double distanceKm
+    ) {
+        RaceCourseMapAsset asset = raceCourseMapAssetRepository.findByRaceId(raceId).orElse(null);
+        if (asset != null && hasLiveCourseData(asset)) {
+            return backfillMissingLiveTerrain(asset, toResult(asset, true));
+        }
+        RaceCourseMapBulkSeedService.CatalogRace trusted = bulkSeedService == null
+                ? null
+                : bulkSeedService.findCatalogRace(raceId).orElse(null);
+        if (trusted == null) {
+            return resolveCourseMap(raceName, city, country, websiteUrl, latitude, longitude, distanceKm);
+        }
+        return resolveCourseMapWithStorage(
+                trusted.id(),
+                trusted.name() == null ? raceName : trusted.name(),
+                trusted.city() == null ? city : trusted.city(),
+                trusted.country() == null ? country : trusted.country(),
+                trusted.officialWebsite() == null ? websiteUrl : trusted.officialWebsite(),
+                trusted.latitude() == null ? latitude : trusted.latitude(),
+                trusted.longitude() == null ? longitude : trusted.longitude(),
+                trusted.distanceKm() == null ? distanceKm : trusted.distanceKm());
+    }
+
     private boolean hasLiveCourseData(RaceCourseMapAsset asset) {
         if (asset == null) return false;
         if (asset.getLiveImageUrl() != null && !asset.getLiveImageUrl().isBlank()) return true;
@@ -547,6 +578,8 @@ public class RaceCourseMapService {
     }
 
     public String materializeTransparentOverlayImageUrl(String imageUrl) {
+        ResolvedCandidateAsset source = imageService.resolveUploadedReference(imageUrl);
+        if (source != null && VerifiedCourseMapReference.isRecognizedImage(source.imageBytes())) return "";
         return imageService.buildTransparentCourseMapOverlayImageUrl(imageUrl);
     }
 
@@ -664,6 +697,8 @@ public class RaceCourseMapService {
         String source = asset.getPendingSource() == null || asset.getPendingSource().isBlank()
                 ? classifyAdminUploadSource(asset.getPendingImageUrl())
                 : asset.getPendingSource();
+        Double analysisDistanceKm = distanceKm != null && Double.isFinite(distanceKm) && distanceKm > 0
+                ? distanceKm : asset.getDistanceKm();
         RaceCourseMapResult resolved = analyzeUploadedAssetWithFallback(
                 source,
                 storedAsset,
@@ -672,18 +707,17 @@ public class RaceCourseMapService {
                 country,
                 latitude,
                 longitude,
-                distanceKm,
+                analysisDistanceKm,
                 "Hermes re-scanned the upload but could not align it confidently yet."
         );
         resolved = keepExistingAlignmentWhenReanalysisRegresses(existingPending, resolved);
         LocalDateTime updatedAt = LocalDateTime.now();
-        asset.setRaceId(raceId); asset.setRaceName(raceName); asset.setCity(city); asset.setCountry(country); asset.setOfficialWebsite(websiteUrl); asset.setLatitude(latitude); asset.setLongitude(longitude); asset.setDistanceKm(distanceKm);
+        asset.setRaceId(raceId); asset.setRaceName(raceName); asset.setCity(city); asset.setCountry(country); asset.setOfficialWebsite(websiteUrl); asset.setLatitude(latitude); asset.setLongitude(longitude); asset.setDistanceKm(analysisDistanceKm);
         asset.setPendingImageUrl(resolved.imageUrl()); asset.setPendingSource(resolved.source()); asset.setPendingConfidence(resolved.confidence()); asset.setPendingSummary(resolved.summary());
         asset.setPendingOverlayBoundsJson(writeJson(resolved.overlayBounds())); asset.setPendingRoutePointsJson(writeJson(resolved.routePoints())); asset.setPendingElevationSamplesJson(writeJson(resolved.elevationSamples()));
         asset.setPendingTotalClimbMeters(resolved.totalClimbMeters()); asset.setPendingAiAssisted(resolved.aiAssisted()); asset.setPendingUpdatedAt(updatedAt); asset.setPendingUpdatedByEmail(actorEmail);
-        if (isStoredAlignedResult(resolved)) {
-            applyLiveResult(asset, resolved, actorEmail, updatedAt);
-        }
+        // Reanalysis only stages a preview. Publishing is the sole path that
+        // replaces live geometry and its successful-route artifact.
         raceCourseMapAssetRepository.save(asset);
         invalidateListRowsCache();
         return resolved;
@@ -760,22 +794,37 @@ public class RaceCourseMapService {
     public RaceCourseMapAdminDetail getAdminDetail(String raceId) {
         RaceCourseMapAsset asset = raceCourseMapAssetRepository.findByRaceId(raceId)
                 .orElseThrow(() -> new IllegalArgumentException("Race course-map asset not found."));
-        PreviewSnapshot currentLivePreview = null;
-        try {
-            RaceCourseMapResult currentLiveResult = resolveCourseMapWithStorage(
-                    asset.getRaceId(), asset.getRaceName(), asset.getCity(), asset.getCountry(),
-                    asset.getOfficialWebsite(), asset.getLatitude(), asset.getLongitude(), asset.getDistanceKm()
-            );
-            currentLivePreview = materializePreviewImage(toPreviewSnapshot(currentLiveResult, asset.getLiveUpdatedAt()));
-        } catch (Exception ignored) {
-            currentLivePreview = null;
-        }
+        // Reviewing a map must not seed, replace, or backfill its published data.
+        PreviewSnapshot live = reviewSnapshot(asset, false);
         return new RaceCourseMapAdminDetail(
                 asset.getRaceId(), asset.getRaceName(), asset.getCity(), asset.getCountry(),
-                materializePreviewImage(buildPreviewSnapshot(asset, false)),
-                materializePreviewImage(buildPreviewSnapshot(asset, true)),
-                currentLivePreview
+                asset.getOfficialWebsite(), asset.getLatitude(), asset.getLongitude(), asset.getDistanceKm(),
+                live,
+                reviewSnapshot(asset, true),
+                live
         );
+    }
+
+    private PreviewSnapshot reviewSnapshot(RaceCourseMapAsset asset, boolean pending) {
+        PreviewSnapshot snapshot = buildPreviewSnapshot(asset, pending);
+        if (snapshot == null) return null;
+        return new PreviewSnapshot(snapshot.imageUrl(), snapshot.previewImageUrl(), snapshot.source(), snapshot.summary(),
+                snapshot.confidence(), snapshot.updatedAt(), snapshot.overlayBounds(), snapshot.routePoints(),
+                snapshot.elevationSamples(), snapshot.totalClimbMeters(), snapshot.aiAssisted(), snapshot.courseMapDetected(),
+                isReviewSourceAvailable(snapshot.imageUrl()), pendingAlignmentIssue(asset, snapshot.routePoints()) == null);
+    }
+
+    private boolean isReviewSourceAvailable(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) return false;
+        return !isLocalCourseMapReference(imageUrl) || imageService.resolveDisplayableLocalImage(imageUrl) != null;
+    }
+
+    private String pendingAlignmentIssue(RaceCourseMapAsset asset, List<RoutePoint> points) {
+        if (points == null || points.size() < 2) return null;
+        var geography = RaceKnownOrderedCourseCatalog.assessKnownCourseRoute(points,
+                asset.getRaceName(), asset.getCity(), asset.getCountry(), geometryService);
+        if (!geography.accepted()) return geography.reason();
+        return strictDistanceMismatchReason(points, asset.getDistanceKm());
     }
 
     private RaceCourseMapResult analyzeResolvedImage(String source, String imageReference, byte[] imageBytes, String raceName, String city, String country, Double latitude, Double longitude, Double distanceKm) {
@@ -1057,6 +1106,18 @@ public class RaceCourseMapService {
             Double distanceKm,
             String fallbackSummary
     ) {
+        var official = VerifiedCourseMapReference.match(asset.imageBytes(), raceName, city, country, distanceKm);
+        if (official.isPresent()) {
+            scanWatcher.record("course_map.verified_official_reference", "completed", official.get().summary(),
+                    Map.of("sourceUrl", official.get().sourceUrl(), "routePoints", official.get().routePoints().size()));
+            return official.get().preview(asset.imageUrl());
+        }
+        if (VerifiedCourseMapReference.isRecoveredSource(asset.imageBytes())) {
+            // A recovered edition is evidence of its own course, not proof that
+            // an older catalog polyline still matches. Require fresh alignment.
+            return analyzeResolvedImage("official-source-recovered", asset.imageUrl(), asset.imageBytes(),
+                    raceName, city, country, latitude, longitude, distanceKm);
+        }
         RaceCourseMapResult resolved = null;
         try {
             RaceCourseMapResult knownOrderedShortcut = tryKnownOrderedCourseUploadShortcut(
@@ -2370,7 +2431,14 @@ public class RaceCourseMapService {
 
     private void ensurePendingAlignedForPublish(RaceCourseMapAsset asset, String actorEmail) {
         if (asset == null) return;
+        if (isLocalCourseMapReference(asset.getPendingImageUrl()) && !isReviewSourceAvailable(asset.getPendingImageUrl())) {
+            throw new IllegalArgumentException("race_course_map_pending_missing");
+        }
         RaceCourseMapResult pending = toResult(asset, false);
+        String alignmentIssue = pendingAlignmentIssue(asset, pending.routePoints());
+        if (alignmentIssue != null) {
+            throw new IllegalArgumentException("Pending course-map alignment needs review: " + alignmentIssue);
+        }
         if (isStoredAlignedResult(pending) || isStoredCityLevelReferenceResult(pending)) return;
         RaceCourseMapResult cityLevelReference = buildAdminUploadCityLevelReferenceForPublish(asset, pending);
         if (cityLevelReference != null) {
@@ -2566,14 +2634,27 @@ public class RaceCourseMapService {
     }
 
     private RaceCourseMapResult keepExistingAlignmentWhenReanalysisRegresses(RaceCourseMapResult existingResult, RaceCourseMapResult reanalysisResult) {
-        if (isStoredAlignedResult(existingResult) && !isStoredAlignedResult(reanalysisResult)) {
-            scanWatcher.record("course_map.reanalysis_preserved_existing", "completed", "Fresh Qwen reanalysis failed, so Hermes kept the previous aligned pending map.", Map.of(
+        boolean lostSourceBinding = isSourceBoundAlignment(existingResult)
+                && reanalysisResult != null
+                && existingResult.imageUrl() != null && !existingResult.imageUrl().isBlank()
+                && existingResult.imageUrl().equals(reanalysisResult.imageUrl())
+                && !isSourceBoundAlignment(reanalysisResult);
+        if (lostSourceBinding || (isStoredAlignedResult(existingResult) && !isStoredAlignedResult(reanalysisResult))) {
+            String summary = lostSourceBinding
+                    ? "Fresh reanalysis lacked a source binding, so Hermes kept the reviewed pending route for the same image."
+                    : "Fresh Qwen reanalysis failed, so Hermes kept the previous aligned pending map.";
+            scanWatcher.record("course_map.reanalysis_preserved_existing", "completed", summary, Map.of(
                     "existingRoutePoints", existingResult.routePoints() == null ? 0 : existingResult.routePoints().size(),
                     "freshConfidence", reanalysisResult == null ? 0 : reanalysisResult.confidence()
             ));
             return existingResult;
         }
         return reanalysisResult;
+    }
+
+    private boolean isSourceBoundAlignment(RaceCourseMapResult result) {
+        if (!isStoredAlignedResult(result) || result.aiAssisted() || result.source() == null) return false;
+        return result.source().startsWith("reviewed-source-map:") || result.source().startsWith("verified-official-map:");
     }
 
     private void persistPending(String raceId, String raceName, String city, String country, String websiteUrl, Double latitude, Double longitude, Double distanceKm, RaceCourseMapResult resolved, String actorEmail) {

@@ -1,0 +1,276 @@
+/* Supplied Weekly Load Card reference. Scope above the shared glass cascade. */
+.runner-shell-page .hd-content .hd-weekly-card {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  justify-content: space-between;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  padding: 24px 28px 22px;
+  border: 0;
+  border-radius: 20px;
+  box-shadow: none;
+}
+
+.runner-shell-page .hd-weekly-card .hd-card-head {
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin: 0;
+}
+
+.runner-shell-page .hd-weekly-card .hd-card-kicker {
+  display: block;
+  font-size: 12px;
+  letter-spacing: .06em;
+  line-height: 1.2;
+}
+
+.runner-shell-page .hd-weekly-card .hd-card-title {
+  margin: 4px 0 0;
+  font: italic 800 24px/1.1 "Manrope", var(--font-display, sans-serif);
+  letter-spacing: -.02em;
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  min-width: 200px;
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-total {
+  color: var(--hd-text-secondary);
+  font-size: 13px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-total strong {
+  color: var(--hd-text-primary);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-budget {
+  color: var(--hd-text-secondary);
+  font-size: 12px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-progress {
+  width: 200px;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--hd-line-strong);
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--hd-accent);
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: stretch;
+  gap: clamp(6px, 2vw, 20px);
+  height: 223px;
+  padding: 0;
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-col {
+  appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transform: none;
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-col:focus-visible {
+  outline: 2px solid var(--hd-accent);
+  outline-offset: 3px;
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-track {
+  flex: none;
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 190px;
+  border-bottom: 1px solid var(--hd-line-strong);
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-track::after {
+  content: "";
+  position: absolute;
+  right: calc(-1 * clamp(6px, 2vw, 20px));
+  bottom: -1px;
+  width: clamp(6px, 2vw, 20px);
+  border-bottom: 1px solid var(--hd-line-strong);
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-col:last-child .hd-bar-track::after { display: none; }
+
+.runner-shell-page .hd-weekly-card .hd-bar {
+  position: absolute;
+  bottom: 0;
+  left: 6%;
+  width: 40%;
+  border-radius: 8px 8px 2px 2px;
+  box-shadow: none;
+  transition: none;
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar.projected {
+  left: 54%;
+  border: 1.5px dashed var(--hd-text-secondary);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--hd-text-primary) 5%, transparent);
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar.actual { background: var(--hd-accent); }
+.runner-shell-page .hd-weekly-card .is-under-plan .hd-bar.actual { background: #d9786a; }
+.runner-shell-page .hd-weekly-card .is-active .hd-bar-track { background: var(--hd-bg-input); }
+.runner-shell-page .hd-weekly-card .is-active .hd-bar.actual { background: var(--hd-accent); }
+
+.runner-shell-page .hd-weekly-card .hd-bar-value {
+  position: absolute;
+  right: 0;
+  left: 0;
+  padding-bottom: 6px;
+  color: var(--hd-text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-value.has-actual {
+  right: 54%;
+  left: 6%;
+  color: var(--hd-text-primary);
+  font-weight: 700;
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-value.is-projected {
+  right: 6%;
+  left: 54%;
+  color: var(--hd-text-secondary);
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding-top: 8px;
+  color: var(--hd-text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 18px;
+  text-transform: none;
+}
+
+.runner-shell-page .hd-weekly-card .is-today .hd-bar-label {
+  color: var(--hd-accent);
+  font-weight: 800;
+}
+
+.runner-shell-page .hd-weekly-card .is-today .hd-bar-label::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--hd-accent);
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hd-line);
+}
+
+.runner-shell-page .hd-weekly-card .hd-bar-tooltip {
+  min-height: 20px;
+  padding: 0;
+  color: var(--hd-text-secondary);
+  font-size: 13px;
+  line-height: 20px;
+  text-align: left;
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-legend {
+  gap: 16px;
+  color: var(--hd-text-secondary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.runner-shell-page .hd-weekly-card .hd-weekly-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.runner-shell-page .hd-weekly-card .hd-legend-dot { width: 10px; height: 10px; margin: 0; }
+.runner-shell-page .hd-weekly-card .hd-legend-dot.actual { background: var(--hd-accent); }
+.runner-shell-page .hd-weekly-card .hd-legend-dot.projected { border: 1.5px dashed var(--hd-text-secondary); background: transparent; }
+
+.runner-shell-page .hd-weekly-card .hd-weekly-calculation {
+  border-top: 1px solid var(--hd-line);
+  padding-top: 12px;
+  color: var(--hd-text-secondary);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.runner-shell-page .hd-weekly-calculation summary {
+  width: fit-content;
+  color: var(--hd-text-primary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.runner-shell-page .hd-weekly-calculation summary:focus-visible,
+.runner-shell-page .hd-weekly-table-scroll:focus-visible { outline: 2px solid var(--hd-accent); outline-offset: 3px; }
+.runner-shell-page .hd-weekly-calculation p { margin: 12px 0 0; }
+.runner-shell-page .hd-weekly-calculation .hd-weekly-equation-label { font-weight: 600; }
+.runner-shell-page .hd-weekly-calculation .hd-weekly-equation {
+  margin-top: 2px;
+  color: var(--hd-text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.runner-shell-page .hd-weekly-table-scroll { margin-top: 16px; overflow-x: auto; }
+.runner-shell-page .hd-weekly-calculation table { width: 100%; min-width: 520px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.runner-shell-page .hd-weekly-calculation caption { text-align: left; font-weight: 600; color: var(--hd-text-primary); padding-bottom: 6px; }
+.runner-shell-page .hd-weekly-calculation th,
+.runner-shell-page .hd-weekly-calculation td { padding: 7px 8px; text-align: left; border-bottom: 1px solid var(--hd-line); white-space: nowrap; }
+.runner-shell-page .hd-weekly-calculation tr[aria-current="date"] { color: var(--hd-text-primary); background: var(--hd-bg-input); }
+
+@media (max-width: 640px) {
+  .runner-shell-page .hd-content .hd-weekly-card { padding: 22px 18px; }
+  .runner-shell-page .hd-weekly-card .hd-weekly-summary { align-items: flex-start; min-width: 0; max-width: 100%; }
+  .runner-shell-page .hd-weekly-card .hd-weekly-total { overflow-wrap: anywhere; }
+}

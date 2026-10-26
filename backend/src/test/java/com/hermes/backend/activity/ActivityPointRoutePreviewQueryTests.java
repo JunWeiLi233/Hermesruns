@@ -41,16 +41,18 @@ class ActivityPointRoutePreviewQueryTests {
 
     @BeforeEach
     void setUp() throws Exception {
-        String url = System.getenv("HERMES_QUERY_TEST_POSTGRES_URL");
+        String url = postgresUrl();
         boolean postgres = url != null && !url.isBlank();
         if (postgres && !url.matches("jdbc:postgresql://127\\.0\\.0\\.1:[0-9]+/postgres")) {
             throw new IllegalArgumentException("Query tests require a dedicated loopback PostgreSQL server");
         }
         if (!postgres) {
-            url = "jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=PostgreSQL;DEFAULT_NULL_ORDERING=HIGH";
+            // Regular H2 mode matches the development/file-backed runtime.
+            url = "jdbc:h2:mem:" + UUID.randomUUID() + ";DEFAULT_NULL_ORDERING=HIGH";
         }
         connection = DriverManager.getConnection(url, postgres ? "postgres" : "sa", "");
         jdbc = new JdbcTemplate(new SingleConnectionDataSource(connection, true));
+        jdbc.setQueryTimeout(3);
         namedJdbc = new NamedParameterJdbcTemplate(jdbc);
         schema = "preview_test_" + UUID.randomUUID().toString().replace("-", "");
         jdbc.execute("create schema " + schema);
@@ -66,6 +68,10 @@ class ActivityPointRoutePreviewQueryTests {
         jdbc.execute("create index idx_activity_point_activity_sequence on activity_points(activity_id, sequence_index)");
         sql = ActivityPointRepository.class.getMethod("findRoutePreviewSamplesByActivityIds", List.class, int.class)
                 .getAnnotation(Query.class).value();
+    }
+
+    protected String postgresUrl() {
+        return System.getenv("HERMES_QUERY_TEST_POSTGRES_URL");
     }
 
     @AfterEach
@@ -144,6 +150,58 @@ class ActivityPointRoutePreviewQueryTests {
         assertEquals(50, sample(List.of(2L)).size());
     }
 
+    @Test
+    void boundedQueryKeepsSamplingExactAcrossIntegerBoundaryCases() {
+        int[] lengths = {241, 480, 481, 1_500, 6_001};
+        for (int index = 0; index < lengths.length; index++) run(index + 1L, lengths[index]);
+        long started = System.nanoTime();
+        for (int target : new int[]{240, 241, 500}) {
+            List<long[]> rows = sample(List.of(5L, 3L, 1L, 4L, 2L), target);
+            for (int index = 0; index < lengths.length; index++) {
+                long id = index + 1L;
+                int points = lengths[index];
+                int step = (int) Math.ceil((double) points / target);
+                List<Long> expected = new ArrayList<>();
+                for (long ordinal = 1; ordinal <= points; ordinal++) {
+                    if (ordinal == 1 || ordinal == points || (ordinal - 1) % step == 0) expected.add(ordinal);
+                }
+                List<Long> actual = rows.stream().filter(row -> row[0] == id).map(row -> row[1]).toList();
+                assertEquals(expected, actual, "exact integer ceiling and first/last points for run " + id + ", target " + target);
+                assertTrue(actual.size() <= target + 1, "retain the existing target-plus-final-point bound");
+            }
+        }
+        long millis = (System.nanoTime() - started) / 1_000_000;
+        assertTrue(millis < 5_000, "three previews of 8 703 points took " + millis + " ms; decimal division must not allocate an enormous scale");
+    }
+
+    @Test
+    void sentinelTargetsAndAnIntegerMaximumTargetKeepAllPoints() {
+        run(1, 481);
+        for (int target : new int[]{0, 1, 2, Integer.MAX_VALUE}) {
+            List<Long> actual = sample(List.of(1L), target).stream().map(row -> row[1]).toList();
+            assertEquals(java.util.stream.LongStream.rangeClosed(1, 481).boxed().toList(), actual);
+        }
+    }
+
+    @Test
+    void aFullPageOfLongRoutesIsSampledWithoutRepeatingTheWindowForEveryPoint() {
+        List<Long> ids = java.util.stream.LongStream.rangeClosed(1, 60).boxed().toList();
+        for (long id : ids) run(id, 2_000);
+        long started = System.nanoTime();
+        List<long[]> rows = sample(ids);
+        long millis = (System.nanoTime() - started) / 1_000_000;
+        assertTrue(millis < 3_000, "60 routes with 120 000 points took " + millis + " ms");
+        assertEquals(60 * sampleSizeOf(2_000), rows.size());
+        for (long id : ids) {
+            List<Long> actual = rows.stream().filter(row -> row[0] == id).map(row -> row[1]).toList();
+            List<Long> expected = new ArrayList<>();
+            for (long ordinal = 1; ordinal <= 2_000; ordinal++) {
+                if (ordinal == 1 || ordinal == 2_000 || (ordinal - 1) % 9 == 0) expected.add(ordinal);
+            }
+            assertEquals(expected, actual, "exact per-route first/last and interval for activity " + id);
+        }
+    }
+
     /** How many rows a run of this many points is thinned to: first, last and every step-th in between. */
     private static int sampleSizeOf(int points) {
         if (points <= TARGET) return points;
@@ -156,7 +214,11 @@ class ActivityPointRoutePreviewQueryTests {
     }
 
     private List<long[]> sample(List<Long> activityIds) {
-        return namedJdbc.query(sql, Map.of("activityIds", activityIds, "targetPointsPerActivity", TARGET),
+        return sample(activityIds, TARGET);
+    }
+
+    private List<long[]> sample(List<Long> activityIds, int target) {
+        return namedJdbc.query(sql, Map.of("activityIds", activityIds, "targetPointsPerActivity", target),
                 (row, index) -> new long[]{row.getLong(1), row.getLong(4)});
     }
 

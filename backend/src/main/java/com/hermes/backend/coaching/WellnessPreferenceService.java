@@ -14,6 +14,9 @@ public class WellnessPreferenceService {
     private final RunnerRepository runnerRepository;
     private final ReadinessService readinessService;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationEventPublisher events;
+
     public WellnessPreferenceService(RunnerRepository runnerRepository, ReadinessService readinessService) {
         this.runnerRepository = runnerRepository;
         this.readinessService = readinessService;
@@ -41,7 +44,9 @@ public class WellnessPreferenceService {
     }
 
     public Map<String, Object> savePreferences(Runner runner) {
-        return preferences(runnerRepository.save(runner));
+        Runner saved = runnerRepository.save(runner);
+        if (events != null) events.publishEvent(new RecoveryUpdatedEvent(saved.getId()));
+        return preferences(saved);
     }
 
     private ReadinessService.MetricSources resolvedMetricSources(Runner runner) {

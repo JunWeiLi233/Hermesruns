@@ -53,6 +53,15 @@ class HrZoneAnalysisTests {
     }
 
     @Test
+    void inclusiveFortyMinuteStreamPreservesTheTerminalSampleSecond() {
+        HrZoneAnalysis.Result result = HrZoneAnalysis.analyze(seconds(2401), constant(2401, 130), 2401, ZONES);
+
+        assertThat(result.zoneSeconds()).containsExactly(0, 2401, 0, 0, 0);
+        assertThat(result.coveredSeconds()).isEqualTo(2401);
+        assertThat(result.weightedMinutes()).isCloseTo(2401 * 2.0 / 60, within(1e-9));
+    }
+
+    @Test
     void aPauseDoesNotCountAsTimeInAZone() {
         // The watch kept its last reading through a five-minute hole in the file.
         int[] elapsed = {0, 10, 310, 320};

@@ -1,6 +1,8 @@
 package com.hermes.backend.coaching;
 
+import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.activity.RunMetricsProjection;
+import com.hermes.backend.runner.Runner;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -57,12 +59,13 @@ final class TrainingLoadAnalyzer {
         return run.getDurationSeconds() != null && run.getDurationSeconds() > 0 ? run.getDurationSeconds() : 0;
     }
 
-    static Map<LocalDate, Double> dailyLoads(List<RunMetricsProjection> runs, LocalDate start, LocalDate end) {
+    static Map<LocalDate, Double> dailyLoads(List<RunMetricsProjection> runs, LocalDate start, LocalDate end, Runner runner) {
         Map<LocalDate, Double> dailyLoads = new HashMap<>();
         if (runs == null) return dailyLoads;
         for (RunMetricsProjection run : runs) {
-            if (run.getEffectiveStartTime() == null) continue;
-            LocalDate day = run.getEffectiveStartTime().toLocalDate();
+            var localTime = ActivityLocalDates.localStartTimeOf(run, runner);
+            if (localTime == null) continue;
+            LocalDate day = localTime.toLocalDate();
             if (day.isBefore(start) || day.isAfter(end)) continue;
             dailyLoads.put(day, dailyLoads.getOrDefault(day, 0.0) + loadOf(run));
         }
@@ -73,10 +76,10 @@ final class TrainingLoadAnalyzer {
      * EWMA acute:chronic workload ratio ending at {@code end} (inclusive).
      * Returns null while chronic load is still too small to interpret.
      */
-    static Double ewmaAcwr(List<RunMetricsProjection> runs, LocalDate end) {
+    static Double ewmaAcwr(List<RunMetricsProjection> runs, LocalDate end, Runner runner) {
         if (runs == null || runs.isEmpty()) return null;
         LocalDate start = end.minusDays(ACWR_WINDOW_DAYS);
-        Map<LocalDate, Double> dailyLoads = dailyLoads(runs, start, end);
+        Map<LocalDate, Double> dailyLoads = dailyLoads(runs, start, end, runner);
         return ewmaAcwrFromDailyLoads(dailyLoads, end);
     }
 
@@ -109,10 +112,10 @@ final class TrainingLoadAnalyzer {
      * Foster weekly monotony over the 7 days ending at {@code end} (inclusive,
      * rest days counted as zero load). Returns null when the week has no load.
      */
-    static Double weeklyMonotony(List<RunMetricsProjection> runs, LocalDate end) {
+    static Double weeklyMonotony(List<RunMetricsProjection> runs, LocalDate end, Runner runner) {
         if (runs == null || runs.isEmpty()) return null;
         LocalDate start = end.minusDays(MONOTONY_WINDOW_DAYS - 1L);
-        Map<LocalDate, Double> dailyLoads = dailyLoads(runs, start, end);
+        Map<LocalDate, Double> dailyLoads = dailyLoads(runs, start, end, runner);
         double sum = 0;
         for (LocalDate day = start; !day.isAfter(end); day = day.plusDays(1)) {
             sum += dailyLoads.getOrDefault(day, 0.0);
@@ -135,17 +138,18 @@ final class TrainingLoadAnalyzer {
      * as the personalized planner). Returns null when no hard session exists
      * in the window.
      */
-    static Integer hoursSinceLastHardSession(List<RunMetricsProjection> runs, Integer runnerMaxHr, LocalDate end) {
+    static Integer hoursSinceLastHardSession(List<RunMetricsProjection> runs, Integer runnerMaxHr, LocalDate end, Runner runner) {
         if (runs == null || runs.isEmpty()) return null;
         LocalDate windowStart = end.minusDays(ACWR_WINDOW_DAYS);
         java.time.LocalDateTime latest = null;
         for (RunMetricsProjection run : runs) {
-            if (run.getEffectiveStartTime() == null) continue;
-            LocalDate day = run.getEffectiveStartTime().toLocalDate();
+            var localTime = ActivityLocalDates.localStartTimeOf(run, runner);
+            if (localTime == null) continue;
+            LocalDate day = localTime.toLocalDate();
             if (day.isBefore(windowStart) || day.isAfter(end)) continue;
             if (!isHardSession(run, runnerMaxHr)) continue;
-            if (latest == null || run.getEffectiveStartTime().isAfter(latest)) {
-                latest = run.getEffectiveStartTime();
+            if (latest == null || localTime.isAfter(latest)) {
+                latest = localTime;
             }
         }
         if (latest == null) return null;

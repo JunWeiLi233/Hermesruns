@@ -2,6 +2,7 @@ package com.hermes.backend.strength;
 
 import com.hermes.backend.activity.Activity;
 import com.hermes.backend.activity.ActivityRepository;
+import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.coaching.AutomatedCoachService;
 import com.hermes.backend.coaching.CoachWorkoutType;
@@ -10,8 +11,10 @@ import com.hermes.backend.coaching.SorenessLog;
 import com.hermes.backend.coaching.SorenessLogRepository;
 import com.hermes.backend.runner.Runner;
 import java.time.LocalDate;
+import java.time.Clock;
 import java.util.*;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -26,6 +29,7 @@ public class MuscleTrainingPlannerService {
     private final InjuryRiskService injuryRiskService;
     private final RunnerStrengthSignalService strengthSignalService;
     private final PersonalizedStrengthPlanEngine strengthPlanEngine;
+    private final Clock clock;
 
     public MuscleTrainingPlannerService(
             MuscleTrainingProfileService profileService,
@@ -38,6 +42,23 @@ public class MuscleTrainingPlannerService {
             RunnerStrengthSignalService strengthSignalService,
             PersonalizedStrengthPlanEngine strengthPlanEngine
     ) {
+        this(profileService, checkInService, metricsService, sessionService, activityRepository,
+                sorenessLogRepository, injuryRiskService, strengthSignalService, strengthPlanEngine, Clock.systemDefaultZone());
+    }
+
+    @Autowired
+    public MuscleTrainingPlannerService(
+            MuscleTrainingProfileService profileService,
+            MuscleTrainingCheckInService checkInService,
+            MuscleTrainingMetricsService metricsService,
+            MuscleTrainingSessionService sessionService,
+            ActivityRepository activityRepository,
+            SorenessLogRepository sorenessLogRepository,
+            InjuryRiskService injuryRiskService,
+            RunnerStrengthSignalService strengthSignalService,
+            PersonalizedStrengthPlanEngine strengthPlanEngine,
+            Clock clock
+    ) {
         this.profileService = profileService;
         this.checkInService = checkInService;
         this.metricsService = metricsService;
@@ -47,6 +68,7 @@ public class MuscleTrainingPlannerService {
         this.injuryRiskService = injuryRiskService;
         this.strengthSignalService = strengthSignalService;
         this.strengthPlanEngine = strengthPlanEngine;
+        this.clock = clock;
     }
 
     @Transactional
@@ -85,17 +107,19 @@ public class MuscleTrainingPlannerService {
             AutomatedCoachService.CoachStateDto coachState,
             List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule
     ) {
+        var zone = ActivityLocalDates.zoneOf(runner);
+        LocalDate today = LocalDate.now(clock.withZone(zone));
         MuscleTrainingPreference preference = profileService.getOrCreatePreference(runner);
         TodayCheckInDto todayCheckIn = checkInService.getTodayCheckIn(runner);
         List<AutomatedCoachService.CoachScheduledWorkoutDto> effectiveSchedule = applyTodayCheckIn(schedule, todayCheckIn);
         List<Activity> recentRuns = activityRepository.findRunsBetween(
                 runner, ActivityType.RUN,
-                LocalDate.now().minusDays(35).atStartOfDay(),
-                LocalDate.now().atTime(23, 59)
+                today.minusDays(36).atStartOfDay(),
+                today.plusDays(2).atStartOfDay()
         );
 
-        MuscleTrainingMetricsService.PlanMetrics metrics = metricsService.buildMetrics(recentRuns, coachState, preference, effectiveSchedule);
-        LocalDate today = LocalDate.now();
+        // Fetch both UTC file instants and Strava wall times, then apply the account calendar in the metrics service.
+        MuscleTrainingMetricsService.PlanMetrics metrics = metricsService.buildMetrics(recentRuns, coachState, preference, effectiveSchedule, today, zone);
         String sorenessLevel = sorenessLogRepository.findByRunnerAndDate(runner, today)
                 .map(SorenessLog::getLevel)
                 .orElse(null);
@@ -163,7 +187,7 @@ public class MuscleTrainingPlannerService {
         }
 
         List<AutomatedCoachService.CoachScheduledWorkoutDto> adjusted = new ArrayList<>(coachSchedule.size());
-        LocalDate today = LocalDate.now();
+        LocalDate today = todayCheckIn.trainingDate();
         for (AutomatedCoachService.CoachScheduledWorkoutDto day : coachSchedule) {
             if (!today.equals(day.scheduledDate())) {
                 adjusted.add(day);
@@ -369,7 +393,7 @@ public class MuscleTrainingPlannerService {
     }
 
     private String resolveDayPlanSource(LocalDate date, TodayCheckInDto todayCheckIn) {
-        if (date != null && date.equals(LocalDate.now()) && todayCheckIn != null) {
+        if (date != null && todayCheckIn != null && date.equals(todayCheckIn.trainingDate())) {
             return resolvePlanSource(todayCheckIn);
         }
         return "COACH_SCHEDULE";

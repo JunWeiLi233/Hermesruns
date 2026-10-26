@@ -32,7 +32,7 @@ final class PaceProfileCalculator {
     static final double SLOWEST_PLAUSIBLE_PACE = 1800.0;
     static final double SPLIT_METERS = 1000.0;
     /** What is left after the last full kilometre only counts as a split if it is at least this long. */
-    static final double MIN_PARTIAL_SPLIT_METERS = 100.0;
+    static final double MIN_PARTIAL_SPLIT_METERS = ActivityAnalyticsHelper.MIN_PARTIAL_SPLIT_METERS;
     /** A stream shorter than this has no profile. It is also the shortest leftover that counts as a split, so every profile has a split. */
     static final double MIN_STREAM_METERS = 100.0;
     static final double MIN_STREAM_SECONDS = 10.0;

@@ -95,3 +95,9 @@ The [Strava linking checklist](STRAVA_LINKING_QA.md) remains useful for auth cha
 This cleanup passes typecheck, 80 unit tests, 330 contracts, lint (two existing
 warnings), architecture checks and a fresh production build. The active CSS bundle
 is byte-for-byte unchanged. Build verification is not proof of a live-site update.
+
+## Training and coaching workspace
+
+The authenticated product includes `/training/calendar` and the Training & coaching navigation entry on desktop and mobile. Source lives in `src/features/training`; the normal frontend build includes its route chunks. It reuses Hermes login, canonical Runner/activity/plan data, and a same-origin HttpOnly cookie handoff for training requests. Team administration, athlete consent and coaching grants remain separate permissions.
+
+Use the normal Hermes origin, with no preview port or query flag. See `../replica/intervals-icu/product-integration.md` for verification, current limits and the PostgreSQL release-migration requirement. H2 development can migrate automatically; PostgreSQL does not migrate automatically by default. No remote database was changed during integration.

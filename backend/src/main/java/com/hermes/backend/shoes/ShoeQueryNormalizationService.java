@@ -3,6 +3,7 @@ package com.hermes.backend.shoes;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hermes.backend.coaching.LettaAgentClient;
+import com.hermes.backend.billing.AiSpendingBudget;
 import com.hermes.backend.infrastructure.config.SystemConfigService;
 import java.io.IOException;
 import java.util.List;
@@ -36,6 +37,7 @@ public class ShoeQueryNormalizationService {
     private final ObjectMapper objectMapper;
     private final SystemConfigService systemConfigService;
     private final LettaAgentClient lettaAgentClient;
+    private final AiSpendingBudget spendingBudget;
 
     @Value("${app.ai.api-key:}")
     private String aiApiKey;
@@ -46,25 +48,19 @@ public class ShoeQueryNormalizationService {
     @Value("${app.ai.agent.provider:}")
     private String aiAgentProvider;
 
-    public ShoeQueryNormalizationService(
-            RestTemplate restTemplate,
-            ObjectMapper objectMapper,
-            SystemConfigService systemConfigService
-    ) {
-        this(restTemplate, objectMapper, systemConfigService, null);
-    }
-
     @Autowired
     public ShoeQueryNormalizationService(
             RestTemplate restTemplate,
             ObjectMapper objectMapper,
             SystemConfigService systemConfigService,
-            LettaAgentClient lettaAgentClient
+            LettaAgentClient lettaAgentClient,
+            AiSpendingBudget spendingBudget
     ) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.systemConfigService = systemConfigService;
         this.lettaAgentClient = lettaAgentClient;
+        this.spendingBudget = spendingBudget;
     }
 
     public ShoeMetadataDto normalize(String rawInput) {
@@ -84,7 +80,7 @@ public class ShoeQueryNormalizationService {
                         "parts", List.of(Map.of("text", prompt))
                 )),
                 "generationConfig", Map.of(
-                        "responseMimeType", "application/json"
+                        "responseMimeType", "application/json", "maxOutputTokens", 1024
                 )
         );
 
@@ -95,6 +91,7 @@ public class ShoeQueryNormalizationService {
         String url = "https://generativelanguage.googleapis.com/v1beta/models/"
                 + aiModel + ":generateContent";
 
+        spendingBudget.reserve();
         ResponseEntity<Map> response = restTemplate.exchange(
                 url,
                 HttpMethod.POST,
@@ -134,6 +131,7 @@ public class ShoeQueryNormalizationService {
         if (lettaAgentClient == null || !lettaAgentClient.isConfigured()) {
             throw new IllegalStateException("Letta AI agent normalization is not configured.");
         }
+        spendingBudget.reserve();
         String responseText = lettaAgentClient.sendUserMessage(NORMALIZATION_PROMPT.formatted(rawInput.trim())
                 + "\nReturn only the JSON object, with no markdown fences or commentary.");
         return parseMetadataFromText(responseText, "Letta");

@@ -1,0 +1,5 @@
+import {test,expect,open,scan,identity,api,today} from './helpers.mjs';
+test('F05-H1 comparisons use the existing Runs ledger',async({page,request},info)=>{
+ const athlete=await identity(request,'athlete');for(const effort of [2,4])await api(request,'athlete','POST',`/athletes/${athlete.id}/activities/manual`,{title:`QA comparison session ${effort}`,date:today(),minutes:25,sport:'Running',rpe:effort});
+ await open(page,'/runs?view=compare');const dialog=page.getByRole('dialog',{name:/^Compare sessions/});await expect(dialog.getByRole('heading',{name:'Heart rate overlay',exact:true})).toBeVisible();const boxes=dialog.getByRole('region',{name:'Sessions',exact:true}).getByRole('checkbox');await boxes.nth(0).check();await boxes.nth(1).check();await dialog.getByLabel('Comparison name').fill('QA Élan 🏃 comparison');await dialog.getByRole('button',{name:'Save comparison',exact:true}).click();await expect(dialog.getByText('Comparison saved.',{exact:true})).toBeVisible();await scan(page,'runs-comparison',info);
+});

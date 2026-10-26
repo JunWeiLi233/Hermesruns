@@ -174,6 +174,46 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("runnerId") Long runnerId,
             @Param("activityType") String activityType
     );
+
+    /** Aggregate the complete history in SQL; return one observed point, never millions of rows. */
+    @Query(value = """
+            with densest as (
+                select floor(ap.latitude / 0.001) as lat_cell, floor(ap.longitude / 0.001) as lng_cell,
+                       count(*) as point_count, count(distinct ap.activity_id) as activity_count,
+                       avg(ap.latitude) as center_lat, avg(ap.longitude) as center_lng
+                from activity_points ap join activities a on a.id = ap.activity_id
+                where a.runner_id = :runnerId and a.activity_type = :activityType
+                  and ap.latitude between -90 and 90 and ap.longitude between -180 and 180
+                  and not (ap.latitude = 0 and ap.longitude = 0)
+                group by floor(ap.latitude / 0.001), floor(ap.longitude / 0.001)
+                order by point_count desc, activity_count desc, lat_cell asc, lng_cell asc limit 1
+            )
+            select ap.latitude, ap.longitude, d.activity_count, d.point_count
+            from activity_points ap join activities a on a.id = ap.activity_id
+            join densest d on floor(ap.latitude / 0.001) = d.lat_cell and floor(ap.longitude / 0.001) = d.lng_cell
+            where a.runner_id = :runnerId and a.activity_type = :activityType
+              and not (ap.latitude = 0 and ap.longitude = 0)
+            order by power(ap.latitude - d.center_lat, 2)
+                   + power((ap.longitude - d.center_lng) * cos(radians(d.center_lat)), 2),
+                     ap.latitude asc, ap.longitude asc limit 1
+            """, nativeQuery = true)
+    List<Object[]> findDensestHeatmapAnchor(@Param("runnerId") Long runnerId, @Param("activityType") String activityType);
+
+    /** Rank runs through the winning cell, then fetch only their traces. */
+    @Query(value = """
+            select a.id from activities a
+            where a.runner_id = :runnerId and a.activity_type = :activityType
+              and exists (select 1 from activity_points ap where ap.activity_id = a.id
+                  and ap.latitude >= :minLat and ap.latitude < :maxLat
+                  and ap.longitude >= :minLng and ap.longitude < :maxLng
+                  and not (ap.latitude = 0 and ap.longitude = 0))
+            order by abs(coalesce(a.distance_km, a.distance_meters / 1000.0, 0)
+                       - coalesce(cast(:targetKm as double precision), a.distance_km, a.distance_meters / 1000.0, 0)),
+                     coalesce(a.start_time, a.created_at) desc, a.id desc limit 18
+            """, nativeQuery = true)
+    List<Long> findHeatmapRouteActivityIds(@Param("runnerId") Long runnerId, @Param("activityType") String activityType,
+            @Param("minLat") double minLat, @Param("maxLat") double maxLat,
+            @Param("minLng") double minLng, @Param("maxLng") double maxLng, @Param("targetKm") Double targetKm);
     @Query(value = """
             select ap.activity_id, ap.latitude, ap.longitude, ap.distance_meters, ap.elapsed_seconds
             from activity_points ap
@@ -295,44 +335,32 @@ public interface ActivityPointRepository extends JpaRepository<ActivityPoint, Lo
             @Param("limitValue") int limitValue
     );
 
-    // The step is worked out once per run in its own grouped query, so the filter below holds no bound parameter. With
-    // the parameter inside the filter, H2 worked the window function out again for every row: 1 000 points took 3.5 s
-    // and a few Runs list loads held every pooled connection (ActivityPointRoutePreviewQueryTests).
+    // One bounded window scan avoids repeated CTE scans and cached CTE views across changing native bindings in H2.
+    // OFFSET 0 keeps the outer sampling predicate outside the window; ceiling uses bounded integer arithmetic.
     @Query(value = """
-            with valid_points as (
-                select ap.activity_id, ap.latitude, ap.longitude, ap.sequence_index
+            select rp.activity_id, rp.latitude, rp.longitude, rp.sequence_index
+            from (
+                select
+                    ap.activity_id,
+                    ap.latitude,
+                    ap.longitude,
+                    ap.sequence_index,
+                    count(*) over (partition by ap.activity_id) as point_count,
+                    row_number() over (partition by ap.activity_id order by ap.sequence_index asc) as point_ordinal
                 from activity_points ap
                 where ap.activity_id in (:activityIds)
                   and ap.latitude between -90 and 90
                   and ap.longitude between -180 and 180
-            ),
-            run_steps as (
-                select
-                    activity_id,
-                    count(*) as point_count,
+                offset 0 rows
+            ) rp
+            where rp.point_ordinal = 1
+               or rp.point_ordinal = rp.point_count
+               or mod(rp.point_ordinal - 1,
                     case
                         when :targetPointsPerActivity <= 2 then 1
-                        when count(*) <= :targetPointsPerActivity then 1
-                        else cast(ceiling(count(*) * 1.0 / :targetPointsPerActivity) as integer)
-                    end as step
-                from valid_points
-                group by activity_id
-            ),
-            ranked_points as (
-                select
-                    vp.activity_id,
-                    vp.latitude,
-                    vp.longitude,
-                    vp.sequence_index,
-                    row_number() over (partition by vp.activity_id order by vp.sequence_index asc) as point_ordinal
-                from valid_points vp
-            )
-            select rp.activity_id, rp.latitude, rp.longitude, rp.sequence_index
-            from ranked_points rp
-            join run_steps rs on rs.activity_id = rp.activity_id
-            where rp.point_ordinal = 1
-               or rp.point_ordinal = rs.point_count
-               or mod(rp.point_ordinal - 1, rs.step) = 0
+                        when rp.point_count <= :targetPointsPerActivity then 1
+                        else 1 + (rp.point_count - 1) / cast(:targetPointsPerActivity as bigint)
+                    end) = 0
             order by rp.activity_id asc, rp.sequence_index asc
             """, nativeQuery = true)
     List<Object[]> findRoutePreviewSamplesByActivityIds(

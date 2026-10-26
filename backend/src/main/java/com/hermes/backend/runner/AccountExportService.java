@@ -54,9 +54,11 @@ public class AccountExportService {
     private final RunnerPaceZoneRaceRepository paceZoneRaces;
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
+    private final List<RunnerDataExportContributor> contributors;
 
     private long runningSinceMs;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public AccountExportService(ActivityRepository activities,
                                 ActivityBestEffortRepository bestEfforts,
                                 ActivityTagRepository tags,
@@ -65,7 +67,8 @@ public class AccountExportService {
                                 GoalRepository goals,
                                 RunnerPaceZoneRaceRepository paceZoneRaces,
                                 JdbcTemplate jdbc,
-                                ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper,
+                                List<RunnerDataExportContributor> contributors) {
         this.activities = activities;
         this.bestEfforts = bestEfforts;
         this.tags = tags;
@@ -75,6 +78,7 @@ public class AccountExportService {
         this.paceZoneRaces = paceZoneRaces;
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
+        this.contributors = List.copyOf(contributors);
     }
 
     /**
@@ -109,6 +113,9 @@ public class AccountExportService {
         entry(zip, "races.csv", racesCsv(races.findByRunnerOrderByEventDateAsc(runner)));
         entry(zip, "goals.csv", goalsCsv(goals.findByRunnerIdOrderByIdAsc(runner.getId())));
         entry(zip, "pace-zone-race.csv", paceZoneRaceCsv(paceZoneRaces.findByRunner(runner).orElse(null)));
+        for (RunnerDataExportContributor contributor : contributors) {
+            entry(zip, contributor.filename(), objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(contributor.export(runner)));
+        }
 
         if (includeTracks) {
             for (Activity run : runs) {
@@ -142,6 +149,9 @@ public class AccountExportService {
 
                 profile.json  Your account details (no passwords or tokens).
                 runs.csv      Every run Hermes holds for you.
+                training-plans.json  Your saved plan versions, prescriptions and workout links.
+                manual-run-receipts.json  Your manual-save keys and activity references.
+                stories.json  Pocket-story preferences, branches, progress and earned postcards.
                 best-efforts.csv  The fastest stretch of each standard distance in each run, with the times
                               you typed in and the efforts you hid.
                 shoes.csv     Your shoes.

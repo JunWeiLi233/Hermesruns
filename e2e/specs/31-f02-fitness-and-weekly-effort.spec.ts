@@ -142,12 +142,34 @@ test.describe('F02 fitness, fatigue and form (M4)', () => {
     const fitnessSentence = before > 0
       ? `${signedChange(now.fitnessChange7d)} (${signedChange((now.fitnessChange7d / before) * 100, 0)}%) in the last 7 days`
       : `${signedChange(now.fitnessChange7d)} in the last 7 days`;
+    // Each line starts with an arrow, for the eye only: ↑ or ↓ when the number moved by 3% of where it started, → under that.
+    const arrowFor = (change: number, scale: number): string => {
+      if (Number(Math.abs(change).toFixed(1)) === 0) return '→';
+      if (scale > 0 && Math.abs(change) < 0.03 * scale) return '→';
+      return change > 0 ? '↑' : '↓';
+    };
+    const line = (arrow: string, sentence: string): RegExp => new RegExp(`^${arrow} ${literal(sentence)}$`);
     const articles = todayCards(page).locator('article');
-    await expect(articles.nth(0).locator('em')).toHaveText(fitnessSentence);
-    await expect(articles.nth(1).locator('em')).toHaveText(`${signedChange(now.fatigueChange7d)} in the last 7 days`);
+    await expect(articles.nth(0).locator('em').nth(0)).toHaveText(line(arrowFor(now.fitnessChange7d, before), fitnessSentence));
+    await expect(articles.nth(1).locator('em').nth(0)).toHaveText(line(arrowFor(now.fatigueChange7d, now.fatigue - now.fatigueChange7d), `${signedChange(now.fatigueChange7d)} in the last 7 days`));
 
-    // Form says a word, and the word agrees with the number.
-    await expect(articles.nth(2).locator('em')).toHaveText(formWord(now.form, now.fitness));
+    // The change over 14 days is the difference of the two numbers on the chart, worked out here from the points.
+    const last = series.points.at(-1) as Day;
+    const fortnight = series.points.at(-15) as Day;
+    const fitnessChange14 = last.fitness - fortnight.fitness;
+    await expect(articles.nth(0).locator('em').nth(1)).toHaveText(line(
+      arrowFor(fitnessChange14, fortnight.fitness),
+      `${signedChange(fitnessChange14)} (${signedChange((fitnessChange14 / fortnight.fitness) * 100, 0)}%) in the last 14 days`,
+    ));
+    const fatigueChange14 = last.fatigue - fortnight.fatigue;
+    await expect(articles.nth(1).locator('em').nth(1)).toHaveText(line(arrowFor(fatigueChange14, fortnight.fatigue), `${signedChange(fatigueChange14)} in the last 14 days`));
+
+    // Form says a word, and the word agrees with the number; under it, where it moved, with no share (it crosses zero).
+    await expect(articles.nth(2).locator('em').nth(0)).toHaveText(formWord(now.form, now.fitness));
+    const formBefore7 = now.form - now.formChange7d;
+    await expect(articles.nth(2).locator('em').nth(1)).toHaveText(line(arrowFor(now.formChange7d, Math.max(Math.abs(now.form), Math.abs(formBefore7))), `${signedChange(now.formChange7d)} in the last 7 days`));
+    const formChange14 = last.form - fortnight.form;
+    await expect(articles.nth(2).locator('em').nth(2)).toHaveText(line(arrowFor(formChange14, Math.max(Math.abs(last.form), Math.abs(fortnight.form))), `${signedChange(formChange14)} in the last 14 days`));
   });
 
   test('F02-H8b the lines can be switched off, but never all three, and each switch says whether its line is drawn', async ({ browser, baseURL, guard }) => {

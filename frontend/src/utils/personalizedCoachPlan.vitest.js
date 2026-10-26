@@ -1,10 +1,110 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeCoachEvidence, resolvePersonalizedCoachRecommendation } from './personalizedCoachPlan.js';
+import { localizedReason, normalizeCoachEvidence, resolvePersonalizedCoachRecommendation } from './personalizedCoachPlan.js';
 import { generateMorningBriefing } from './coachVoice.js';
 
 const t = (key, values = {}) => `${key}${Object.keys(values).length ? `:${JSON.stringify(values)}` : ''}`;
 
 describe('resolvePersonalizedCoachRecommendation', () => {
+  it.each([
+    'injury_protect', 'readiness_protect', 'scheduled_rest', 'readiness_limited',
+    'race_taper', 'race_day', 'high_load', 'intensity_rebalance',
+    'readiness_data', 'recovery_after_hard',
+  ])('uses session-neutral %s copy without changing today copy', reasonCode => {
+    expect(localizedReason(reasonCode, t, { sessionNeutral: true }))
+      .toBe(`today_run.personalized_session_reason_${reasonCode}`);
+    expect(localizedReason(reasonCode, t)).toBe(`today_run.personalized_reason_${reasonCode}`);
+  });
+
+  it.each([
+    ['REST', 'scheduled_rest'],
+    ['EASY', 'build_consistency'],
+  ])('keeps the %s session reason distinct from weekly plan context', (workoutType, reasonCode) => {
+    const reasonCodes = ['build_consistency', 'load_data', 'goal_specific'];
+    const result = resolvePersonalizedCoachRecommendation({
+      coachPayload: {
+        today: { workoutType, reasonCode, intent: workoutType === 'REST' ? 'rest' : 'easy' },
+        plan: { reasonCodes, targetWeeklyKm: 23.6, sessionsPerWeek: 3 },
+      },
+      t,
+      lang: 'en',
+      unit: 'km',
+    });
+
+    expect(result.recommendation.workoutType).toBe(workoutType);
+    expect(result.recommendation.purpose).toBe(`today_run.personalized_reason_${reasonCode}`);
+    expect(result.recommendation.summaryReason).toBe(result.recommendation.purpose);
+    expect(result.reasons).toEqual([
+      `today_run.personalized_reason_${reasonCode}`,
+      ...reasonCodes.map(code => `today_run.personalized_plan_reason_${code}`),
+    ]);
+    expect(result.plan).toMatchObject({ reasonCodes, targetWeeklyKm: 23.6, sessionsPerWeek: 3 });
+    if (workoutType === 'REST') {
+      expect(result.steps).toHaveLength(1);
+      expect(result.steps[0].isRest).toBe(true);
+      expect(result.recommendation.distance).toBe('today_run.personalized_distance_rest');
+    }
+  });
+
+  it.each([
+    'injury_protect', 'readiness_protect', 'comeback', 'onboarding', 'race_taper',
+    'race_day', 'high_load', 'intensity_rebalance', 'readiness_data',
+  ])('keeps backend plan code %s separate from a scheduled rest reason', reasonCode => {
+    const result = resolvePersonalizedCoachRecommendation({
+      coachPayload: {
+        today: { workoutType: 'REST', intent: 'rest', reasonCode: 'scheduled_rest' },
+        plan: { reasonCodes: [reasonCode] },
+      }, t, lang: 'en', unit: 'km',
+    });
+    expect(result.recommendation.workoutType).toBe('REST');
+    expect(result.recommendation.purpose).toBe('today_run.personalized_reason_scheduled_rest');
+    expect(result.steps).toHaveLength(1);
+    expect(result.steps[0].isRest).toBe(true);
+    expect(result.reasons).toEqual([
+      'today_run.personalized_reason_scheduled_rest',
+      `today_run.personalized_plan_reason_${reasonCode}`,
+    ]);
+  });
+
+  it.each(['future_plan_reason', 'aerobic_progression', undefined])('keeps unavailable plan context honest for %s', reasonCode => {
+    const result = resolvePersonalizedCoachRecommendation({
+      coachPayload: {
+        today: { workoutType: 'REST', reasonCode: 'scheduled_rest' },
+        plan: { reasonCodes: [reasonCode] },
+      }, t, lang: 'en', unit: 'km',
+    });
+    expect(result.reasons).toEqual([
+      'today_run.personalized_reason_scheduled_rest',
+      'today_run.personalized_plan_reason_unavailable',
+    ]);
+    expect(result.plan.reasonCodes).toEqual([reasonCode]);
+  });
+
+  it.each([true, false])('preserves primary readiness behavior with plan protection and supported evidence=%s', supported => {
+    const coachPayload = {
+      today: { workoutType: 'REST', intent: 'rest', reasonCode: 'readiness_protect' },
+      state: { readinessScore: 48, readinessStress: 35, readinessSleep: 10,
+        readinessAvailability: supported ? { stress: true } : {} },
+    };
+    const baseline = resolvePersonalizedCoachRecommendation({ coachPayload, t, lang: 'en', unit: 'km' });
+    const result = resolvePersonalizedCoachRecommendation({
+      coachPayload: { ...coachPayload, plan: { reasonCodes: ['readiness_protect'] } },
+      t, lang: 'en', unit: 'km',
+    });
+    expect(result.recommendation).toEqual(baseline.recommendation);
+    expect(result.steps).toEqual(baseline.steps);
+    expect(result.recommendation.summaryReason).toBe(supported
+      ? 'today_run.personalized_reason_readiness_protect'
+      : 'today_run.personalized_reason_readiness_limited');
+    if (supported) {
+      expect(result.recommendation.purpose).toContain('readiness_signal_stress');
+      expect(result.recommendation.purpose).not.toContain('readiness_signal_sleep');
+    }
+    expect(result.reasons).toEqual([
+      baseline.recommendation.purpose,
+      'today_run.personalized_plan_reason_readiness_protect',
+    ]);
+  });
+
   it('removes unsupported cached scores and the fabricated stamina fallback', () => {
     const { state } = normalizeCoachEvidence({ state: {
       lastSleepScore: 35, lastStressScore: 95, readinessSleep: 35, readinessHrv: 45,
@@ -59,8 +159,8 @@ describe('resolvePersonalizedCoachRecommendation', () => {
     expect(result.recommendation.distance).toContain('10');
     expect(result.steps[1].value).toContain(result.recommendation.pace);
     expect(result.steps[2].value).toBe('today_run.plan_base_3');
-    expect(result.recommendation.pace).toContain('4:40');
-    expect(result.recommendation.pace).toContain('5:00');
+    expect(result.recommendation.pace).toContain('4:30');
+    expect(result.recommendation.pace).toContain('4:50');
     expect(result.recommendation.purpose).toBe('today_run.personalized_reason_goal_specific');
     expect(result.plan).toMatchObject({ phase: 'build', confidence: 88, targetWeeklyKm: 42, sessionsPerWeek: 5 });
   });

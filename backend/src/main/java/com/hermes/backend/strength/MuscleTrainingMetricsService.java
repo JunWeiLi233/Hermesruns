@@ -1,11 +1,13 @@
 package com.hermes.backend.strength;
 
 import com.hermes.backend.activity.Activity;
+import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.coaching.AutomatedCoachService;
 import com.hermes.backend.coaching.CoachHrBand;
 import com.hermes.backend.coaching.CoachHrZoneClassifier;
 import com.hermes.backend.coaching.CoachWorkoutType;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import org.springframework.stereotype.Service;
 
@@ -46,17 +48,28 @@ public class MuscleTrainingMetricsService {
             MuscleTrainingPreference preference,
             List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule
     ) {
+        return buildMetrics(runs, coachState, preference, schedule, LocalDate.now(), ZoneId.systemDefault());
+    }
+
+    public PlanMetrics buildMetrics(
+            List<Activity> runs,
+            AutomatedCoachService.CoachStateDto coachState,
+            MuscleTrainingPreference preference,
+            List<AutomatedCoachService.CoachScheduledWorkoutDto> schedule,
+            LocalDate today,
+            ZoneId zone
+    ) {
         double vol7 = coachState != null ? coachState.volumeKm7d() : 0;
         double vol28 = coachState != null ? coachState.volumeKm28d() : 0;
         if (vol7 <= 0) {
-            vol7 = runsWithinDays(runs, 7).stream().mapToDouble(this::distanceKm).sum();
+            vol7 = runsWithinDays(runs, 7, today, zone).stream().mapToDouble(this::distanceKm).sum();
         }
         if (vol28 <= 0) {
-            vol28 = runsWithinDays(runs, 28).stream().mapToDouble(this::distanceKm).sum();
+            vol28 = runsWithinDays(runs, 28, today, zone).stream().mapToDouble(this::distanceKm).sum();
         }
 
-        Double acwr = computeAcwr(runs);
-        int hardCount = countRecentHardRuns(runs, coachState);
+        Double acwr = computeAcwr(runs, today, zone);
+        int hardCount = countRecentHardRuns(runs, coachState, today, zone);
 
         String recoveryGate = deriveRecoveryGate(coachState);
         if ("OPEN".equals(recoveryGate)) {
@@ -64,13 +77,13 @@ public class MuscleTrainingMetricsService {
             else if (hardCount >= 3) recoveryGate = "PROTECT";
         }
 
-        boolean conservativeMode = runsWithinDays(runs, 28).size() < 3 || vol7 < 8;
+        boolean conservativeMode = runsWithinDays(runs, 28, today, zone).size() < 3 || vol7 < 8;
 
         boolean raceWeek = false;
         if (coachState != null && coachState.activeBlock() != null) {
             LocalDate raceDate = coachState.activeBlock().targetRaceDate();
             if (raceDate != null) {
-                long daysToRace = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), raceDate);
+                long daysToRace = java.time.temporal.ChronoUnit.DAYS.between(today, raceDate);
                 if (daysToRace >= 0 && daysToRace <= 7) raceWeek = true;
             }
         }
@@ -259,14 +272,13 @@ public class MuscleTrainingMetricsService {
         return Objects.equals(workoutType, CoachWorkoutType.LONG_RUN.name());
     }
 
-    private Double computeAcwr(List<Activity> runs) {
+    private Double computeAcwr(List<Activity> runs, LocalDate today, ZoneId zone) {
         if (runs.isEmpty()) return null;
-        LocalDate today = LocalDate.now();
         LocalDate start = today.minusDays(35);
 
         Map<LocalDate, Double> dailyLoads = new HashMap<>();
         for (Activity run : runs) {
-            LocalDate d = resolveLocalDate(run);
+            LocalDate d = resolveLocalDate(run, zone);
             if (d != null && !d.isBefore(start) && !d.isAfter(today)) {
                 dailyLoads.put(d, dailyLoads.getOrDefault(d, 0.0) + estimateLoad(run));
             }
@@ -307,16 +319,16 @@ public class MuscleTrainingMetricsService {
         return (movingSec / 3600.0) * intensityRatio * intensityRatio * 100.0;
     }
 
-    private int countRecentHardRuns(List<Activity> runs, AutomatedCoachService.CoachStateDto coachState) {
+    private int countRecentHardRuns(List<Activity> runs, AutomatedCoachService.CoachStateDto coachState, LocalDate today, ZoneId zone) {
         double hrMax = coachState != null && coachState.profileMaxHeartRateBpm() != null && coachState.profileMaxHeartRateBpm() >= 130
                 ? CoachHrZoneClassifier.clampHrMax(coachState.profileMaxHeartRateBpm())
                 : 185;
 
-        LocalDate cutoff = LocalDate.now().minusDays(6);
+        LocalDate cutoff = today.minusDays(6);
         int hard = 0;
         for (Activity run : runs) {
-            LocalDate date = resolveLocalDate(run);
-            if (date == null || date.isBefore(cutoff)) continue;
+            LocalDate date = resolveLocalDate(run, zone);
+            if (date == null || date.isBefore(cutoff) || date.isAfter(today)) continue;
             if (distanceKm(run) >= 16) {
                 hard++;
                 continue;
@@ -327,18 +339,18 @@ public class MuscleTrainingMetricsService {
         return hard;
     }
 
-    private List<Activity> runsWithinDays(List<Activity> runs, int days) {
-        LocalDate cutoff = LocalDate.now().minusDays(days - 1L);
+    private List<Activity> runsWithinDays(List<Activity> runs, int days, LocalDate today, ZoneId zone) {
+        LocalDate cutoff = today.minusDays(days - 1L);
         return runs.stream()
                 .filter(run -> {
-                    LocalDate date = resolveLocalDate(run);
-                    return date != null && !date.isBefore(cutoff);
+                    LocalDate date = resolveLocalDate(run, zone);
+                    return date != null && !date.isBefore(cutoff) && !date.isAfter(today);
                 })
                 .toList();
     }
 
-    private LocalDate resolveLocalDate(Activity activity) {
-        if (activity.getStartTime() != null) return activity.getStartTime().toLocalDate();
+    private LocalDate resolveLocalDate(Activity activity, ZoneId zone) {
+        if (activity.getStartTime() != null) return ActivityLocalDates.localStart(activity.getStartTime(), activity.isStravaApiSourced(), zone).toLocalDate();
         if (activity.getCreatedAt() != null) return activity.getCreatedAt().toLocalDate();
         return null;
     }

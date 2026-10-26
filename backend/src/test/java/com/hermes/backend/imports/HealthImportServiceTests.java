@@ -47,6 +47,8 @@ class HealthImportServiceTests {
                 coachRunnerStateRepository,
                 new ObjectMapper()
         );
+        var events = mock(org.springframework.context.ApplicationEventPublisher.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "events", events);
         Runner runner = runner();
         CoachRunnerState state = new CoachRunnerState();
         state.setRunner(runner);
@@ -77,6 +79,7 @@ class HealthImportServiceTests {
         assertThat(state.getBaselineRestingHr()).isEqualTo(51);
         assertThat(state.getLastSleepScore()).isEqualTo(88);
         assertThat(state.getLastHrvMs()).isEqualTo(65);
+        verify(events, timeout(1000)).publishEvent(new com.hermes.backend.coaching.RecoveryUpdatedEvent(runner.getId()));
     }
 
     @Test
@@ -94,6 +97,8 @@ class HealthImportServiceTests {
                 coachRunnerStateRepository,
                 new ObjectMapper()
         );
+        var events = mock(org.springframework.context.ApplicationEventPublisher.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "events", events);
         Runner runner = runner();
         CoachRunnerState state = new CoachRunnerState();
         state.setRunner(runner);
@@ -113,6 +118,7 @@ class HealthImportServiceTests {
         verify(coachRunnerStateRepository, timeout(1000)).save(state);
         assertThat(state.getLastNightRestingHr()).isEqualTo(53);
         assertThat(state.getBaselineRestingHr()).isEqualTo(49);
+        verify(events, timeout(1000)).publishEvent(new com.hermes.backend.coaching.RecoveryUpdatedEvent(runner.getId()));
     }
 
     @Test

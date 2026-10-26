@@ -3,16 +3,21 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import Settings from '../Settings';
+import PageSkeleton from '../../../components/PageSkeleton';
 import { apiFetch, apiJson } from '../../../api';
 import { invalidateResourceCache } from '../../../api/resourceCache';
 import { downloadBlob } from '../../../utils/downloadBlob';
 import { forgetMemory, writeEnabled } from '../../../utils/runSummaryPreference';
 import en from '../../../i18n/locales/en';
 import zh from '../../../i18n/locales/zh-CN';
+// The account transport and new tools have their own integration regressions.
+// Keep export response mocks scoped to the existing Settings export controls.
+vi.mock('../../../features/training/integrated/TrainingDataProvider',()=>({default:({children})=>children}));
+vi.mock('../../../features/training/integrated/SettingsTrainingTools',()=>({default:()=>null}));
 
 const state = vi.hoisted(() => ({
   lang: 'en', linked: true, logout: vi.fn(), setUnit: vi.fn(), setTheme: vi.fn(), setLang: vi.fn(),
-  profileTimeZone: 'America/New_York', deviceZone: 'Europe/Copenhagen',
+  profileTimeZone: 'America/New_York', deviceZone: 'Europe/Copenhagen', profileEmail: 'preview@example.test',
   zones: {
     maxHeartRate: { bpm: 190, source: 'DEFAULT' }, suggestedMaxHeartRate: null,
     heartRate: { source: 'AUTO', boundaries: [114, 133, 152, 171], defaultBoundaries: [114, 133, 152, 171], zones: [
@@ -37,7 +42,8 @@ vi.mock('../../../contexts/ThemeContext', () => ({ useTheme: () => ({ theme: 'li
 vi.mock('../../../contexts/UnitContext', () => ({ useUnit: () => ({ unit: 'km', setUnit: state.setUnit }) }));
 vi.mock('../../../components/TopbarUserMenu', () => ({ default: () => null }));
 vi.mock('../../../components/TopbarNotifications', () => ({ default: () => null }));
-vi.mock('../../../utils/timeZone', () => ({
+vi.mock('../../../utils/timeZone', async (importOriginal) => ({
+  ...(await importOriginal()),
   getDeviceTimeZone: () => state.deviceZone,
   listTimeZones: (...extra) => [...new Set(['America/New_York', 'Asia/Tokyo', 'Europe/Copenhagen', 'UTC', ...extra.filter(Boolean)])],
 }));
@@ -46,6 +52,7 @@ vi.mock('../../../utils/downloadBlob', async (importOriginal) => ({ ...(await im
 beforeEach(() => {
   state.lang = 'en'; state.linked = true;
   state.profileTimeZone = 'America/New_York'; state.deviceZone = 'Europe/Copenhagen';
+  state.profileEmail = 'preview@example.test';
   state.unlink = { unlinked: true, revokedAtStrava: true, removedActivities: 2 };
   state.failures = {};
   invalidateResourceCache.mockReset(); downloadBlob.mockReset();
@@ -53,12 +60,15 @@ beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('hermes.settings.mantra', 'Easy days easy, hard days hard.');
   localStorage.setItem('hermes.settings.digest', '1');
+  localStorage.setItem('hermes_email', state.profileEmail);
   vi.stubGlobal('matchMedia', () => ({ matches: false }));
   apiFetch.mockReset(); apiFetch.mockResolvedValue({ ok: true });
   apiJson.mockReset();
   apiJson.mockImplementation(async (url, options) => {
     if (state.failures[url]) throw Object.assign(new Error('Request failed'), { status: state.failures[url] });
-    if (url === '/api/profile/me') return { displayName: 'Mira Chen', email: 'preview@example.test', timeZone: state.profileTimeZone };
+    if (url === '/api/profile/me') return { displayName: 'Mira Chen', email: state.profileEmail, timeZone: state.profileTimeZone };
+    if (url === '/api/profile/quota') return { pro: false };
+    if (url === '/api/billing/config') return { configured: false };
     if (url === '/api/training/zones') return state.zones;
     if (url === '/api/profile/me/time-zone') return { displayName: 'Mira Chen', timeZone: JSON.parse(options.body).timeZone };
     if (url === '/api/auth/strava/unlink') return state.unlink;
@@ -116,6 +126,35 @@ it('retains shell navigation and setup progress while showing only the profile g
   await waitFor(() => expect(container.querySelector('.st-activity-summary')).toHaveTextContent('1'));
   expect(container.querySelector('#st-v2-connections')).toHaveTextContent(t('settings.stitch_garmin_ready'));
   expect(container.querySelector('#st-v2-notifications')).toHaveTextContent(t('settings.stitch_wellness_source_garmin'));
+});
+
+it.each(['en', 'zh-CN'])('remembers completion-card dismissal across remounts and loading in %s', async (lang) => {
+  state.lang = lang;
+  const user = userEvent.setup();
+  const view = await openPage();
+  const dismiss = screen.getByRole('button', { name: t('settings.dismiss_completion') });
+  await user.click(dismiss);
+  expect(view.container.querySelector('.st-v2-setup')).not.toBeInTheDocument();
+  expect(screen.getByRole('tablist')).toBeInTheDocument();
+  view.unmount();
+
+  const loading = render(<PageSkeleton variant="settings" />);
+  expect(loading.container.querySelector('.page-skeleton__settings-index > .page-skeleton__panel')).not.toBeInTheDocument();
+  loading.unmount();
+
+  const reopened = await openPage();
+  expect(reopened.container.querySelector('.st-v2-setup')).not.toBeInTheDocument();
+});
+
+it('keeps completion-card dismissal separate for another signed-in account', async () => {
+  const user = userEvent.setup();
+  const view = await openPage();
+  await user.click(screen.getByRole('button', { name: t('settings.dismiss_completion') }));
+  view.unmount();
+  state.profileEmail = 'another@example.test';
+  localStorage.setItem('hermes_email', state.profileEmail);
+  const otherAccount = await openPage();
+  expect(otherAccount.container.querySelector('.st-v2-setup')).toBeInTheDocument();
 });
 
 it('saves the display name through the existing API and persists the mantra', async () => {

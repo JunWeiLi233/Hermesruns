@@ -6,6 +6,7 @@ import { useI18n } from '../../contexts/I18nContext';
 import { useUnit } from '../../contexts/UnitContext';
 import { apiJson, apiFetch } from '../../api';
 import { cachedApiJson } from '../../api/resourceCache';
+import { withRequestDeadline } from '../../api/requestDeadline';
 import AppIcon from '../../components/AppIcon';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import Modal from '../../components/Modal';
@@ -24,6 +25,7 @@ import { formatShoeDisplayName, localizeShoeBrand, localizeShoeModel } from '../
 import { clearPendingShoePhotoState, createPendingShoePhotoState } from '../../utils/shoeImagePickerState';
 import { getSafeImageUrl } from '../../utils/safeImageUrl.js';
 import PageSkeleton from '../../components/PageSkeleton';
+import LoadingOperationStatus from '../../components/loading/LoadingOperationStatus';
 import {
   buildRecentShoeSignal,
   calculateRotationHealth,
@@ -95,6 +97,15 @@ async function fileToOptimizedDataUrl(file, t) {
   }
 }
 
+// Validate again at the image boundary: processed/cache results and generated
+// thumbnails must retain an image URL, including when a producer falls back.
+function getShoeImageSource(value) {
+  const source = getSafeImageUrl(value);
+  if (source.startsWith('https://') || source.startsWith('http://')
+    || source.startsWith('blob:') || source.startsWith('data:image/')) return source;
+  return undefined;
+}
+
 /** Shoe image component with auto background removal */
 function ProcessedDisplayImage({ src, alt, className, fallback, onError, loading = 'lazy' }) {
   const encodedSrc = getSafeImageUrl(src);
@@ -120,10 +131,11 @@ function ProcessedDisplayImage({ src, alt, className, fallback, onError, loading
   if (!encodedSrc) {
     return fallback || <div className="shoe-img-placeholder"><span>S</span></div>;
   }
-  if (!processed || processed.src !== encodedSrc) {
+  const processedSrc = getShoeImageSource(processed?.url);
+  if (!processed || processed.src !== encodedSrc || !processedSrc) {
     return fallback || <div className="shoe-img-placeholder shoe-img-loading" />;
   }
-  return <img className={className} src={processed.url} alt={alt} width="800" height="800" onError={onError} loading={loading} decoding="async" />;
+  return <img className={className} src={processedSrc} alt={alt} width="800" height="800" onError={onError} loading={loading} decoding="async" />;
 }
 
 function ShoeImage({ src, alt }) {
@@ -224,6 +236,7 @@ const Shoes = memo(function Shoes() {
   const [shoes, setShoes] = useState([]);
   const [runs, setRuns] = useState([]);
   const [loadState, setLoadState] = useState('loading');
+  const shoesLoadControllerRef = useRef(null);
   const [duplicateClusters, setDuplicateClusters] = useState([]);
   const [mergeBusy, setMergeBusy] = useState(false);
   const [shoeActionBusyId, setShoeActionBusyId] = useState(null);
@@ -367,18 +380,32 @@ const Shoes = memo(function Shoes() {
   }, []);
 
   const loadShoes = useCallback(async () => {
+    shoesLoadControllerRef.current?.abort();
+    const controller = new AbortController();
+    shoesLoadControllerRef.current = controller;
+    const isCurrent = () => shoesLoadControllerRef.current === controller && !controller.signal.aborted;
+    setLoadState((current) => current === 'error' ? 'loading' : current);
+    // Duplicate suggestions are optional and must not hold up the owned inventory.
+    withRequestDeadline(async (signal) => {
+      const response = await apiFetch('/api/shoes/duplicate-clusters', { signal });
+      return response.ok ? response.json() : null;
+    }, controller.signal).then((data) => {
+      if (isCurrent()) setDuplicateClusters(Array.isArray(data?.clusters) ? data.clusters : []);
+    }).catch(() => {
+      if (isCurrent()) setDuplicateClusters([]);
+    });
     try {
-      const [data, dupData] = await Promise.all([
-        apiJson('/api/shoes?includeRetired=true'),
-        apiFetch('/api/shoes/duplicate-clusters').then(r => (r.ok ? r.json() : { clusters: [] })).catch(() => ({ clusters: [] })),
-      ]);
-      const list = Array.isArray(data) ? data : [];
+      const data = await withRequestDeadline((signal) => apiJson('/api/shoes?includeRetired=true', { signal }), controller.signal);
+      if (!isCurrent()) return;
+      if (!Array.isArray(data) || data.some((shoe) => !shoe || typeof shoe !== 'object' || Array.isArray(shoe))) {
+        throw new Error('Invalid shoe inventory');
+      }
+      const list = data;
       list.sort((a, b) => (b.currentDistanceKm || 0) - (a.currentDistanceKm || 0));
       setShoes(list);
-      setDuplicateClusters(Array.isArray(dupData.clusters) ? dupData.clusters : []);
       setLoadState('ready');
     } catch (err) {
-      if (err.message !== 'Unauthorized') setLoadState('error');
+      if (isCurrent() && err.message !== 'Unauthorized') setLoadState('error');
     }
   }, []);
 
@@ -399,10 +426,6 @@ const Shoes = memo(function Shoes() {
     } catch { /* ignored */ }
     finally { setMergeBusy(false); }
   }
-
-  useEffect(() => {
-    if (loadState === 'ready') loadShoes();
-  }, [loadShoes, loadState]);
 
   const checkScanAvailable = useCallback(async () => {
     try {
@@ -445,6 +468,10 @@ const Shoes = memo(function Shoes() {
     loadShoes();
     loadRuns();
     checkScanAvailable();
+    return () => {
+      shoesLoadControllerRef.current?.abort();
+      shoesLoadControllerRef.current = null;
+    };
   }, [checkScanAvailable, isAuthenticated, loadProfile, loadRuns, loadShoes, navigate]);
 
   useEffect(() => {
@@ -1261,8 +1288,8 @@ const Shoes = memo(function Shoes() {
                       {[
                         t('shoes.v2_active_pairs', { count: activeShoes.length }),
                         t('shoes.v2_retire_soon', { count: retireSoonCount }),
-                        `${t('shoes.rotation_health_label')}: ${t(`shoes.rotation_health_${rotationHealth.status}`)}`,
-                      ].join(' · ')}
+                        activeShoes.length > 1 ? `${t('shoes.rotation_health_label')}: ${t(`shoes.rotation_health_${rotationHealth.status}`)}` : null,
+                      ].filter(Boolean).join(' · ')}
                     </p>
                   </div>
                   <div className="shoe-v2-head-actions">
@@ -1330,7 +1357,10 @@ const Shoes = memo(function Shoes() {
                 </div>
 
                 {loadState === 'loading' && <div className="shoe-inventory-status shoe-inventory-status--loading">{t('shoes.loading')}</div>}
-                {loadState === 'error' && <div className="shoe-inventory-status">{t('shoes.load_error')}</div>}
+                {loadState === 'error' && <div className="shoe-inventory-status" role="alert">
+                  <p>{t('shoes.load_error')}</p>
+                  <button type="button" className="shoe-v2-reset" onClick={loadShoes}>{t('analysis.stitch_load_retry')}</button>
+                </div>}
                 {loadState === 'ready' && shoeActionStatus && <div className="shoe-inventory-status">{shoeActionStatus}</div>}
                 {loadState === 'ready' && inventoryShoes.length === 0 && <div className="shoe-inventory-status">{inventoryTab === 'retired' ? t('shoes.retired_empty') : t('shoes.stitch_inventory_empty')}</div>}
 
@@ -1624,6 +1654,7 @@ const Shoes = memo(function Shoes() {
                 </span>
               </div>
 
+              {imgSearching && <LoadingOperationStatus t={t} what="shoe images" initial={t('shoes.img_searching')} slow={t('loading.copy.still_searching')} />}
               <div className="shoe-photo-picker-body" id="shoe-photo-panel" role="tabpanel" aria-labelledby={`shoe-photo-tab-${imgPickerTab}`} aria-busy={imgApplying || imgSearching || imgUploading}>
                 {imgPickerTab === 'search' && (
                   <div className="shoe-photo-picker-pane">
@@ -1648,13 +1679,13 @@ const Shoes = memo(function Shoes() {
                       </button>
                     </form>
                     <div className="shoe-photo-picker-meta">
-                      <span>{imgSearching ? t('shoes.img_searching') : (visibleCandidates.length ? t('shoes.img_results_count', { count: visibleCandidates.length }) : t('shoes.img_search_copy'))}</span>
+                      <span>{!imgSearching && (visibleCandidates.length ? t('shoes.img_results_count', { count: visibleCandidates.length }) : t('shoes.img_search_copy'))}</span>
                       {visibleCandidates.length > 0 && !imgSearching ? <span>{t('shoes.img_pick_hint')}</span> : null}
                     </div>
                     {!imgSearching && imgSearchStatus && <div className="shoe-photo-studio-search-status">{imgSearchStatus}</div>}
                     {imgSearching ? (
-                      <div className="shoe-photo-picker-grid" aria-hidden="true">
-                        {Array.from({ length: 8 }, (_, i) => <span key={i} className="shoe-photo-picker-cell is-loading" />)}
+                      <div className="shoe-photo-picker-grid loading-design" aria-hidden="true">
+                        {Array.from({ length: 8 }, (_, i) => <span key={i} className="shoe-photo-picker-cell is-loading hr-sk" />)}
                       </div>
                     ) : visibleCandidates.length > 0 ? (
                       <div className="shoe-photo-picker-grid">
@@ -1837,7 +1868,7 @@ const Shoes = memo(function Shoes() {
                       <div className="scan-v2-thumbs">
                         {scanThumbs.map((url, index) => (
                           <span key={url} className="scan-v2-thumb is-scanning">
-                            <img src={url} alt={`${t('shoes.scan_image')} ${index + 1}`} />
+                            <img src={getShoeImageSource(url)} alt={`${t('shoes.scan_image')} ${index + 1}`} />
                             <i aria-hidden="true" />
                           </span>
                         ))}
@@ -1860,7 +1891,7 @@ const Shoes = memo(function Shoes() {
                         <div className="scan-v2-thumbs">
                           {scanThumbs.map((url, index) => (
                             <span key={url} className="scan-v2-thumb">
-                              <img src={url} alt={`${t('shoes.scan_image')} ${index + 1}`} />
+                              <img src={getShoeImageSource(url)} alt={`${t('shoes.scan_image')} ${index + 1}`} />
                               <button type="button" onClick={() => removeScanFile(index)} aria-label={t('shoes.scan_v2_remove_image', { index: index + 1 })}>&times;</button>
                             </span>
                           ))}

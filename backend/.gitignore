@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Private training-import spool; never a static asset or source artifact.
+.training-private/

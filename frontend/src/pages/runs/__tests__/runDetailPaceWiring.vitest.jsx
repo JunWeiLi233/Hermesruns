@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { apiFetch, apiJson } from '../../../api';
@@ -31,6 +31,7 @@ vi.mock('../../../components/TopbarNotifications', () => ({ default: () => null 
 vi.mock('../../../components/FooterNavLinks', () => ({ default: () => null }));
 vi.mock('../../../components/RunnerShellTopNav', () => ({ default: () => null }));
 vi.mock('../../../components/RunsSubpageNav', () => ({ default: () => null }));
+vi.mock('react-chartjs-2', () => ({ Line: ({ 'aria-label': label }) => <div role="img" aria-label={label} /> }));
 
 /** A promise the test settles by hand, to decide which answer arrives first. */
 function deferred() {
@@ -95,6 +96,40 @@ function renderPage(path = '/runs/7') {
 }
 
 describe('the pace analysis on the run page', () => {
+  it('shows the sample average and switches telemetry with the keyboard', async () => {
+    const fallback = apiFetch.getMockImplementation();
+    apiFetch.mockImplementation(async (url, options) => url.endsWith('/telemetry')
+      ? respond({ series: {
+        heartRate: { samples: [{ t: 0, value: 100 }, { t: 1, value: 120 }, { t: 2, value: 140 }] },
+        cadence: { samples: [{ t: 0, value: 160 }, { t: 1, value: 180 }] },
+      } }) : fallback(url, options));
+    renderPage();
+    const heartRate = await screen.findByRole('tab', { name: t('run_detail.telemetry_heart_rate') });
+    await waitFor(() => expect(document.querySelector('.run-detail-v2__reading strong')).toHaveTextContent('120'));
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName(t('run_detail.telemetry_heart_rate'));
+    fireEvent.keyDown(heartRate, { key: 'ArrowRight' });
+    expect(screen.getByRole('tab', { name: t('run_detail.telemetry_cadence') })).toHaveAttribute('aria-selected', 'true');
+    expect(document.querySelector('.run-detail-v2__reading strong')).toHaveTextContent('170');
+    await screen.findByRole('group', { name: t('run_detail.pace_view_group') });
+  });
+
+  it('keeps interval and condition tools in a collapsed disclosure that opens from section navigation', async () => {
+    renderPage();
+    await screen.findByRole('heading', { name: 'Pace analysis' });
+    const summary = screen.getByText(t('run_detail.session_analysis_title'));
+    const disclosure = summary.closest('details');
+    expect(disclosure).not.toHaveAttribute('open');
+    expect(disclosure.querySelector('#run-detail-intervals')).toBeInTheDocument();
+    expect(disclosure.querySelector('#run-detail-condition-comparison')).toBeInTheDocument();
+
+    act(() => {
+      window.location.hash = '#run-detail-intervals';
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+    await waitFor(() => expect(disclosure).toHaveAttribute('open'));
+    window.history.replaceState(null, '', window.location.pathname);
+  });
+
   it('asks for the pace profile only once the run page has finished asking for the stream', async () => {
     answers['points-7'] = deferred();
     renderPage();

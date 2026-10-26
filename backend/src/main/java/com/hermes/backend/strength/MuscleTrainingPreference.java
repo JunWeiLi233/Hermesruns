@@ -1,5 +1,7 @@
 package com.hermes.backend.strength;
 
+import com.hermes.backend.activity.ActivityLocalDates;
+
 import com.hermes.backend.runner.Runner;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
@@ -97,7 +99,7 @@ public class MuscleTrainingPreference {
             createdAt = now;
         }
         if (cycleStartDate == null) {
-            cycleStartDate = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            cycleStartDate = LocalDate.now(ActivityLocalDates.zoneOf(runner)).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         }
         updatedAt = now;
     }

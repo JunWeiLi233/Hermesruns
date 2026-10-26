@@ -56,8 +56,251 @@ import static org.mockito.Mockito.when;
 
 class RaceCourseMapServiceTests {
 
+    @Test
+    void reanalysisKeepsSourceBoundPendingGeometryWhenSameImageGetsAnAcceptedAiFallback() {
+        var service = createService(mock(RestTemplate.class), mock(SystemConfigService.class),
+                mock(RaceCourseMapAssetRepository.class));
+        var bounds = new OverlayBounds(36.8, 36.2, -121.6, -122.0);
+        var reviewedPoints = List.of(new RoutePoint(36.3, -121.9, "Start"),
+                new RoutePoint(36.4, -121.8, null), new RoutePoint(36.6, -121.7, null),
+                new RoutePoint(36.7, -121.65, "Finish"));
+        var coarsePoints = List.of(reviewedPoints.get(0), reviewedPoints.get(3));
+        for (String source : List.of("reviewed-source-map:big-sur-marathon", "verified-official-map:big-sur-marathon")) {
+            var existing = new RaceCourseMapResult("local-course-map:big-sur.jpg", source, true, 85,
+                    "Source-bound reviewed route", bounds, reviewedPoints, List.of(), null, false);
+            for (String fallbackSource : List.of("official-source-recovered", "admin-upload", source)) {
+                var fresh = new RaceCourseMapResult(existing.imageUrl(), fallbackSource, true, 99,
+                        "Accepted coarse AI fallback", bounds, coarsePoints, List.of(), null, true);
+
+                RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(service,
+                        "keepExistingAlignmentWhenReanalysisRegresses", existing, fresh);
+
+                assertThat(result).as("protect %s from %s", source, fallbackSource).isSameAs(existing);
+            }
+        }
+    }
+
+    @Test
+    void reanalysisAllowsAFreshSourceBindingOrAnExplicitlyDifferentImage() {
+        var service = createService(mock(RestTemplate.class), mock(SystemConfigService.class),
+                mock(RaceCourseMapAssetRepository.class));
+        var bounds = new OverlayBounds(36.8, 36.2, -121.6, -122.0);
+        var points = List.of(new RoutePoint(36.3, -121.9, "Start"), new RoutePoint(36.7, -121.65, "Finish"));
+        var existing = new RaceCourseMapResult("local-course-map:old.jpg", "reviewed-source-map:big-sur-marathon", true, 85,
+                "Reviewed old binding", bounds, points, List.of(), null, false);
+        for (var fresh : List.of(
+                new RaceCourseMapResult(existing.imageUrl(), "verified-official-map:big-sur-marathon", true, 90,
+                        "Fresh exact source binding", bounds, points, List.of(), null, false),
+                new RaceCourseMapResult("local-course-map:new.jpg", "admin-upload", true, 90,
+                        "Different source image", bounds, points, List.of(), null, true))) {
+            RaceCourseMapResult result = ReflectionTestUtils.invokeMethod(service,
+                    "keepExistingAlignmentWhenReanalysisRegresses", existing, fresh);
+            assertThat(result).isSameAs(fresh);
+        }
+    }
+
+    @Test
+    void adminDetailIncludesStoredRaceMetadataForBackendOnlyRows() {
+        var repository = mock(RaceCourseMapAssetRepository.class);
+        var asset = pendingCourseMapAsset("big-sur-marathon", "Big Sur Marathon", "Big Sur", "United States",
+                "https://www.bigsurmarathon.org/", 36.2704, -121.8079, 42.195,
+                "local-course-map:big-sur.jpg", "admin-upload");
+        when(repository.findByRaceId("big-sur-marathon")).thenReturn(Optional.of(asset));
+        var service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), repository);
+
+        var detail = new ObjectMapper().valueToTree(service.getAdminDetail("big-sur-marathon"));
+
+        assertThat(detail.path("officialWebsite").asText()).isEqualTo("https://www.bigsurmarathon.org/");
+        assertThat(detail.path("latitude").asDouble()).isEqualTo(36.2704);
+        assertThat(detail.path("longitude").asDouble()).isEqualTo(-121.8079);
+        assertThat(detail.path("distanceKm").asDouble()).isEqualTo(42.195);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void reanalysisUsesStoredDistanceWhenRequestDistanceIsMissingOrInvalid() throws Exception {
+        byte[] fixture = getClass().getResourceAsStream("/course-maps/tokyo-2026.png").readAllBytes();
+        Files.write(testUploadDirectory.resolve("metadata-tokyo.png"), fixture);
+        for (Double requestedDistance : new Double[] {null, 0.0, -1.0, Double.NaN, Double.POSITIVE_INFINITY}) {
+            var repository = mock(RaceCourseMapAssetRepository.class);
+            var asset = pendingCourseMapAsset("tokyo-marathon", "Tokyo Marathon", "Tokyo", "Japan",
+                    "https://www.marathon.tokyo/", 35.6762, 139.6503, 42.195,
+                    "local-course-map:metadata-tokyo.png", "admin-upload");
+            when(repository.findByRaceId("tokyo-marathon")).thenReturn(Optional.of(asset));
+            var service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), repository,
+                    null, null, testUploadDirectory);
+
+            var result = service.reanalyzePendingCourseMap("tokyo-marathon", "Tokyo Marathon", "Tokyo", "Japan",
+                    "https://www.marathon.tokyo/", 35.6762, 139.6503, requestedDistance, "admin@hermes.test");
+
+            assertThat(result.routePoints()).as("verified source route with request distance %s", requestedDistance).hasSize(600);
+            assertThat(result.source()).isEqualTo("tokyo-official-course");
+            assertThat(asset.getDistanceKm()).isEqualTo(42.195);
+        }
+    }
+
+    @Test
+    void reanalysisPreservesAnExplicitValidDistanceInsteadOfUsingStoredDistance() throws Exception {
+        Files.write(testUploadDirectory.resolve("metadata-custom.png"), samplePng());
+        var repository = mock(RaceCourseMapAssetRepository.class);
+        var asset = pendingCourseMapAsset("custom-race", "Custom Race", "City", "Country",
+                "https://example.com/", 0.0, 0.0, 42.195,
+                "local-course-map:metadata-custom.png", "admin-upload");
+        when(repository.findByRaceId("custom-race")).thenReturn(Optional.of(asset));
+        var service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), repository,
+                null, null, testUploadDirectory);
+
+        service.reanalyzePendingCourseMap("custom-race", "Custom Race", "City", "Country",
+                "https://example.com/", 0.0, 0.0, 21.0975, "admin@hermes.test");
+
+        assertThat(asset.getDistanceKm()).isEqualTo(21.0975);
+    }
+
+    @Test
+    void recoveredGuideCoverCannotBorrowTheRaceRouteAfterTheActualMapPageIsFixed() throws Exception {
+        var service=createService(mock(RestTemplate.class),mock(SystemConfigService.class),mock(RaceCourseMapAssetRepository.class));
+        byte[] bytes=getClass().getResourceAsStream("/course-maps/rome-guide-cover-2026.jpg").readAllBytes();
+        RaceCourseMapResult result=ReflectionTestUtils.invokeMethod(service,"analyzeUploadedAssetWithFallback","admin-upload",
+                new ResolvedCandidateAsset("local-course-map:rome-cover.jpg",bytes),
+                "Run Rome The Marathon","Rome","Italy",41.9028,12.4964,42.195,"Guide cover");
+        assertThat(result.routePoints()).isEmpty();
+        assertThat(result.courseMapDetected()).isFalse();
+    }
+
+    @Test
+    void recoveredEditionCannotSilentlyBorrowLegacyGeometryWhenAiIsUnavailable() throws Exception {
+        var service=createService(mock(RestTemplate.class),mock(SystemConfigService.class),mock(RaceCourseMapAssetRepository.class));
+        byte[] bytes=getClass().getResourceAsStream("/course-maps/london-recovered-2026.jpg").readAllBytes();
+        RaceCourseMapResult result=ReflectionTestUtils.invokeMethod(service,"analyzeUploadedAssetWithFallback","admin-upload",
+                new ResolvedCandidateAsset("local-course-map:london-recovered.jpg",bytes),
+                "London Marathon","London","United Kingdom",51.5074,-0.1278,42.195,"Recovered official source");
+        assertThat(result.routePoints()).isEmpty();
+        assertThat(result.courseMapDetected()).isFalse();
+        assertThat(result.summary()).contains("not configured");
+    }
+
     @TempDir
     Path testUploadDirectory;
+
+    @Test
+    void catalogDetailReportsMissingSourceWithoutChangingLiveData() throws Exception {
+        var repository = mock(RaceCourseMapAssetRepository.class);
+        var asset = catalogReadinessAsset();
+        asset.setLiveRoutePointsJson(asset.getPendingRoutePointsJson());
+        asset.setLiveImageUrl(asset.getPendingImageUrl());
+        asset.setLiveSource("admin-upload");
+        asset.setLiveConfidence(90);
+        var before = new ObjectMapper().valueToTree(asset).toString();
+        when(repository.findByRaceId("amsterdam-marathon")).thenReturn(Optional.of(asset));
+        var service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), repository);
+        var detail = new ObjectMapper().valueToTree(service.getAdminDetail("amsterdam-marathon"));
+        assertThat(detail.at("/pendingPreview/sourceAvailable").asBoolean(true)).isFalse();
+        assertThat(detail.at("/pendingPreview/alignmentAccepted").asBoolean(true)).isFalse();
+        assertThat(new ObjectMapper().valueToTree(asset).toString()).isEqualTo(before);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void publishingCannotReplaceLiveRouteWhenLocalSourceIsMissing() throws Exception {
+        var repository = mock(RaceCourseMapAssetRepository.class);
+        var asset = catalogReadinessAsset();
+        asset.setPendingRoutePointsJson(new ObjectMapper().writeValueAsString(AmsterdamMarathonOfficialCourse.routePoints()));
+        asset.setLiveRoutePointsJson("[{\"lat\":52.34,\"lng\":4.85}]");
+        when(repository.findByRaceId("amsterdam-marathon")).thenReturn(Optional.of(asset));
+        var service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), repository);
+        assertThatThrownBy(() -> service.acceptPendingCourseMap("amsterdam-marathon", "admin@example.com"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("race_course_map_pending_missing");
+        assertThat(asset.getLiveRoutePointsJson()).isEqualTo("[{\"lat\":52.34,\"lng\":4.85}]");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void publishingRejectsKnownWrongAmsterdamCorridorEvenWithARealSource() throws Exception {
+        var repository = mock(RaceCourseMapAssetRepository.class);
+        var asset = catalogReadinessAsset();
+        Files.write(testUploadDirectory.resolve("amsterdam-map.png"), samplePng());
+        when(repository.findByRaceId("amsterdam-marathon")).thenReturn(Optional.of(asset));
+        var service = createService(mock(RestTemplate.class), mock(SystemConfigService.class), repository);
+        assertThatThrownBy(() -> service.acceptPendingCourseMap("amsterdam-marathon", "admin@example.com"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("alignment");
+        verify(repository, never()).save(any());
+    }
+
+    private RaceCourseMapAsset catalogReadinessAsset() throws Exception {
+        var asset = new RaceCourseMapAsset();
+        asset.setRaceId("amsterdam-marathon"); asset.setRaceName("Amsterdam Marathon");
+        asset.setCity("Amsterdam"); asset.setCountry("Netherlands"); asset.setDistanceKm(42.195);
+        asset.setLatitude(52.3676); asset.setLongitude(4.9041);
+        asset.setPendingImageUrl("local-course-map:amsterdam-map.png");
+        asset.setPendingSource("admin-upload"); asset.setPendingSummary("Stored alignment");
+        asset.setPendingConfidence(90); asset.setPendingAiAssisted(true);
+        asset.setPendingOverlayBoundsJson("{\"north\":52.4,\"south\":52.3,\"east\":4.95,\"west\":4.85}");
+        asset.setPendingRoutePointsJson("[{\"lat\":52.39,\"lng\":4.86},{\"lat\":52.39,\"lng\":4.94},{\"lat\":52.31,\"lng\":4.94},{\"lat\":52.31,\"lng\":4.86},{\"lat\":52.39,\"lng\":4.86}]");
+        return asset;
+    }
+
+    @Test
+    void officialTokyoIllustrationIsNotStretchedOverRunnerStreetMap() throws Exception {
+        RaceCourseMapService service = createService(mock(RestTemplate.class), mock(SystemConfigService.class),
+                mock(RaceCourseMapAssetRepository.class));
+        try (var stream = getClass().getResourceAsStream("/course-maps/tokyo-2026.png")) {
+            String source = "data:image/png;base64," + Base64.getEncoder().encodeToString(stream.readAllBytes());
+            assertThat(service.materializeTransparentOverlayImageUrl(source)).isEmpty();
+        }
+    }
+
+    @Test
+    void officialTokyoImageAndPdfUseVerifiedGeometryWithoutChangingLive(@TempDir Path uploadRoot) throws Exception {
+        for (String extension : List.of("png", "pdf")) {
+            Path directory = Files.createDirectory(uploadRoot.resolve(extension));
+            RestTemplate restTemplate = mock(RestTemplate.class);
+            SystemConfigService config = mock(SystemConfigService.class);
+            RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
+            RaceCourseMapAsset asset = pendingCourseMapAsset("tokyo-marathon", "Tokyo Marathon", "Tokyo", "Japan",
+                    "https://www.marathon.tokyo", 35.6762, 139.6503, 42.195,
+                    "local-course-map:old.png", "admin-upload");
+            asset.setLiveSource("tokyo-official-course");
+            asset.setLiveConfidence(90);
+            asset.setLiveRoutePointsJson("[{\"lat\":35.690272,\"lng\":139.691507},{\"lat\":35.681498,\"lng\":139.764924}]");
+            String previousLive = asset.getLiveRoutePointsJson();
+            when(repository.findByRaceId("tokyo-marathon")).thenReturn(Optional.of(asset));
+            when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            RaceCourseMapService service = createService(restTemplate, config, repository, null, null, directory);
+            byte[] fixture;
+            try (var stream = getClass().getResourceAsStream("/course-maps/tokyo-2026." + extension)) {
+                fixture = stream.readAllBytes();
+            }
+            String mediaType = extension.equals("pdf") ? "application/pdf" : "image/png";
+            service.uploadPendingCourseMap("tokyo-marathon", "Tokyo Marathon", "Tokyo", "Japan",
+                    "https://www.marathon.tokyo", 35.6762, 139.6503, 42.195,
+                    "data:" + mediaType + ";base64," + Base64.getEncoder().encodeToString(fixture), "admin@hermes.test");
+
+            RaceCourseMapResult result = service.reanalyzePendingCourseMap("tokyo-marathon", "Tokyo Marathon", "Tokyo", "Japan",
+                    "https://www.marathon.tokyo", 35.6762, 139.6503, 42.195, "admin@hermes.test");
+
+            assertThat(result.routePoints()).hasSize(600);
+            assertThat(result.routePoints().get(0).lat()).isEqualTo(35.690272);
+            assertThat(result.routePoints().get(0).lng()).isEqualTo(139.691507);
+            assertThat(result.routePoints().get(599).lat()).isEqualTo(35.681498);
+            assertThat(result.routePoints().get(599).lng()).isEqualTo(139.764924);
+            assertThat(result.confidence()).isEqualTo(90);
+            assertThat(result.source()).isEqualTo("tokyo-official-course");
+            assertThat(result.summary()).contains("verified official Tokyo Marathon 2026");
+            assertThat(asset.getLiveRoutePointsJson()).isEqualTo(previousLive);
+            assertThat(asset.getLiveConfidence()).isEqualTo(90);
+            assertThat(asset.getPendingRoutePointsJson()).contains("35.690272");
+
+            service.acceptPendingCourseMap("tokyo-marathon", "admin@hermes.test");
+            String publishedLive = asset.getLiveRoutePointsJson();
+            String publishedArtifact = Files.readString(directory.resolve("routes/tokyo-marathon-successful-route.json"));
+            RaceCourseMapResult rescanned = service.scanPendingCourseMap("tokyo-marathon", "Tokyo Marathon", "Tokyo", "Japan",
+                    "https://www.marathon.tokyo", 35.6762, 139.6503, 42.195, "admin@hermes.test");
+            assertThat(rescanned.routePoints()).hasSize(600);
+            assertThat(asset.getPendingRoutePointsJson()).contains("35.690272");
+            assertThat(asset.getLiveRoutePointsJson()).isEqualTo(publishedLive);
+            assertThat(Files.readString(directory.resolve("routes/tokyo-marathon-successful-route.json"))).isEqualTo(publishedArtifact);
+        }
+    }
 
     @Test
     void resolveCourseMapReturnsCandidateOnlyWhenAiIsUnavailable() throws Exception {
@@ -980,7 +1223,7 @@ class RaceCourseMapServiceTests {
     }
 
     @Test
-    void reanalyzePendingCourseMapStoresSuccessfulRouteLocallyAndReplacesPreviousRoute(@TempDir Path courseMapUploadDirectory) throws Exception {
+    void reanalyzePendingCourseMapPreservesLiveRouteAndArtifactUntilPublished(@TempDir Path courseMapUploadDirectory) throws Exception {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
@@ -1048,9 +1291,19 @@ class RaceCourseMapServiceTests {
                 "admin@hermes.test"
         );
 
+        assertThat(result.courseMapDetected()).isTrue();
+        assertThat(Files.exists(previousRoute)).isTrue();
+        assertThat(asset.getLocalRouteArtifactRef()).isEqualTo("local-course-map-route:boston-marathon-old-successful-route.json");
+        assertThat(asset.getLiveImageUrl()).isEqualTo("local-course-map:previous-boston.png");
+        assertThat(asset.getLiveRoutePointsJson()).isEqualTo("[{\"lat\":0.0,\"lng\":0.0}]");
+        assertThat(asset.getLiveConfidence()).isEqualTo(72);
+        assertThat(asset.getPendingConfidence()).isEqualTo(82);
+        assertThat(asset.getPendingRoutePointsJson()).contains("42.228");
+
+        service.acceptPendingCourseMap("boston-marathon", "admin@hermes.test");
+
         Path currentRoute = courseMapUploadDirectory.resolve("routes").resolve("boston-marathon-successful-route.json");
         String currentRouteJson = Files.readString(currentRoute);
-        assertThat(result.courseMapDetected()).isTrue();
         assertThat(Files.exists(previousRoute)).isFalse();
         assertThat(asset.getLocalRouteArtifactRef()).isEqualTo("local-course-map-route:boston-marathon-successful-route.json");
         assertThat(currentRouteJson).contains("Aligned the replacement Boston Marathon course map.");
@@ -1303,7 +1556,7 @@ class RaceCourseMapServiceTests {
     }
 
     @Test
-    void acceptPendingCourseMapPublishesRealAdminUploadAsCityLevelReferenceWhenGeometryScanMisses() {
+    void acceptPendingCourseMapPublishesRealAdminUploadAsCityLevelReferenceWhenGeometryScanMisses() throws Exception {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
@@ -1320,6 +1573,7 @@ class RaceCourseMapServiceTests {
                 "admin-image-url"
         );
         asset.setPendingSummary("Hermes could not align this course-map confidently yet.");
+        Files.write(testUploadDirectory.resolve("paris-marathon-bff639082544a536.jpg"), samplePng());
         when(repository.findByRaceId("paris-marathon")).thenReturn(Optional.of(asset));
         when(repository.save(any(RaceCourseMapAsset.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -1339,7 +1593,7 @@ class RaceCourseMapServiceTests {
     }
 
     @Test
-    void acceptPendingCourseMapDoesNotConvertImplausibleDetectedRouteToCityLevelReference() {
+    void acceptPendingCourseMapDoesNotConvertImplausibleDetectedRouteToCityLevelReference() throws Exception {
         RestTemplate restTemplate = mock(RestTemplate.class);
         SystemConfigService systemConfigService = mock(SystemConfigService.class);
         RaceCourseMapAssetRepository repository = mock(RaceCourseMapAssetRepository.class);
@@ -1357,6 +1611,7 @@ class RaceCourseMapServiceTests {
         );
         asset.setPendingConfidence(90);
         asset.setPendingSummary("Hermes scanned this upload, but Qwen returned 4 route points covering 10.0 km. The route failed the plausibility checks for a 42.2 km road marathon.");
+        Files.write(testUploadDirectory.resolve("tokyo-marathon-qwen-smoke.webp"), samplePng());
         when(repository.findByRaceId("tokyo-marathon-qwen-smoke")).thenReturn(Optional.of(asset));
 
         RaceCourseMapService service = createService(restTemplate, systemConfigService, repository);

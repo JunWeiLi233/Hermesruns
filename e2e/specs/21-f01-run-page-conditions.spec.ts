@@ -315,9 +315,9 @@ test.describe('F01 dates and deleting', () => {
       const page = await context.newPage();
       await page.goto(`/runs/${id}`);
       await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
-      const day = start.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' });
+      const dayAndTime = start.toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/New_York' });
       const time = start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
-      await expect(page.locator('main')).toContainText(`${day} at ${time}`);
+      await expect(page.locator('.run-detail-v2__meta')).toContainText(dayAndTime);
       // The list says the same: the evening's day and the clock, not the morning after.
       await page.goto('/runs');
       const row = page.locator('.runs-ledger-row').filter({ hasText: name });

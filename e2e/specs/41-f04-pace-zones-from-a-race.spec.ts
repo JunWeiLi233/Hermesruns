@@ -102,6 +102,13 @@ async function openSettings(
   guard: Guard,
   options: { lang?: string; theme?: string; unit?: string } = {},
 ): Promise<Page> {
+  // Units belong to the account; a localStorage hint cannot override an already synchronized profile.
+  const profile = (await runner.api.get('/api/training/me')).json;
+  const saved = await runner.api.request('PATCH', '/api/training/me', {
+    body: { units: options.unit === 'mile' ? 'imperial' : 'metric' },
+    headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  });
+  expect(saved.status).toBe(200);
   const page = await pages.open(browser, baseURL, guard, runner, null);
   await page.addInitScript(
     ({ lang, theme, unit }) => {
@@ -119,6 +126,7 @@ async function openSettings(
 async function openRunPage(page: Page, id: number): Promise<void> {
   await page.goto(`/runs/${id}`);
   await expect(paceCard(page)).toBeVisible();
+  await paceCard(page).scrollIntoViewIfNeeded();
   await expect(runZones(page)).toHaveCount(6);
 }
 
@@ -441,12 +449,15 @@ test.describe('F04 pace zones: what the form refuses', () => {
   });
 
   test('F04-PZ-N10 signed out, the race cannot be read, set or removed', async ({ seed }) => {
+    const before = await raceOnServer();
     const nobody = new Api(seed.baseUrl, null);
     expect((await nobody.get(ROUTE)).status).toBe(401);
-    expect((await nobody.put(ROUTE, TEN_K)).status).toBe(401);
-    expect((await nobody.delete(ROUTE)).status).toBe(401);
+    // Cookie-authenticated training writes require CSRF protection when no bearer is supplied.
+    expect((await nobody.put(ROUTE, TEN_K)).status).toBe(403);
+    expect((await nobody.delete(ROUTE)).status).toBe(403);
     const stale = new Api(seed.baseUrl, 'not-a-session');
     expect((await stale.get(ROUTE)).status).toBe(401);
+    expect(await raceOnServer()).toEqual(before);
   });
 
   test('F04-PZ-N11 a save that is refused by the server says so, and a save that fails on the network can be tried again', async ({ browser, baseURL, guard }) => {

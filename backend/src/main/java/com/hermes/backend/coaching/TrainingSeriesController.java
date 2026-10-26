@@ -15,8 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The signed-in runner's fitness, fatigue and form over time, and their weekly effort against their usual range.
- * Own data only: the runner comes from the session, never from the request.
+ * The signed-in runner's fitness, fatigue and form over time, their weekly effort against their usual range, and how
+ * their running time was spread over the heart-rate zones. Own data only: the runner comes from the session, never
+ * from the request.
  */
 @RestController
 @RequestMapping("/api/training")
@@ -24,10 +25,13 @@ public class TrainingSeriesController {
 
     private final AuthService authService;
     private final TrainingSeriesService service;
+    private final TrainingIntensityService intensityService;
 
-    public TrainingSeriesController(AuthService authService, TrainingSeriesService service) {
+    public TrainingSeriesController(AuthService authService, TrainingSeriesService service,
+                                    TrainingIntensityService intensityService) {
         this.authService = authService;
         this.service = service;
+        this.intensityService = intensityService;
     }
 
     /**
@@ -61,6 +65,22 @@ public class TrainingSeriesController {
         }
         try {
             return ResponseEntity.ok(service.weekly(runner.get(), weeks(weeks)));
+        } catch (IllegalArgumentException refused) {
+            return invalid(refused.getMessage());
+        }
+    }
+
+    /** @param weeks how many weeks to return, 1 to 52, this week included; default 12 */
+    @GetMapping("/intensity")
+    public ResponseEntity<?> intensity(
+            @RequestHeader(value = "Authorization", required = false) String authorizationHeader,
+            @RequestParam(value = "weeks", required = false) String weeks) {
+        Optional<Runner> runner = authService.findByAuthorizationHeader(authorizationHeader);
+        if (runner.isEmpty()) {
+            return unauthorized();
+        }
+        try {
+            return ResponseEntity.ok(intensityService.intensity(runner.get(), weeks(weeks)));
         } catch (IllegalArgumentException refused) {
             return invalid(refused.getMessage());
         }

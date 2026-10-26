@@ -10,6 +10,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
@@ -196,6 +197,87 @@ class ActivityImportGzipTests {
     }
 
     // --- the controller's file-type gate ---------------------------------------------------------------------
+
+    private ResponseEntity<?> batch(Runner owner, MockMultipartFile... files) {
+        AuthService auth = mock(AuthService.class);
+        when(auth.findByAuthorizationHeader("Bearer valid")).thenReturn(Optional.of(owner));
+        return new ImportController(auth, importService).importBatch("Bearer valid", List.of(files), null, null, null);
+    }
+
+    private static byte[] archive(String... gpxFiles) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(out)) {
+            for (int index = 0; index < gpxFiles.length; index++) {
+                zip.putNextEntry(new ZipEntry("activities/" + index + ".gpx"));
+                zip.write(gpxFiles[index].getBytes(StandardCharsets.UTF_8));
+                zip.closeEntry();
+            }
+        }
+        return out.toByteArray();
+    }
+
+    @Test
+    void batchCountsActivitiesInsideAnArchiveAndDuplicatesOnRetry() throws Exception {
+        Runner owner = runner();
+        MockMultipartFile zip = upload("runs.zip", archive(GPX, GPX.replace("2026-10-01", "2026-10-02")));
+        ResponseEntity<?> imported = batch(owner, zip);
+        assertThat(imported.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(((ImportResult) imported.getBody()).importedActivities()).isEqualTo(2);
+
+        ResponseEntity<?> duplicates = batch(owner, zip);
+        assertThat(duplicates.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ImportResult outcome = (ImportResult) duplicates.getBody();
+        assertThat(outcome.importedActivities()).isZero();
+        assertThat(outcome.skippedDuplicates()).isEqualTo(2);
+        assertThat(outcome.rejectedFiles()).isEmpty();
+        assertThat(activities.findAll().stream().filter(a -> a.getRunner().getId().equals(owner.getId()))).hasSize(2);
+    }
+
+    @Test
+    void mixedBatchReportsSavedActivitiesDuplicatesAndParserRejections() {
+        Runner owner = runner();
+        MockMultipartFile duplicate = upload("existing.gpx", GPX.getBytes(StandardCharsets.UTF_8));
+        importService.importFile(owner, ImportProvider.GARMIN, duplicate);
+        ResponseEntity<?> response = batch(owner, duplicate,
+                upload("new.gpx", GPX.replace("2026-10-01", "2026-10-03").getBytes(StandardCharsets.UTF_8)),
+                upload("broken.gpx", "not xml".getBytes(StandardCharsets.UTF_8)));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ImportResult outcome = (ImportResult) response.getBody();
+        assertThat(outcome.importedActivities()).isEqualTo(1);
+        assertThat(outcome.skippedDuplicates()).isEqualTo(1);
+        assertThat(outcome.rejectedFiles()).hasSize(1).allSatisfy(detail -> assertThat(detail).startsWith("broken.gpx:"));
+        assertThat(activities.findAll().stream().filter(a -> a.getRunner().getId().equals(owner.getId()))).hasSize(2);
+    }
+
+    @Test
+    void failedBatchRetainsBothParserAndEmptyFileRejections() {
+        Runner owner = runner();
+        ResponseEntity<?> response = batch(owner,
+                upload("broken.gpx", "not xml".getBytes(StandardCharsets.UTF_8)), upload("empty.gpx", new byte[0]));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        Map<?, ?> outcome = (Map<?, ?>) response.getBody();
+        assertThat(outcome.get("importedActivities")).isEqualTo(0);
+        assertThat(outcome.get("skippedDuplicates")).isEqualTo(0);
+        assertThat((List<?>) outcome.get("rejectedFiles")).hasSize(2);
+        assertThat(activities.findAll().stream().filter(a -> a.getRunner().getId().equals(owner.getId()))).isEmpty();
+    }
+
+    @Test
+    void rejectedArchiveRollsBackEarlierEntriesBeforeReportingZeroImports() throws Exception {
+        Runner owner = runner();
+        ResponseEntity<?> response = batch(owner, upload("broken.zip", archive(GPX, "not xml")));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        Map<?, ?> outcome = (Map<?, ?>) response.getBody();
+        assertThat(outcome.get("importedActivities")).isEqualTo(0);
+        assertThat((List<?>) outcome.get("rejectedFiles")).hasSize(1);
+        assertThat(activities.findAll().stream().filter(a -> a.getRunner().getId().equals(owner.getId()))).isEmpty();
+
+        ImportResult retry = (ImportResult) batch(owner, upload("valid.gpx", GPX.getBytes(StandardCharsets.UTF_8))).getBody();
+        assertThat(retry.importedActivities()).isEqualTo(1);
+        assertThat(retry.skippedDuplicates()).isZero();
+    }
 
     private ResponseEntity<?> uploadThroughController(String name, ActivityImportService service) {
         AuthService authService = mock(AuthService.class);

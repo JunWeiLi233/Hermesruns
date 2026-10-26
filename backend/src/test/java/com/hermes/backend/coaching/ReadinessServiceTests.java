@@ -11,11 +11,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 class ReadinessServiceTests {
@@ -244,7 +248,7 @@ class ReadinessServiceTests {
         runner.setWellnessSleepSource("GARMIN");
         runner.setWellnessHrvSource("APPLE_HEALTH");
         runner.setWellnessStressSource("GARMIN");
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(com.hermes.backend.activity.ActivityLocalDates.zoneOf(runner));
 
         when(sleepRepository.findByRunnerAndDateBetweenOrderByDateDesc(runner, today, today))
                 .thenReturn(List.of(sleep(today, ImportProvider.APPLE_HEALTH, 45), sleep(today, ImportProvider.GARMIN, 92)));
@@ -379,6 +383,14 @@ class ReadinessServiceTests {
         assertThat(steady.readiness().confidence()).isEqualTo(20);
         assertThat(steady.readiness().loadScore()).isGreaterThanOrEqualTo(78);
         assertThat(steady.readiness().verdict()).isEqualTo("EASY");
+        var evidence = ReadinessService.RecoveryEvidence.from(today, steady);
+        assertThat(evidence.date()).isEqualTo(today);
+        assertThat(evidence.readings().sleepScore()).isNull();
+        assertThat(evidence.readings().hrvMs()).isNull();
+        assertThat(evidence.trainingLoad().score()).isEqualTo(steady.readiness().loadScore());
+        assertThat(evidence.trainingLoad().ewmaLoadRatio()).isNotNull();
+        assertThat(evidence.trainingLoadWeight()).isEqualTo(0.2);
+        assertThat(steady.readiness().score()).isEqualTo((int) Math.round(steady.readiness().loadScore() * 0.2 + 75 * 0.8));
 
         // A three-day spike pushes ACWR far past the 1.5 danger zone; the
         // score must fall below the steady runner's and leave recovery mode.
@@ -447,6 +459,67 @@ class ReadinessServiceTests {
         var tomorrow = service.resolveReadinessSnapshot(runner, new CoachRunnerState(), today.plusDays(1));
         assertThat(tomorrow.availability().any()).isFalse();
         assertThat(tomorrow.readiness().verdict()).isEqualTo("EASY");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"America/Los_Angeles, 20", "Australia/Sydney, 0"})
+    void fileAndApiRunsSupplyTheSameAccountDayReadiness(String timeZone, int localHour) {
+        Runner runner = new Runner();
+        runner.setTimeZone(timeZone);
+        LocalDate day = LocalDate.of(2026, 10, 6);
+        LocalDateTime localTime = day.atTime(localHour, 30);
+        LocalDateTime utcTime = localTime.atZone(java.time.ZoneId.of(timeZone))
+                .withZoneSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime();
+        var activities = mock(ActivityRepository.class);
+        var service = new ReadinessService(mock(DailySleepDataRepository.class), mock(DailyHRVDataRepository.class),
+                mock(DailyStressDataRepository.class), mock(DailyWellnessSummaryRepository.class), activities);
+        RunMetricsProjection apiRun = runMetric(localTime, 18, 5400);
+        when(apiRun.getStartTime()).thenReturn(localTime);
+        when(apiRun.getStravaApiSourced()).thenReturn(true);
+        RunMetricsProjection fileRun = runMetric(utcTime, 18, 5400);
+        when(fileRun.getStartTime()).thenReturn(utcTime);
+        when(fileRun.getStravaApiSourced()).thenReturn(false);
+
+        // Respect the actual query bounds, so a UTC run beyond local midnight cannot sneak in.
+        var stored = new ArrayList<>(List.of(apiRun));
+        when(activities.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any())).thenAnswer(call -> {
+            LocalDateTime from = call.getArgument(2);
+            LocalDateTime to = call.getArgument(3);
+            return stored.stream().filter(run -> !run.getEffectiveStartTime().isBefore(from)
+                    && !run.getEffectiveStartTime().isAfter(to)).toList();
+        });
+        var apiSnapshot = service.resolveReadinessSnapshot(runner, new CoachRunnerState(), day);
+        assertThat(apiSnapshot.availability().trainingLoad()).isTrue();
+        assertThat(apiSnapshot.readiness().loadScore()).isNotNull();
+        stored.set(0, fileRun);
+        var fileSnapshot = service.resolveReadinessSnapshot(runner, new CoachRunnerState(), day);
+        assertThat(fileSnapshot.availability().trainingLoad()).isTrue();
+        assertThat(fileSnapshot.readiness().loadScore()).isEqualTo(apiSnapshot.readiness().loadScore());
+    }
+
+    @Test
+    void readinessTrendEndsOnTheSameAccountDayAsTheWorkout() {
+        Runner runner = new Runner();
+        runner.setTimeZone("America/Los_Angeles");
+        LocalDate serverDay = LocalDate.of(2026, 10, 7);
+        LocalDate accountDay = serverDay.minusDays(1);
+        var activities = mock(ActivityRepository.class);
+        var service = new ReadinessService(mock(DailySleepDataRepository.class), mock(DailyHRVDataRepository.class),
+                mock(DailyStressDataRepository.class), mock(DailyWellnessSummaryRepository.class), activities);
+        LocalDateTime utcTime = LocalDateTime.of(2026, 10, 7, 1, 0);
+        RunMetricsProjection run = runMetric(utcTime, 18, 5400);
+        when(run.getStartTime()).thenReturn(utcTime);
+        when(run.getStravaApiSourced()).thenReturn(false);
+        when(activities.findRunMetricsBetween(eq(runner), eq(ActivityType.RUN), any(), any()))
+                .thenReturn(List.of(run));
+        var current = service.resolveReadinessSnapshot(runner, new CoachRunnerState(), accountDay);
+        try (var dates = mockStatic(LocalDate.class, CALLS_REAL_METHODS)) {
+            dates.when(LocalDate::now).thenReturn(serverDay);
+            dates.when(() -> LocalDate.now(java.time.ZoneId.of(runner.getTimeZone()))).thenReturn(accountDay);
+            var trend = service.getReadinessTrend(runner, 2);
+            assertThat(trend.get(1).date()).isEqualTo(accountDay);
+            assertThat(trend.get(1).score()).isEqualTo(current.readiness().score());
+        }
     }
 
     private RunMetricsProjection runMetric(LocalDateTime startedAt, double distanceKm, long durationSeconds) {

@@ -1,5 +1,6 @@
 package com.hermes.backend.shoes;
 
+import com.hermes.backend.billing.AiSpendingBudget;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +20,7 @@ public class AiShoeScanService {
             "Example: [{\"brand\":\"Nike\",\"model\":\"Pegasus 41\",\"distanceKm\":342.5}]";
 
     private final RestTemplate restTemplate;
+    private final AiSpendingBudget spendingBudget;
 
     @Value("${app.ai.api-key:}")
     private String aiApiKey;
@@ -29,11 +31,13 @@ public class AiShoeScanService {
     @Value("${app.ai.provider:gemini}")
     private String aiProvider;
 
-    public AiShoeScanService(RestTemplate restTemplate) {
+    public AiShoeScanService(RestTemplate restTemplate, AiSpendingBudget spendingBudget) {
         this.restTemplate = restTemplate;
+        this.spendingBudget = spendingBudget;
     }
 
     public String callAi(String base64, String mediaType) {
+        spendingBudget.reserve();
         if ("claude".equalsIgnoreCase(aiProvider)) {
             return callClaude(base64, mediaType);
         }
@@ -43,6 +47,7 @@ public class AiShoeScanService {
     @SuppressWarnings("unchecked")
     private String callGemini(String base64, String mediaType) {
         Map<String, Object> request = Map.of(
+                "generationConfig", Map.of("maxOutputTokens", 1024),
                 "contents", List.of(Map.of(
                         "parts", List.of(
                                 Map.of("inline_data", Map.of(

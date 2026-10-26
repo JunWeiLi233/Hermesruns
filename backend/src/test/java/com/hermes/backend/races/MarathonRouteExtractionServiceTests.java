@@ -754,6 +754,14 @@ RecordingMarathonRouteExtractionService service = new RecordingMarathonRouteExtr
     }
 
     private static Path resolveRouteExtractionPython() {
+        String configuredPython = System.getenv("APP_ROUTE_EXTRACTION_PYTHON_COMMAND");
+        if (configuredPython != null && !configuredPython.isBlank()) {
+            Path configuredPath = Path.of(configuredPython.trim()).toAbsolutePath();
+            assertThat(configuredPath)
+                    .as("configured route extraction Python executable")
+                    .isRegularFile();
+            return configuredPath;
+        }
         for (Path candidate : List.of(
                 Path.of(".venv", "Scripts", "python.exe"),
                 Path.of("backend", ".venv", "Scripts", "python.exe"),

@@ -1,0 +1,160 @@
+/* Heatmap Redesign.html: floating controls, without reserving space from the map. */
+.workout-map {
+  --wm-ink:#1c1917; --wm-surface:#fff; --wm-soft:#f2f2f7; --wm-line:#e7e5e4;
+  --wm-focus:#a0392a; --wm-accent:#a0392a; --wm-map:#eceee8; --wm-muted:#625c56;
+  --wm-shadow:0 8px 28px #1c19171a; --wm-control:44px; --wm-edge:16px;
+  --wm-panel:380px; --wm-small:12px; --wm-border:1px; --wm-outline:3px; --wm-offset:2px;
+  font-family:Manrope,"Segoe UI","PingFang SC",sans-serif;
+}
+html body #root .workout-map {position:fixed;inset:0;width:100%;height:100dvh;min-height:0;margin:0;padding:0;overflow:hidden;background:var(--wm-map);color:var(--wm-ink);font-size:14px;line-height:1.45;}
+.workout-map * {box-sizing:border-box;}
+.workout-map .workout-map-surface {position:absolute;inset:0;width:100%;height:100%;background:var(--wm-map);}
+.workout-map-streets {filter:grayscale(1) contrast(.82) brightness(1.08);}
+.workout-map :is(button,a,input,select,summary):focus-visible,.workout-map-surface:focus-visible {outline:3px solid var(--wm-focus);outline-offset:2px;}
+.workout-map :is(button,a) {color:var(--wm-ink);}
+.workout-map button {cursor:pointer;}
+.workout-map button:disabled {cursor:default;opacity:.5;}
+.workout-map :is(button,input,select) {font:inherit;}
+.workout-map :is(.workout-map-summary,.workout-map-summary-toggle,.workout-map-account,.workout-map-zoom,.workout-map-panel,.workout-map-status,.workout-map-clear) {position:absolute;z-index:650;}
+.workout-map-summary {left:max(var(--wm-edge),env(safe-area-inset-left));top:max(var(--wm-edge),env(safe-area-inset-top));width:400px;padding:18px 18px 14px;background:var(--wm-surface);border-radius:20px;box-shadow:var(--wm-shadow);}
+.workout-map-summary-row {display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;}
+.workout-map-heading {flex:1;min-width:0;}
+.workout-map h1 {margin:0;color:var(--wm-ink);font:italic 800 26px/1.1 Manrope,"Segoe UI",sans-serif;letter-spacing:-.03em;}
+.workout-map-total {display:block;margin-top:6px;white-space:nowrap;font-size:13px;font-weight:650;font-variant-numeric:tabular-nums;}
+.workout-map-tools {display:flex;gap:6px;align-items:center;flex:none;}
+.workout-map-icon {position:relative;display:grid;place-items:center;flex:none;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:var(--wm-soft);text-decoration:none;font-size:24px;}
+.workout-map .workout-map-icon svg {width:18px;height:18px;}
+.workout-map .workout-map-icon.is-active {background:var(--wm-ink);color:#fff;}
+.workout-map .workout-map-filter-trigger {display:flex;align-items:center;justify-content:center;gap:7px;width:auto;padding:0 13px;font-size:13px;font-weight:750;}
+.workout-map .workout-map-collapse {width:28px;background:transparent;color:var(--wm-muted);}
+.workout-map-summary-toggle {left:var(--wm-edge);top:var(--wm-edge);display:grid;place-items:center;width:52px;height:52px;border:0;border-radius:16px;background:var(--wm-surface);color:var(--wm-accent);box-shadow:var(--wm-shadow);}
+.workout-map-badge {display:grid;place-items:center;font-size:11px;background:var(--wm-accent);color:#fff;border-radius:99px;min-width:18px;height:18px;padding:0 4px;}
+.workout-map-summary-toggle .workout-map-badge {position:absolute;right:-4px;top:-4px;box-shadow:0 0 0 2px #fff;}
+.workout-map-dates {display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--wm-soft);}
+.workout-map-dates button {flex:1;min-width:0;min-height:32px;padding:4px 10px;border:0;border-radius:999px;background:transparent;font-size:12px;font-weight:750;white-space:nowrap;}
+.workout-map-dates button[aria-pressed=true] {background:var(--wm-surface);box-shadow:0 1px 3px #1c19171f;}
+.workout-map-account {top:var(--wm-edge);right:var(--wm-edge);display:flex;align-items:center;gap:4px;height:48px;padding:0 6px;background:var(--wm-surface);border-radius:999px;box-shadow:var(--wm-shadow);z-index:700;}
+.workout-map-account>a,.workout-map-account .runner-shell-icon-btn {display:grid;place-items:center;width:36px;height:36px;min-width:0;padding:0;border:0;border-radius:50%;background:transparent;color:var(--wm-muted);text-decoration:none;}
+.workout-map-account svg {width:18px;height:18px;}
+.workout-map-account .runner-shell-avatar {width:34px;height:34px;min-width:0;padding:0;border:0;border-radius:50%;background:var(--wm-ink);color:#fff;font-size:13px;font-weight:800;}
+.workout-map-account .runner-shell-notification-wrap {position:relative;}
+.workout-map-account .account-menu-popover {top:calc(100% + 12px);right:0;}
+.workout-map-zoom {right:var(--wm-edge);bottom:max(20px,env(safe-area-inset-bottom));display:grid;background:var(--wm-surface);border-radius:14px;box-shadow:var(--wm-shadow);overflow:hidden;}
+.workout-map.has-panel .workout-map-zoom {right:calc(var(--wm-panel) + var(--wm-edge)*2);}
+.workout-map-zoom button {position:relative;display:grid;place-items:center;width:44px;height:44px;border:0;background:transparent;font-size:20px;font-weight:650;padding:0;}
+.workout-map-zoom button+button:before {content:'';position:absolute;top:0;left:8px;right:8px;height:1px;background:var(--wm-line);}
+.workout-map-zoom svg {width:18px;height:18px;}
+.workout-map-panel {right:var(--wm-edge);top:76px;bottom:max(16px,env(safe-area-inset-bottom));width:var(--wm-panel);max-height:calc(100dvh - 92px);overflow:hidden;display:flex;flex-direction:column;background:var(--wm-surface);border:0;border-radius:20px;box-shadow:0 16px 48px #1c19172e;}
+.workout-map-panel header {display:flex;flex:none;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px 12px;}
+.workout-map-panel h1 {font-size:22px;line-height:1.2;overflow-wrap:anywhere;}
+.workout-map-panel header .workout-map-icon {width:36px;height:36px;margin-top:0;}
+.workout-map-panel-body {flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:4px 20px 20px;scrollbar-width:thin;scrollbar-color:#aaa transparent;}
+.workout-map-panel label {display:grid;gap:8px;margin:0 0 22px;font-size:12px;font-weight:650;color:var(--wm-muted);}
+.workout-map-panel :is(input:not([type=color]):not([type=range]):not([type=radio]),select) {width:100%;min-width:0;min-height:44px;padding:10px 13px;color:var(--wm-ink);background:var(--wm-soft);border:1px solid transparent;border-radius:12px;font-size:14px;font-weight:400;}
+.workout-map-panel input[type=search] {padding-left:14px;}
+.workout-map-panel :is(input,select):focus {border-color:var(--wm-focus);}
+.workout-map-pair {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;}
+.workout-map-filter-form {display:flex;flex-direction:column;min-height:0;flex:1;}
+.workout-map-panel fieldset {padding:0;margin:0;border:0;min-width:0;}
+.workout-map-panel legend {font-size:12px;font-weight:750;color:var(--wm-muted);margin-bottom:10px;padding:0;}
+.workout-map-panel .workout-map-filter-section {margin-bottom:22px;}
+.workout-map-filter-section .workout-map-pair {margin-top:12px;}
+.workout-map-filter-section .workout-map-pair label {margin-bottom:0;font-weight:400;}
+.workout-map-chips {display:flex;flex-wrap:wrap;gap:6px;}
+.workout-map-chips button {min-height:34px;padding:6px 13px;font-size:12px;font-weight:750;border:0;border-radius:99px;background:var(--wm-soft);}
+.workout-map-chips button[aria-pressed=true] {background:var(--wm-ink);color:#fff;}
+.workout-map-filter-footer {display:flex;gap:10px;flex:none;padding:12px 20px 16px;border-top:1px solid var(--wm-line);background:var(--wm-surface);}
+.workout-map-filter-footer button {min-height:44px;padding:9px 14px;border:1px solid #d6d3d1;border-radius:99px;font-size:13px;font-weight:750;background:var(--wm-surface);}
+.workout-map .workout-map-primary {flex:1;background:var(--wm-accent);color:#fff;border-color:var(--wm-accent);}
+.workout-map-panel .workout-map-choice-group {margin-bottom:24px;}
+.workout-map-choice-grid {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;}
+.workout-map-panel .workout-map-choice {position:relative;display:block;margin:0;color:var(--wm-ink);cursor:pointer;}
+.workout-map-choice input {position:absolute;opacity:0;width:1px;height:1px;}
+.workout-map-choice-content {display:flex;flex-direction:column;gap:10px;border:1px solid #deddda;border-radius:16px;padding:10px;}
+.workout-map-choice input:checked+.workout-map-choice-content {outline:2px solid var(--wm-ink);outline-offset:-2px;}
+.workout-map-choice input:focus-visible+.workout-map-choice-content {outline:3px solid var(--wm-focus);outline-offset:2px;}
+.workout-map-choice strong {font-size:12px;line-height:1.3;}
+.workout-map-route-preview,.workout-map-base-preview {display:block;height:64px;width:100%;border-radius:10px;background:#eceee8;}
+.workout-map-base-preview {background-color:#eceee8;background-image:linear-gradient(#fff 3px,transparent 3px),linear-gradient(90deg,#fff 3px,transparent 3px);background-size:24px 21px;}
+.workout-map-base-preview.is-dark {background-color:#1b1d20;background-image:linear-gradient(#373b40 3px,transparent 3px),linear-gradient(90deg,#373b40 3px,transparent 3px);}
+.workout-map-panel .workout-map-width {margin-bottom:24px;}
+.workout-map-width>span {display:flex;justify-content:space-between;}
+.workout-map-width output {color:var(--wm-ink);font-variant-numeric:tabular-nums;}
+.workout-map-width input {width:100%;accent-color:var(--wm-accent);margin:0;min-height:24px;}
+.workout-map-range-ends {font-size:11px;font-weight:400;color:#746d66;}
+.workout-map-color {display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 0;border-top:1px solid var(--wm-line);font-size:13px;}
+.workout-map-swatches {display:flex;align-items:center;gap:6px;}
+.workout-map-swatch {width:26px;height:26px;min-width:0;border-radius:50%;border:1px solid #1c19171f;background:var(--swatch);padding:0;}
+.workout-map-swatch[aria-pressed=true] {outline:2px solid var(--wm-ink);outline-offset:2px;}
+.workout-map-panel .workout-map-custom-color {display:block;margin:0;width:26px;height:26px;}
+.workout-map-custom-color input {width:26px;height:26px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;}
+.workout-map-save {display:flex;align-items:center;gap:8px;flex:none;padding:12px 20px;border-top:1px solid var(--wm-line);font-size:12px;color:var(--wm-muted);}
+.workout-map-save>span {width:7px;height:7px;border-radius:50%;background:#3f8f5a;flex:none;}
+.workout-map-save>span.is-pending {background:#a0392a;}
+.workout-map-actions {display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;}
+.workout-map :is(.workout-map-actions button,.workout-map-status button,.workout-map-clear,.workout-map-panel details>button,.workout-map-popup p[role=status]>button,.workout-map-save button) {min-height:40px;padding:8px 12px;border:1px solid var(--wm-line);border-radius:99px;background:var(--wm-surface);}
+.workout-map-panel details {margin-top:16px;border-top:1px solid var(--wm-line);padding-top:12px;}
+.workout-map-panel summary {cursor:pointer;padding:8px 0;font-weight:650;font-size:13px;}
+.workout-map-advanced {margin-bottom:12px;}
+.workout-map-overlap-note {font-size:12px;color:var(--wm-muted);}
+.workout-map-overlap-note button {font:inherit;text-decoration:underline;border:0;background:transparent;padding:8px 0;min-height:44px;}
+.workout-map-list-item {display:grid;gap:6px;width:100%;padding:12px 0;text-align:start;border:0;border-bottom:1px solid var(--wm-line);background:transparent;}
+.workout-map-list-item span {font-size:12px;color:var(--wm-muted);}
+.workout-map-popup {bottom:auto;overflow-y:auto;padding:0 20px 20px;}
+.workout-map-popup header {padding:18px 0 12px;}
+.workout-map-popup dl {margin:0;}
+.workout-map-popup dl>div {display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--wm-line);}
+.workout-map-popup dt {color:var(--wm-muted);}
+.workout-map-popup dd {margin:0;text-align:end;overflow-wrap:anywhere;}
+.workout-map-status {bottom:20px;left:50%;transform:translateX(-50%);max-width:calc(100% - 130px);padding:10px 16px;border-radius:16px;background:var(--wm-surface);box-shadow:var(--wm-shadow);font-size:12px;}
+.workout-map-status button {margin-inline-start:8px;}
+.workout-map-clear {left:var(--wm-edge);top:176px;box-shadow:var(--wm-shadow);}
+.workout-map.is-summary-collapsed .workout-map-clear {top:80px;}
+.workout-map-sr {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0;}
+.workout-map-start {background:var(--wm-surface);border:var(--wm-border) solid var(--wm-ink);border-radius:50%;color:var(--wm-ink);font-weight:bold;display:grid;place-items:center;}
+html body #root .workout-map .leaflet-control-attribution {display:block;background:var(--wm-surface);color:var(--wm-muted);font-size:var(--wm-small);}
+html body #root .workout-map .leaflet-control-attribution a {color:var(--wm-ink);text-decoration:underline;}
+
+@media (max-width:759px) {
+  .workout-map {--wm-edge:12px;}
+  .workout-map-summary {width:auto;right:12px;padding:14px 14px 12px;}
+  .workout-map-summary-row {gap:8px;margin-bottom:12px;}
+  .workout-map h1 {font-size:24px;}
+  .workout-map .workout-map-filter-label {display:none;}
+  .workout-map .workout-map-filter-trigger {width:40px;padding:0;}
+  .workout-map .workout-map-filter-trigger:has(.workout-map-badge) {width:auto;padding:0 7px;gap:4px;}
+  .workout-map-account {top:auto;bottom:20px;left:12px;right:auto;height:44px;}
+  .workout-map-account .workout-map-home {display:none;}
+  .workout-map-account .runner-shell-notification-popover,.workout-map-account .account-menu-popover {top:auto;bottom:calc(100% + 12px);left:0;right:auto;max-width:calc(100vw - 24px);}
+  .workout-map-panel {top:auto;left:0;right:0;bottom:0;width:100%;max-height:calc(100dvh - 164px);border-radius:24px 24px 0 0;padding-bottom:env(safe-area-inset-bottom);}
+  .workout-map-panel header {padding:16px 20px 12px;}
+  .workout-map.has-panel .workout-map-zoom {right:12px;bottom:auto;top:172px;z-index:640;}
+  .workout-map-zoom {bottom:max(20px,env(safe-area-inset-bottom));}
+  .workout-map.has-panel .workout-map-account {display:none;}
+  .workout-map-popup {max-height:65dvh;}
+  .workout-map-popup header {padding:16px 0 12px;}
+  .workout-map-total {font-size:12px;}
+  .workout-map-clear {top:160px;max-width:calc(100% - 80px);}
+  .workout-map-status {bottom:76px;max-width:calc(100% - 32px);}
+  .workout-map.has-panel .workout-map-status {display:none;}
+  .workout-map-colors .workout-map-color {flex-wrap:wrap;}
+}
+@media (max-width:359px) {
+  .workout-map-summary {padding:12px;}
+  .workout-map h1 {font-size:22px;}
+  .workout-map-tools {gap:3px;}
+  .workout-map-dates button {font-size:11px;padding:4px 5px;}
+  .workout-map .workout-map-collapse {width:24px;}
+}
+.workout-map button {transition:none;}
+
+.workout-map-panel-notice {padding:8px 20px 12px;font-size:12px;color:var(--wm-muted);}
+@media(max-width:759px) {.workout-map.has-panel .workout-map-zoom {visibility:hidden;} .workout-map-account .workout-map-home {display:grid;}}
+
+html body #root .workout-map .workout-map-account .runner-shell-avatar {background:#1c1917!important;color:#fff!important;}
+
+.workout-map-panel :is(label,legend,label span,.workout-map-choice strong) {text-transform:none;letter-spacing:normal;}
+.workout-map-custom-color.is-selected {outline:2px solid var(--wm-ink);outline-offset:2px;border-radius:50%;}
+.workout-map-custom-color input::-webkit-color-swatch-wrapper {padding:0;}
+.workout-map-custom-color input::-webkit-color-swatch {border:0;border-radius:50%;}
+.workout-map-custom-color input::-moz-color-swatch {border:0;border-radius:50%;}

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import AuthenticatedPageChrome from '../../components/AuthenticatedPageChrome';
 import { ImportActivityForm } from '../../components/ImportActivityModal';
 import { useI18n } from '../../contexts/I18nContext';
+import { QueuedImportStatus } from '../../features/training/integrated/AthleteTools';
 
 const GUIDE_PROVIDER = { fit: 'generic', coros: 'coros', huawei: 'huawei' };
 const QUICK_STEP_COUNT = 3;
@@ -11,7 +12,6 @@ export default function ImportDataSettings() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const [source, setSource] = useState('fit');
-  const [importedCount, setImportedCount] = useState(null);
   const provider = GUIDE_PROVIDER[source] || 'generic';
 
   return (
@@ -19,10 +19,6 @@ export default function ImportDataSettings() {
       <section className="import-data-page import-page-v2">
         <header className="import-page-v2-head">
           <div className="import-page-v2-title">
-            <button type="button" className="import-page-v2-back" onClick={() => navigate('/settings')}>
-              <span aria-hidden="true">←</span>
-              <span>{t('profile.settings')}</span>
-            </button>
             <h1>{t('profile.import_modal_title')}</h1>
             <p>{t('profile.import_hint')}</p>
           </div>
@@ -33,23 +29,16 @@ export default function ImportDataSettings() {
           </div>
         </header>
 
-        {importedCount != null ? (
-          <div className="import-page-v2-success" role="status">
-            <span>{t('settings.import_v2_success', { count: importedCount })}</span>
-            <button type="button" onClick={() => navigate('/runs')}>{t('profile.garmin_v2_view_runs')} →</button>
-          </div>
-        ) : null}
-
         <div className="import-page-v2-grid">
           <div className="import-page-v2-main">
             <ImportActivityForm
               t={t}
               className="is-page"
               onSourceChange={setSource}
-              onBusyChange={(busy) => { if (busy) setImportedCount(null); }}
               onCancel={() => navigate('/settings')}
-              onSuccess={(count) => setImportedCount(count)}
+              onViewRuns={() => navigate('/runs')}
             />
+            <QueuedImportStatus />
           </div>
 
           <aside className="import-page-v2-guide" aria-labelledby="import-page-v2-guide-title">

@@ -18,11 +18,27 @@ import static org.mockito.Mockito.when;
 class RouteHeatmapAnchorServiceTests {
 
     @Test
-    void selectAnchorPrefersTheCellVisitedByMoreDistinctRuns() {
+    void newlyStoredGpsInvalidatesOnlyItsRunnersHeatmapAndSourceRevision() {
+        var points = mock(ActivityPointRepository.class);
+        var cache = TtlCacheStore.inMemoryForTests(new ObjectMapper(), Clock.systemUTC());
+        var service = new RouteHeatmapAnchorService(points, cache);
+        Runner runner = new Runner(); runner.setId(7L);
+        when(points.findDensestHeatmapAnchor(7L, ActivityType.RUN.name()))
+                .thenReturn(java.util.Collections.singletonList(new Object[]{40.7, -74.0, 1, 10}))
+                .thenReturn(java.util.Collections.singletonList(new Object[]{40.8, -73.9, 2, 30}));
+        assertThat(service.findAnchor(runner).startLat()).isEqualTo(40.7);
+        String original = service.sourceRevision(7L);
+        service.pointsStored(new com.hermes.backend.activity.ActivityPointsStoredEvent(8L, 10L));
+        assertThat(service.findAnchor(runner).startLat()).isEqualTo(40.7);
+        service.pointsStored(new com.hermes.backend.activity.ActivityPointsStoredEvent(7L, 11L));
+        assertThat(service.sourceRevision(7L)).isNotEqualTo(original);
+        assertThat(service.findAnchor(runner).startLat()).isEqualTo(40.8);
+    }
+
+    @Test
+    void selectAnchorPrefersTheCellWithMoreGpsPointsBeforeDistinctRuns() {
         RouteHeatmapAnchorService.RouteAnchor anchor = RouteHeatmapAnchorService.selectAnchor(List.of(
-                point(1L, 40.71241, -74.00641),
-                point(1L, 40.71242, -74.00642),
-                point(2L, 40.71243, -74.00643),
+                new Object[]{40.71242, -74.00642, 2, 3},
                 point(3L, 40.71244, -74.00644),
                 point(9L, 40.73041, -73.99041),
                 point(9L, 40.73042, -73.99042),
@@ -32,10 +48,37 @@ class RouteHeatmapAnchorServiceTests {
         ));
 
         assertThat(anchor).isNotNull();
-        assertThat(anchor.activityCount()).isEqualTo(3);
-        assertThat(anchor.pointCount()).isEqualTo(4);
-        assertThat(anchor.startLat()).isBetween(40.7124, 40.7125);
-        assertThat(anchor.startLng()).isBetween(-74.0065, -74.0064);
+        assertThat(anchor.activityCount()).isEqualTo(1);
+        assertThat(anchor.pointCount()).isEqualTo(5);
+        assertThat(anchor.startLat()).isEqualTo(40.73043);
+        assertThat(anchor.startLng()).isEqualTo(-73.99043);
+    }
+
+    @Test
+    void selectAnchorUsesAnObservedGpsPointRatherThanAnInventedCentroid() {
+        RouteHeatmapAnchorService.RouteAnchor anchor = RouteHeatmapAnchorService.selectAnchor(List.of(
+                point(1L, 40.71210, -74.00610),
+                point(1L, 40.71220, -74.00620),
+                point(1L, 40.71280, -74.00680)
+        ));
+
+        assertThat(anchor).isNotNull();
+        assertThat(anchor.startLat()).isEqualTo(40.71220);
+        assertThat(anchor.startLng()).isEqualTo(-74.00620);
+    }
+
+    @Test
+    void selectAnchorBreaksPointCountTiesByDistinctRuns() {
+        RouteHeatmapAnchorService.RouteAnchor anchor = RouteHeatmapAnchorService.selectAnchor(List.of(
+                point(1L, 40.71210, -74.00610),
+                point(1L, 40.71220, -74.00620),
+                point(2L, 40.73010, -73.99010),
+                point(3L, 40.73020, -73.99020)
+        ));
+
+        assertThat(anchor).isNotNull();
+        assertThat(anchor.activityCount()).isEqualTo(2);
+        assertThat(anchor.startLat()).isBetween(40.73010, 40.73020);
     }
 
     @Test
@@ -43,7 +86,8 @@ class RouteHeatmapAnchorServiceTests {
         RouteHeatmapAnchorService.RouteAnchor anchor = RouteHeatmapAnchorService.selectAnchor(List.of(
                 point(1L, 91.0, -74.0),
                 point(2L, 40.7, -181.0),
-                point(3L, Double.NaN, -74.0)
+                point(3L, Double.NaN, -74.0),
+                point(4L, 0.0, 0.0)
         ));
 
         assertThat(anchor).isNull();
@@ -57,11 +101,9 @@ class RouteHeatmapAnchorServiceTests {
 
         Runner runner = new Runner();
         runner.setId(7L);
-        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name()))
-                .thenReturn(List.of(
-                        point(1L, 40.71241, -74.00641),
-                        point(1L, 40.71242, -74.00642),
-                        point(2L, 40.71243, -74.00643)
+        when(activityPointRepository.findDensestHeatmapAnchor(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(
+                        new Object[]{40.71242, -74.00642, 2, 3}
                 ));
 
         RouteHeatmapAnchorService.RouteAnchor first = service.findAnchor(runner);
@@ -75,7 +117,7 @@ class RouteHeatmapAnchorServiceTests {
         assertThat(second.pointCount()).isEqualTo(first.pointCount());
         // The whole-history GPS aggregation runs once; the repeat read is cache-served.
         verify(activityPointRepository, times(1))
-                .findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name());
+                .findDensestHeatmapAnchor(7L, ActivityType.RUN.name());
     }
 
     @Test
@@ -88,10 +130,10 @@ class RouteHeatmapAnchorServiceTests {
         runnerA.setId(7L);
         Runner runnerB = new Runner();
         runnerB.setId(8L);
-        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name()))
-                .thenReturn(List.<Object[]>of(point(1L, 40.71241, -74.00641)));
-        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(8L, ActivityType.RUN.name()))
-                .thenReturn(List.<Object[]>of(point(2L, 41.81241, -87.62641)));
+        when(activityPointRepository.findDensestHeatmapAnchor(7L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{40.71241, -74.00641, 1, 1}));
+        when(activityPointRepository.findDensestHeatmapAnchor(8L, ActivityType.RUN.name()))
+                .thenReturn(List.<Object[]>of(new Object[]{41.81241, -87.62641, 1, 1}));
 
         RouteHeatmapAnchorService.RouteAnchor firstA = service.findAnchor(runnerA);
         RouteHeatmapAnchorService.RouteAnchor firstB = service.findAnchor(runnerB);
@@ -103,9 +145,9 @@ class RouteHeatmapAnchorServiceTests {
         assertThat(firstB.startLat()).isEqualTo(secondB.startLat()).isCloseTo(41.81241, org.assertj.core.data.Offset.offset(1e-9));
         // Two runners -> two full-history scans total, one per runner.
         verify(activityPointRepository, times(1))
-                .findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name());
+                .findDensestHeatmapAnchor(7L, ActivityType.RUN.name());
         verify(activityPointRepository, times(1))
-                .findAllHeatmapPointsByRunnerAndType(8L, ActivityType.RUN.name());
+                .findDensestHeatmapAnchor(8L, ActivityType.RUN.name());
     }
 
     @Test
@@ -116,14 +158,14 @@ class RouteHeatmapAnchorServiceTests {
 
         Runner runner = new Runner();
         runner.setId(7L);
-        when(activityPointRepository.findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name()))
+        when(activityPointRepository.findDensestHeatmapAnchor(7L, ActivityType.RUN.name()))
                 .thenReturn(List.of());
 
         assertThat(service.findAnchor(runner)).isNull();
         assertThat(service.findAnchor(runner)).isNull();
         // A null (no-data) result is not cached: every call must re-check the source.
         verify(activityPointRepository, times(2))
-                .findAllHeatmapPointsByRunnerAndType(7L, ActivityType.RUN.name());
+                .findDensestHeatmapAnchor(7L, ActivityType.RUN.name());
     }
 
     private static Object[] point(long activityId, double latitude, double longitude) {

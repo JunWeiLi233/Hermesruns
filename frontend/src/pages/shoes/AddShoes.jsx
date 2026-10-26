@@ -28,41 +28,43 @@ function normalizeBrandKey(brand) {
   return (brand || '').toString().trim().toLowerCase().replace(/[\s!.,'"-]+/g, '');
 }
 
-const CATALOG_CATEGORY_META = {
-  all: { zh: '全部', en: 'All' },
-  trainer: { zh: '训练鞋', en: 'Trainer' },
-  cushion: { zh: '缓震', en: 'Cushion' },
-  race: { zh: '竞速', en: 'Race' },
-  test: { zh: '测试', en: 'Test' },
-  stability: { zh: '稳定', en: 'Stability' },
-  support: { zh: '支撑', en: 'Support' },
-  lowstack: { zh: '低堆叠', en: 'Low Stack' },
-  lowstackcommute: { zh: '低堆叠通勤', en: 'Low Stack Commute' },
-  lowstackrace: { zh: '低堆叠竞速', en: 'Low Stack Race' },
-  lowstacktrainer: { zh: '低堆叠训练', en: 'Low Stack Trainer' },
-  supershoe: { zh: '超级跑鞋', en: 'Super Shoe' },
-  trainerrace: { zh: '训练/竞速', en: 'Trainer/Race' },
-  trail: { zh: '越野', en: 'Trail' },
+const CATALOG_CATEGORY_KEYS = {
+  '全部': 'all',
+  '缓震': 'cushion',
+  '综训': 'trainer',
+  '支撑': 'support',
+  '综训/竞速': 'trainerrace',
+  '速度': 'speed',
+  '竞速': 'race',
+  '薄底': 'lowstack',
+  '薄底竞速': 'lowstackrace',
+  '薄底通勤': 'lowstackcommute',
+  '薄底综训': 'lowstacktrainer',
+  '厚底竞速': 'thickstackrace',
+  '竞训': 'speedtrainer',
+  '体测': 'fitnesstest',
+  '稳定': 'stability',
+  '路跑缓震': 'roadcushion',
+  '路跑竞速': 'roadrace',
+  '路跑速度': 'roadspeed',
+  '全地形': 'allterrain',
+  '越野': 'trail',
+  '越野防水': 'trailwaterproof',
+  '越野竞速': 'trailrace',
+  '越野路跑': 'trailroad',
+  '越野泥地': 'trailmud',
+  '越野长距': 'traillongdistance',
+  '越野综训': 'trailtrainer',
 };
+const CATALOG_CATEGORY_KEY_SET = new Set(Object.values(CATALOG_CATEGORY_KEYS));
 
-function getCatalogCategoryLabel(category, lang) {
-  const raw = (category || '').toString();
-  if (!raw) return lang === 'zh-CN' ? '其他' : 'Other';
-  const normalized = normalizeBrandKey(raw);
-  if (normalized === 'all') return lang === 'zh-CN' ? CATALOG_CATEGORY_META.all.zh : CATALOG_CATEGORY_META.all.en;
-  if (normalized.includes('trail')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trail.zh : CATALOG_CATEGORY_META.trail.en;
-  if (normalized.includes('stability')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.stability.zh : CATALOG_CATEGORY_META.stability.en;
-  if (normalized.includes('support')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.support.zh : CATALOG_CATEGORY_META.support.en;
-  if (normalized.includes('cushion')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.cushion.zh : CATALOG_CATEGORY_META.cushion.en;
-  if (normalized.includes('test')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.test.zh : CATALOG_CATEGORY_META.test.en;
-  if (normalized.includes('super')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.supershoe.zh : CATALOG_CATEGORY_META.supershoe.en;
-  if (normalized.includes('trainerrace')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trainerrace.zh : CATALOG_CATEGORY_META.trainerrace.en;
-  if (normalized.includes('lowstackcommute')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstackcommute.zh : CATALOG_CATEGORY_META.lowstackcommute.en;
-  if (normalized.includes('lowstackrace')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstackrace.zh : CATALOG_CATEGORY_META.lowstackrace.en;
-  if (normalized.includes('lowstacktrainer')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstacktrainer.zh : CATALOG_CATEGORY_META.lowstacktrainer.en;
-  if (normalized.includes('lowstack')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.lowstack.zh : CATALOG_CATEGORY_META.lowstack.en;
-  if (normalized.includes('race')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.race.zh : CATALOG_CATEGORY_META.race.en;
-  if (normalized.includes('trainer') || normalized.includes('daily')) return lang === 'zh-CN' ? CATALOG_CATEGORY_META.trainer.zh : CATALOG_CATEGORY_META.trainer.en;
+function getCatalogCategoryLabel(category, t) {
+  const raw = (category || '').toString().trim();
+  if (!raw) return t('shoeCatalog.category_other');
+  const normalized = normalizeBrandKey(raw).replaceAll('/', '');
+  const key = CATALOG_CATEGORY_KEYS[raw] || normalized;
+  if (CATALOG_CATEGORY_KEY_SET.has(key)) return t(`shoeCatalog.category.${key}`);
+  if (TYPE_LABELS[key]) return t(`shoes.${TYPE_LABELS[key]}`);
   return raw;
 }
 
@@ -189,11 +191,11 @@ export default function AddShoes() {
       .filter((item) => browserType === 'all' || (item.type || '') === browserType)
       .filter((item) => {
         if (!q) return true;
-        const haystack = [browserBrand?.brand, item.brand, item.model, item.modelEn, item.modelZh, item.category, item.type, localizeShoeBrand(browserBrand?.brand || item.brand || '', lang), getCatalogModelLabel(item, lang), getCatalogCategoryLabel(item.category || item.type, lang)].filter(Boolean).join(' ').toLowerCase();
+        const haystack = [browserBrand?.brand, item.brand, item.model, item.modelEn, item.modelZh, item.category, item.type, localizeShoeBrand(browserBrand?.brand || item.brand || '', lang), getCatalogModelLabel(item, lang), getCatalogCategoryLabel(item.category || item.type, t)].filter(Boolean).join(' ').toLowerCase();
         return haystack.includes(q);
       })
       .slice(0, 18);
-  }, [browserBrand, browserCategory, browserType, modelQuery, lang]);
+  }, [browserBrand, browserCategory, browserType, modelQuery, lang, t]);
   const selectedCatalogModel = useMemo(() => {
     if (!selectedModelKey) return null;
     return browserBrand?.models?.find((model) => `${browserBrand?.brand || ''}:${model.model}` === selectedModelKey) || null;
@@ -214,7 +216,7 @@ export default function AddShoes() {
   const browserModelPlaceholder = browserBrand
     ? t('shoes.add_page_search_models', { brand: localizeShoeBrand(browserBrand.brand, lang) })
     : t('shoes.add_page_search_models_empty');
-  const selectedCategoryLabel = selectedCatalogModel ? getCatalogCategoryLabel(selectedCatalogModel.category || selectedCatalogModel.type, lang) : '';
+  const selectedCategoryLabel = selectedCatalogModel ? getCatalogCategoryLabel(selectedCatalogModel.category || selectedCatalogModel.type, t) : '';
   const featuredBrand = browserBrand || browserBrandsToShow[0] || null;
   const secondaryBrands = browserBrandsToShow.filter((brand) => brand.brand !== featuredBrand?.brand);
   const selectedDistanceDisplay = `${formMaxDist || '--'} ${distanceUnitLabel}`;
@@ -252,12 +254,17 @@ export default function AddShoes() {
   async function handleSubmit(event) {
     event.preventDefault();
     if (!formBrand.trim() || !formModel.trim()) return;
+    const maxDistanceKm = Number(formMaxDist);
+    if (!formMaxDist.trim() || !Number.isFinite(maxDistanceKm) || maxDistanceKm < 100 || maxDistanceKm > 2000 || (maxDistanceKm - 100) % 50 !== 0) {
+      setSubmitState('invalid_mileage');
+      return;
+    }
     setSubmitState('saving');
     try {
       const response = await apiFetch('/api/shoes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brand: formBrand.trim(), model: formModel.trim(), nickname: formNickname.trim(), maxDistanceKm: Number(formMaxDist) || 500, isPrimary: formPrimary }),
+        body: JSON.stringify({ brand: formBrand.trim(), model: formModel.trim(), nickname: formNickname.trim(), maxDistanceKm, isPrimary: formPrimary }),
       });
       if (!response.ok) throw new Error('request_failed');
       navigate('/shoes');
@@ -381,7 +388,7 @@ export default function AddShoes() {
                   <div className="add-shoes-step-head"><span className="add-shoes-step-number">2</span><div><h2>{t('shoes.add_page_step_model_title')}</h2><p>{t('shoes.add_page_step_model_copy')}</p></div></div>
                   <div className="add-shoes-model-board-top">
                     <div className="add-shoes-filter-row">
-                      {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => handleCategoryFilterPick(categoryKey)} aria-pressed={browserCategory === categoryKey} aria-label={getCatalogCategoryLabel(categoryKey, lang)}>{getCatalogCategoryLabel(categoryKey, lang)}</button>)}
+                      {browserCategoryOptions.slice(0, 8).map((categoryKey) => <button key={categoryKey} type="button" className={cx('add-shoes-filter-chip', browserCategory === categoryKey && 'is-active')} onClick={() => handleCategoryFilterPick(categoryKey)} aria-pressed={browserCategory === categoryKey} aria-label={getCatalogCategoryLabel(categoryKey, t)}>{getCatalogCategoryLabel(categoryKey, t)}</button>)}
                       {browserTypeOptions.filter((typeKey) => typeKey !== 'all').slice(0, 4).map((typeKey) => <button key={typeKey} type="button" className={cx('add-shoes-filter-chip', browserType === typeKey && 'is-active')} onClick={() => handleTypeFilterPick(typeKey)} aria-pressed={browserType === typeKey} aria-label={t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}>{t(`shoes.${TYPE_LABELS[typeKey] || 'type_daily'}`)}</button>)}
                     </div>
                     <div className="add-shoes-search-row">
@@ -405,7 +412,7 @@ export default function AddShoes() {
                           <button key={cardKey} type="button" className={cx('add-shoes-model-card', isActive && 'is-active')} onClick={() => handleModelPick(model)} aria-label={getCatalogModelLabel(model, lang)}>
                             <span className="add-shoes-model-art"><ShoeBrandLogo brand={browserBrand?.brand || model.brand} logoUrl={browserBrand?.logoUrl || model.logoUrl} fallbackEmoji={browserBrand?.logo} /></span>
                             <strong>{getCatalogModelLabel(model, lang)}</strong>
-                            <span>{getCatalogCategoryLabel(model.category || model.type, lang)}</span>
+                            <span>{getCatalogCategoryLabel(model.category || model.type, t)}</span>
                           </button>
                         );
                       })}
@@ -430,9 +437,24 @@ export default function AddShoes() {
                     <form className="add-shoes-form" onSubmit={handleSubmit}>
                       <div className="add-shoes-form-grid">
                         <label className="add-shoes-field"><span className="modal-label">{t('shoes.nickname')}</span><input type="text" value={formNickname} onChange={(event) => setFormNickname(event.target.value)} placeholder={t('shoes.nickname_placeholder')} /></label>
-                        <label className="add-shoes-field"><span className="modal-label">{t('shoes.max_distance')}</span><input type="number" value={formMaxDist} onChange={(event) => setFormMaxDist(event.target.value)} min="100" max="2000" step="50" /></label>
+                        <label className="add-shoes-field">
+                          <span className="modal-label">{t('shoes.max_distance')}</span>
+                          <input
+                            type="number"
+                            value={formMaxDist}
+                            onChange={(event) => { setFormMaxDist(event.target.value); if (submitState === 'invalid_mileage') setSubmitState(''); }}
+                            onInvalid={() => setSubmitState('invalid_mileage')}
+                            required
+                            min="100"
+                            max="2000"
+                            step="50"
+                            aria-invalid={submitState === 'invalid_mileage' || undefined}
+                            aria-describedby={submitState === 'invalid_mileage' ? 'shoe-mileage-limit-error' : undefined}
+                          />
+                        </label>
                       </div>
                       <label className="add-shoes-toggle"><input type="checkbox" checked={formPrimary} onChange={(event) => setFormPrimary(event.target.checked)} /><span>{t('shoes.set_primary')}</span></label>
+                      {submitState === 'invalid_mileage' ? <p id="shoe-mileage-limit-error" className="add-shoes-form-error" role="alert">{t('shoes.mileage_limit_invalid')}</p> : null}
                       {submitState === 'error' ? <p className="add-shoes-form-error">{t('shoes.add_page_error')}</p> : null}
                       <div className="add-shoes-form-actions">
                         <button type="button" className="add-shoes-secondary-btn" onClick={() => navigate('/shoes')} aria-label={t('shoes.cancel')}>{t('shoes.cancel')}</button>

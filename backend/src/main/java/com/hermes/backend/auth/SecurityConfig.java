@@ -63,6 +63,8 @@ public class SecurityConfig {
                         // APP_CORS_ALLOWED_ORIGINS is configured; the actual requests below
                         // still require authentication.
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/internal/ready").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/internal/ready").permitAll()
                         .requestMatchers(
                                 "/api/auth/login", "/api/auth/signup", "/api/auth/verify-email",
                                 "/api/auth/forgot-password", "/api/auth/reset-password",
@@ -110,7 +112,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/index.html", "/assets/**",
                                 "/favicon.ico", "/favicon.svg", "/hermes-tab-icon.svg", "/icons.svg",
-                                "/apple-touch-icon.png", "/og-image.png",
+                                "/training-plan-sw.js", "/apple-touch-icon.png", "/og-image.png",
                                 "/robots.txt", "/sitemap.xml", "/llms.txt",
                                 "/images/**",
                                 "/error"

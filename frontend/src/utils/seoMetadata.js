@@ -1,23 +1,15 @@
+import { PUBLIC_HOME_COPY, PUBLIC_FREE_PLAN_PRICE, PUBLIC_HOME_REVIEW_DATE } from './publicHomeCopy.js';
+import { SUPPORT_EMAIL } from './supportContact.js';
+
 export const SITE_URL = 'https://hermesruns.com';
 export const SOCIAL_IMAGE_URL = `${SITE_URL}/og-image.png`;
 export const LOGO_URL = `${SITE_URL}/apple-touch-icon.png`;
 export const SOURCE_REPOSITORY_URL = 'https://github.com/JunWeiLi233/Hermesruns';
 
-const HOME_FEATURES = Object.freeze([
-  'Daily run, workout or rest call',
-  'VO2max estimation and training zones',
-  'Race finish time predictions',
-  'Interactive route heatmaps',
-  'Shoe mileage tracking',
-  'Strava sync and GPX, FIT and TCX file import',
-]);
-
 const SEO_COPY = Object.freeze({
   en: Object.freeze({
     home: Object.freeze({
-      title: 'Running Analytics You Can Check | HermesRuns',
-      description: 'A daily run, workout or rest call, plus VO2max, pace zones, race predictions and shoe mileage, worked out from your runs with published formulas.',
-      imageAlt: 'HermesRuns: running analytics you can check',
+      ...PUBLIC_HOME_COPY.en,
     }),
     terms: Object.freeze({
       title: 'Terms of Service and Use | HermesRuns',
@@ -37,9 +29,7 @@ const SEO_COPY = Object.freeze({
   }),
   'zh-CN': Object.freeze({
     home: Object.freeze({
-      title: '可核对的跑步数据分析 | HermesRuns',
-      description: '每天告诉你该跑、该练还是该休息，并给出 VO2max、配速区间、比赛预测和跑鞋里程。全部基于你的跑步数据，公式公开可查。',
-      imageAlt: 'HermesRuns：可核对的跑步数据分析',
+      ...PUBLIC_HOME_COPY['zh-CN'],
     }),
     terms: Object.freeze({
       title: '服务条款与账户使用 | HermesRuns',
@@ -76,6 +66,10 @@ const PAGE_TITLES = Object.freeze({
     todayRun: "Today's run",
     rewards: 'Rewards',
     trainingLog: 'Training log',
+    paceCurve: 'Pace curve',
+    vo2maxEstimates: 'VO2max estimates',
+    trends: 'Trends',
+    qualitySessions: 'Quality sessions',
     settings: 'Settings',
     importData: 'Import data',
     shoes: 'Shoes',
@@ -86,6 +80,7 @@ const PAGE_TITLES = Object.freeze({
     schedule: 'Schedule',
     muscleTraining: 'Muscle training',
     admin: 'Admin',
+    team: 'Coaching & teams',
   }),
   'zh-CN': Object.freeze({
     login: '登录',
@@ -101,6 +96,10 @@ const PAGE_TITLES = Object.freeze({
     todayRun: '今日训练',
     rewards: '奖励',
     trainingLog: '训练日志',
+    paceCurve: '配速曲线',
+    vo2maxEstimates: 'VO2max 估算',
+    trends: '趋势',
+    qualitySessions: '质量训练课',
     settings: '设置',
     importData: '导入数据',
     shoes: '跑鞋',
@@ -111,6 +110,7 @@ const PAGE_TITLES = Object.freeze({
     schedule: '计划',
     muscleTraining: '肌肉训练',
     admin: '管理',
+    team: '教练与团队',
   }),
 });
 
@@ -124,6 +124,7 @@ const PAGE_KEYS_BY_PATH = Object.freeze({
   '/signup': 'signup',
   '/forgot-password': 'forgotPassword',
   '/profile': 'home',
+  '/profile/team': 'team',
   '/runs': 'runs',
   '/analysis': 'analysis',
   '/heatmap': 'heatmap',
@@ -132,6 +133,10 @@ const PAGE_KEYS_BY_PATH = Object.freeze({
   '/today-run': 'todayRun',
   '/rewards': 'rewards',
   '/training-log': 'trainingLog',
+  '/analysis/pace-curve': 'paceCurve',
+  '/analysis/vo2max-estimates': 'vo2maxEstimates',
+  '/analysis/trends': 'trends',
+  '/analysis/quality-sessions': 'qualitySessions',
   '/settings': 'settings',
   '/settings/import-data': 'importData',
   '/shoes': 'shoes',
@@ -147,6 +152,7 @@ const PAGE_KEYS_BY_PATH = Object.freeze({
 
 function pageKeyForPath(pathname) {
   if (Object.hasOwn(PAGE_KEYS_BY_PATH, pathname)) return PAGE_KEYS_BY_PATH[pathname];
+  if (/^\/(?:training|training-plan)(?:\/|$)/.test(pathname)) return 'schedule';
   if (/^\/runs\/[^/]+$/.test(pathname)) return 'run';
   if (/^\/analysis\/[^/]+$/.test(pathname)) return 'analysis';
   if (/^\/races\/details\/[^/]+$/.test(pathname)) return 'raceDetails';
@@ -182,26 +188,34 @@ function routeForPath(pathname) {
   return 'private';
 }
 
+function buildOrganization() {
+  return {
+    '@type': 'Organization',
+    '@id': `${SITE_URL}/#organization`,
+    name: 'HermesRuns',
+    url: `${SITE_URL}/`,
+    logo: LOGO_URL,
+    email: SUPPORT_EMAIL,
+  };
+}
+
+function buildWebsite(metadata) {
+  return {
+    '@type': 'WebSite',
+    '@id': `${SITE_URL}/#website`,
+    url: `${SITE_URL}/`,
+    name: 'HermesRuns',
+    publisher: { '@id': `${SITE_URL}/#organization` },
+    inLanguage: metadata.language,
+  };
+}
+
 function buildHomeStructuredData(metadata) {
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      {
-        '@type': 'Organization',
-        '@id': `${SITE_URL}/#organization`,
-        name: 'HermesRuns',
-        url: `${SITE_URL}/`,
-        logo: LOGO_URL,
-        sameAs: [SOURCE_REPOSITORY_URL],
-      },
-      {
-        '@type': 'WebSite',
-        '@id': `${SITE_URL}/#website`,
-        url: `${SITE_URL}/`,
-        name: 'HermesRuns',
-        publisher: { '@id': `${SITE_URL}/#organization` },
-        inLanguage: metadata.language,
-      },
+      buildOrganization(),
+      buildWebsite(metadata),
       {
         '@type': 'WebApplication',
         '@id': `${SITE_URL}/#webapplication`,
@@ -212,7 +226,26 @@ function buildHomeStructuredData(metadata) {
         applicationCategory: 'SportsApplication',
         operatingSystem: 'Web',
         browserRequirements: 'Requires JavaScript and a modern web browser.',
-        featureList: HOME_FEATURES,
+        featureList: metadata.features,
+        offers: {
+          '@type': 'Offer',
+          name: metadata.freePlanName,
+          price: PUBLIC_FREE_PLAN_PRICE,
+          url: `${SITE_URL}/#pricing`,
+        },
+        publisher: { '@id': `${SITE_URL}/#organization` },
+        mainEntityOfPage: { '@id': `${SITE_URL}/#webpage` },
+        inLanguage: metadata.language,
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${SITE_URL}/#webpage`,
+        url: metadata.url,
+        name: metadata.title,
+        description: metadata.description,
+        isPartOf: { '@id': `${SITE_URL}/#website` },
+        mainEntity: { '@id': `${SITE_URL}/#webapplication` },
+        dateModified: PUBLIC_HOME_REVIEW_DATE,
         publisher: { '@id': `${SITE_URL}/#organization` },
         inLanguage: metadata.language,
       },
@@ -228,8 +261,8 @@ function buildLegalStructuredData(metadata) {
     url: metadata.url,
     name: metadata.title,
     description: metadata.description,
-    isPartOf: { '@id': `${SITE_URL}/#website` },
-    dateModified: '2026-04-11',
+    isPartOf: { ...buildWebsite(metadata), publisher: buildOrganization() },
+    dateModified: '2026-10-17',
     inLanguage: metadata.language,
   };
 }
@@ -259,10 +292,8 @@ export function getSeoMetadata(pathname = '/', language = 'en') {
     structuredData: null,
   };
 
-  metadata.structuredData = route === 'home' ? buildHomeStructuredData({
-      ...copy,
-      language: normalizedLanguage === 'zh-CN' ? 'zh-CN' : 'en',
-    }) : indexable ? buildLegalStructuredData(metadata) : null;
+  metadata.structuredData = route === 'home' ? buildHomeStructuredData(metadata)
+    : indexable ? buildLegalStructuredData(metadata) : null;
 
   return metadata;
 }

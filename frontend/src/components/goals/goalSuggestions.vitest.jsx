@@ -86,11 +86,18 @@ describe('suggested goals', () => {
     expect(items[2]).toHaveTextContent('Your usual month over the last 3 months: 126 km. This is 10% more.');
   });
 
-  it('shows three at a time', async () => {
+  it('keeps prescribed weekly goals and historical monthly and yearly goals reachable together', async () => {
     suggestions = { enough: true, suggestions: [weekly, runsPerWeek, monthly, yearly] };
     render(<GoalsCard />);
 
-    expect(within(await suggested()).getAllByRole('listitem')).toHaveLength(3);
+    const block = await suggested();
+    expect(within(block).getAllByRole('listitem')).toHaveLength(4);
+    expect(block).toHaveTextContent('Weekly distance: 35 km');
+    expect(block).toHaveTextContent('Weekly runs: 3 runs');
+    expect(block).toHaveTextContent('Monthly distance: 140 km');
+    await userEvent.click(within(block).getByRole('button', { name: 'Set the goal Yearly distance: 1,650 km' }));
+    await waitFor(() => expect(sent).toEqual([{ method: 'POST', url: '/api/goals', body: { period: 'YEAR', metric: 'DISTANCE', target: 1650 } }]));
+    expect(await screen.findByRole('heading', { name: 'Yearly distance' })).toBeInTheDocument();
   });
 
   it('sets a suggestion as it is, says so, and takes it off the list', async () => {

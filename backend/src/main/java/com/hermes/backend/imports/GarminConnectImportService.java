@@ -218,6 +218,7 @@ public class GarminConnectImportService {
         activity.setStartTime(parsed.startTime());
         activity.setDistanceMeters(parsed.distanceMeters());
         activity.setDurationSeconds(parsed.durationSeconds());
+        activity.setSourceImportedLapsJson(com.hermes.backend.activity.analysis.SessionAnalysisSources.encode(parsed.sourceLaps()));
         activity.setDistanceKm(parsed.distanceMeters() == null ? 0d : parsed.distanceMeters() / 1000d);
         activity.setMovingTimeSeconds(parsed.durationSeconds() == null ? 0 : Math.toIntExact(parsed.durationSeconds()));
         activity.setStartDate(parsed.startTime() == null ? null : parsed.startTime().toString());

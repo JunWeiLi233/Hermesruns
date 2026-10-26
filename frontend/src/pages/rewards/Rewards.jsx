@@ -13,11 +13,18 @@ import TopbarNotifications from '../../components/TopbarNotifications';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import { buildRewardShowcase } from '../../utils/rewardBadges';
 import RewardIllustration from '../../components/RewardIllustration';
+import PocketStories from './PocketStories';
+import EntertainmentExpansion from './EntertainmentExpansion';
 import { buildRewardTracks, buildRewardRingSegments, REWARD_RING_RADIUS, rewardProgress } from './rewardTracks';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
 
 export default function Rewards() {
+  const { token, email } = useAuth();
+  return <RewardsSession key={`${token}:${email}`} />;
+}
+
+function RewardsSession() {
   const { isAuthenticated } = useAuth();
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -31,20 +38,24 @@ export default function Rewards() {
       navigate('/login');
       return;
     }
+    const request = new AbortController();
+    let active = true;
     (async () => {
       setLoadState('loading');
       try {
         const [profileData, activitiesData] = await Promise.all([
-          apiJson('/api/profile/me'),
-          apiJson('/api/activities'),
+          apiJson('/api/profile/me', { signal: request.signal }),
+          apiJson('/api/activities', { signal: request.signal }),
         ]);
+        if (!active) return;
         setProfile(profileData);
         setRuns(Array.isArray(activitiesData) ? activitiesData : []);
         setLoadState('ready');
       } catch {
-        setLoadState('error');
+        if (active) setLoadState('error');
       }
     })();
+    return () => { active = false; request.abort(); };
   }, [isAuthenticated, navigate]);
 
   const rewardShowcase = useMemo(() => buildRewardShowcase(runs, lang), [runs, lang]);
@@ -203,6 +214,9 @@ export default function Rewards() {
               </article>
             )}
           </section>
+
+          <PocketStories timeZone={profile?.timeZone} />
+          <EntertainmentExpansion />
 
           {rewardTracks.map((track) => (
             <section key={track.key} className="rewards-v2-track" style={{ '--track-color': track.color }} aria-labelledby={`rewards-v2-track-${track.key}`}>

@@ -32,11 +32,11 @@ assert.ok(navSource.includes("'run-detail-pace'"), 'Runs subpage navigation is m
 assert.match(
   runDetailSource,
   /<RunPaceAnalysis key=\{`pace-\$\{run\.id\}`\} runId=\{run\.id\} startTime=\{run\.startTime \|\| run\.startDate\} streamReady=\{streamCheckedFor === run\.id\} refreshToken=\{paceRefresh\} \/>/,
-  'Run Detail should render the pace analysis for the open run, with when it started (for the zones it had), ready only once its stream has been fetched.',
+  'Run Detail should render the pace analysis for the open run, ready only once its stream has been fetched.',
 );
 // Keyed siblings with the same key are duplicated or dropped when the page updates (seen live: the pace card twice).
-const detailKeys = [...runDetailSource.matchAll(/<(RunPaceAnalysis|RunTrainingCards|RunBestEfforts|RunMatches) key=\{([^}]+)\}/g)].map((match) => match[2]);
-assert.equal(detailKeys.length, 4, 'Run Detail keys the pace, effort, best-efforts and same-route sections by run.');
+const detailKeys = [...runDetailSource.matchAll(/<(RunPaceAnalysis|RunTrainingCards) key=\{([^}]+)\}/g)].map((match) => match[2]);
+assert.equal(detailKeys.length, 2, 'Run Detail keys the pace and effort sections by run.');
 assert.equal(new Set(detailKeys).size, detailKeys.length, 'The keyed sections of Run Detail must not share a key.');
 assert.ok(
   readFileSync(path.join(srcRoot, 'pages/runs/RunPaceAnalysis.jsx'), 'utf8').includes('id="run-detail-pace"'),
@@ -111,7 +111,7 @@ assert.match(
 );
 assert.match(
   navSource,
-  /onClick=\{\(\) => onActivate\(sectionId\)\}/,
+  /onClick=\{\(\) => \{[\s\S]*onActivate\(sectionId\)/,
   'Run Detail section links should keep the active rail item in sync with direct anchor clicks.',
 );
 assert.match(
@@ -126,7 +126,7 @@ assert.match(
 );
 assert.match(
   navSource,
-  /const nextTarget = isAtPageEnd \? targets\[targets\.length - 1\] : visibleTargets\[visibleTargets\.length - 1\] \|\| targets\[0\]/,
+  /const nextTarget = isAtPageEnd \? renderedTargets\[renderedTargets\.length - 1\] : visibleTargets\[visibleTargets\.length - 1\] \|\| renderedTargets\[0\]/,
   'Run Detail navigation should activate the final section when the page cannot scroll it up to the marker.',
 );
 assert.match(

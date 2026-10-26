@@ -10,9 +10,10 @@ const enPagesSource = readFileSync(path.join(here, "../../../i18n/locales/en/pag
 
 assert.match(
   runsSource,
-  /className="runs-ledger-v2__figure"[\s\S]*<span>\{t\('runs\.summary_runs'\)\}<\/span>[\s\S]*<strong>\{filteredRuns\.length\}<\/strong>/,
+  /className="runs-ledger-v2__figure"[\s\S]*<span>\{t\('runs\.summary_runs'\)\}<\/span>[\s\S]*<strong>\{historyPending && !allRuns\.length \? '--' : filteredCount\}<\/strong>/,
   'The summary count should describe the matching runs.',
 );
+assert.match(runsSource, /const filteredCount = historyPage\?\.summary\.count \?\? filteredRuns\.length;/, 'Matching counts must come from complete server metadata before all pages have loaded.');
 
 assert.doesNotMatch(
   runsSource,

@@ -48,6 +48,7 @@ assertOrdered(frontend, [
   'COPY frontend/package*.json ./',
   'RUN npm ci --ignore-scripts',
   'COPY frontend/index.html ./',
+  'COPY frontend/public.html ./',
   'COPY frontend/vite.config.js ./',
   'COPY frontend/postcss.config.js ./',
   'COPY frontend/tailwind.config.js ./',
@@ -68,7 +69,7 @@ assertOrdered(backend, [
 ])
 assertOrdered(runtime, [
   'WORKDIR /app',
-  'RUN addgroup -S hermes && adduser -S -G hermes hermes && chown -R hermes:hermes /app',
+  'RUN addgroup -S -g 101 hermes && adduser -S -u 100 -G hermes hermes && chown -R hermes:hermes /app',
   'COPY --chown=hermes:hermes --from=backend-build /backend/target/*.jar app.jar',
   'COPY --chown=hermes:hermes frontend/src/data/worldRaceCatalog.json ./frontend/src/data/worldRaceCatalog.json',
   'USER hermes',
@@ -99,10 +100,12 @@ assert.deepEqual(JSON.parse(entrypoints[0].slice('ENTRYPOINT '.length)), [
   'sh', '-c', 'exec java $JAVA_OPTS -jar app.jar',
 ], 'Use sh to expand deploy-time JAVA_OPTS and exec to make Java the signal-receiving process.')
 assertOrdered(runtime, ['USER hermes', javaOptions[0], 'EXPOSE 8080', entrypoints[0]])
+assert.ok(runtime.instructions.includes('ENV SPRING_PROFILES_ACTIVE=production HERMES_ENV=production'),
+  'The deploy image must enable production validation before serving traffic.')
 
 assert.match(applicationProperties, /^server\.port=\$\{PORT:8080\}$/m)
 assert.match(railway, /export\s+const\s+partial\s*=\s*"hermes-web"/)
-assert.match(railway, /service\("hermes-web",\s*\{[\s\S]*healthcheck:\s*"\/"/)
+assert.match(railway, /service\("hermes-web",\s*\{[\s\S]*healthcheck:\s*"\/internal\/ready"/)
 assert.match(railway, /healthcheckTimeout:\s*180/)
 assert.equal(existsSync(resolve(repoRoot, 'railway.json')), false)
 const railwayVersion = rootPackage.devDependencies?.railway
@@ -116,10 +119,16 @@ for (const ignoredPath of [
   '.railway',
   '.tmp',
   '.workspace',
+  '.private-backups',
+  'output',
+  'replica',
+  'founder',
+  'sites',
   '.env',
   '.env.*',
   'Hermes.local.env.ps1',
   'backend/target',
+  'backend/target-*',
   'frontend/node_modules',
   'backend/*.mv.db',
   '*.dump',

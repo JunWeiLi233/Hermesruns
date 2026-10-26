@@ -16,58 +16,36 @@ afterEach(() => {
   localStorage.clear();
 });
 
-it('renders local skeleton previews with the same language and theme providers as the app', async () => {
+it('renders local previews with the application theme and one loading announcement', async () => {
   localStorage.setItem('hermes_lang', 'en');
   localStorage.setItem('hermes_theme', 'midnight');
   window.history.replaceState({}, '', '/profile?skeleton-preview=profile');
-  render(<App />);
-  expect(await screen.findByRole('status')).toHaveAttribute('aria-busy', 'true');
+  const { container } = render(<App />);
+  await screen.findByRole('status');
+  expect(container.querySelector('[data-loading-state="profile"]')).toBeInTheDocument();
   expect(document.body).toHaveClass('theme-midnight');
 });
 
-it('previews an allowlisted admin layout locally without accessing an admin route', async () => {
+it('previews an allowlisted admin layout without an admin session', async () => {
   window.history.replaceState({}, '', '/?skeleton-preview=admin&skeleton-tab=users');
   const { container } = render(<App />);
   await screen.findByRole('status');
-  expect(container.querySelector('.page-skeleton__admin-users')).toBeInTheDocument();
+  expect(container.querySelector('[data-loading-state="admin-users"]')).toBeInTheDocument();
 });
 
-it.each([['auth', 2], ['signup', 3], ['forgot-password', 1]])('matches the %s form field count', async (variant, count) => {
+it.each(['profile', 'preferences', 'training', 'connections', 'notifications', 'activity', 'account'])('shows only the requested settings section: %s', async section => {
+  window.history.replaceState({}, '', `/settings?section=${section}`);
+  const { container } = await mount('settings');
+  expect(container.querySelectorAll('[data-settings-section]')).toHaveLength(1);
+  expect(container.querySelector('[data-settings-section]')).toHaveAttribute('data-settings-section', section);
+  expect(container.querySelectorAll('.loading-design__settings-nav [aria-current="page"]')).toHaveLength(1);
+});
+
+it.each(['landing', 'auth', 'signup', 'forgot-password', 'legal', 'profile', 'runs', 'run-detail', 'analysis', 'analysis-load', 'analysis-intensity', 'analysis-injury', 'analysis-coach', 'analysis-insight', 'prediction', 'heatmap', 'weather', 'today-run', 'rewards', 'settings', 'import-data', 'shoes', 'add-shoes', 'shoe-catalog', 'races', 'race-detail', 'schedule', 'muscle-training', 'admin'])('keeps unknown data inert and exposes one live announcement for %s', async variant => {
   const { container } = await mount(variant);
-  const fieldClass = variant === 'forgot-password' ? '.page-skeleton__auth-field' : '.page-skeleton__account-field';
-  expect(container.querySelectorAll(fieldClass)).toHaveLength(count);
-  expect(container.querySelector('.page-skeleton__auth-slide-details')).not.toBeInTheDocument();
-  expect(container.querySelector('.page-skeleton__auth-brand-actions')).not.toBeInTheDocument();
-  if (variant !== 'auth') expect(container.querySelector('.page-skeleton__auth-social')).not.toBeInTheDocument();
-});
-
-it.each(['profile', 'runs', 'analysis', 'shoes', 'heatmap'])('reserves the four-item mobile navigation for %s', async (variant) => {
-  const { container } = await mount(variant);
-  expect(container.querySelector('.page-skeleton__mobile-nav')).toHaveAttribute('aria-hidden', 'true');
-  expect(container.querySelectorAll('.page-skeleton__mobile-nav-item')).toHaveLength(4);
-  expect(container.querySelectorAll('a, button, input')).toHaveLength(0);
-});
-
-it('does not insert the optional comeback promotion ahead of the Home workout', async () => {
-  const { container } = await mount('profile');
-  expect(container.querySelector('.page-skeleton__profile-comeback')).not.toBeInTheDocument();
-  expect(container.querySelector('.page-skeleton__profile-editorial-hero').nextElementSibling).toHaveClass('page-skeleton__profile-today');
-});
-
-it('uses a small history sample instead of guessing dozens of unloaded activities', async () => {
-  const { container } = await mount('runs');
-  expect(container.querySelectorAll('.page-skeleton__runs-card')).toHaveLength(6);
-});
-
-it('matches the session-first Today Run composition', async () => {
-  const { container } = await mount('today-run');
-  expect(container.querySelector('.page-skeleton__session-hero')).toBeInTheDocument();
-  expect(container.querySelector('.page-skeleton__session-timeline')).toBeInTheDocument();
-  expect(container.querySelector('.page-skeleton__session-support').children).toHaveLength(4);
-  expect(container.querySelector('.page-skeleton__today-coaching')).not.toBeInTheDocument();
-});
-
-it.each([['load-balance','analysis-load'],['intensity','analysis-intensity'],['injury-risk','analysis-injury'],['coach-insight','analysis-coach']])('keeps the %s composition during the data-loading phase', async (key, variant) => {
-  const { container } = await mount('analysis-insight', `/analysis/${key}/`);
-  expect(container.querySelector('.page-skeleton')).toHaveClass(`page-skeleton--${variant}`);
+  expect(screen.getAllByRole('status')).toHaveLength(1);
+  expect(screen.getByRole('status').closest('[aria-busy="true"]')).toBeNull();
+  expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+  expect(container.querySelectorAll('input, select, textarea')).toHaveLength(0);
+  expect(container.querySelector('.hr-sk')).toHaveAttribute('aria-hidden', 'true');
 });

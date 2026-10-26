@@ -22,6 +22,12 @@ function mount(route = '/profile') {
   return render(<MemoryRouter initialEntries={[route]}><RouteEcho /><MobileRunnerNavigation /></MemoryRouter>);
 }
 
+it.each(['/heatmap', '/heatmap/recorded'])('keeps %s map-only without the bottom navigation or reserved space', route => {
+  mount(route);
+  expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  expect(document.body).not.toHaveClass('has-mobile-runner-navigation');
+});
+
 it('makes the three frequent destinations accessible and marks nested run routes active', async () => {
   const user = userEvent.setup();
   mount('/runs/21');

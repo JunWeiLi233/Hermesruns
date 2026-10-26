@@ -35,6 +35,6 @@ assert.match(activityContracts, /export interface ActivitySummary/);
 const activityApi = read('./src/api/activityApi.ts');
 assert.match(activityApi, /apiJson<unknown>\('\/api\/activities'/);
 assert.match(activityApi, /Promise<ActivitySummary\[\]>/);
-assert.match(read('./src/pages/prediction/PredictionDetail.jsx'), /fetchActivitySummaries/);
+assert.match(read('./src/pages/prediction/PredictionDetail.jsx'), /fetchAnalysisActivitySummaries/);
 
 console.log('[PASS] Incremental TypeScript API and domain contract seam passed.');

@@ -29,7 +29,7 @@ assert.match(
 
 assert.match(
   heatmapSource,
-  /if \(!authHydrated\) \{\s*return;\s*\}\s*if \(!isAuthenticated\) \{\s*navigate\('\/login'\);/,
+  /if \(simple \|\| !authHydrated\) \{\s*return;\s*\}\s*if \(!isAuthenticated\) \{\s*navigate\('\/login'\);/,
   'Heatmap should wait for URL/local token hydration before redirecting to login.',
 );
 
@@ -41,12 +41,12 @@ assert.match(
 
 assert.match(
   heatmapSource,
-  /}, \[hasBounds, heatmapState\]\);/,
+  /}, \[hasBounds, heatmapState, simple\]\);/,
   'Heatmap map-mount effect should not remount while progressive GPS pages append or bounds object identity changes.',
 );
 assert.match(
   heatmapSource,
-  /const boundsRef = useRef\(null\);[\s\S]*?const hasBounds = Boolean\(bounds\);[\s\S]*?boundsRef\.current = bounds;[\s\S]*?if \(!mapRef\.current \|\| !boundsRef\.current \|\| !hasBounds \|\| heatmapState !== 'ready'\) return undefined;[\s\S]*?const latestBounds = boundsRef\.current;[\s\S]*?latestBounds\.minLatitude/,
+  /const boundsRef = useRef\(null\);[\s\S]*?const hasBounds = Boolean\(bounds\);[\s\S]*?boundsRef\.current = bounds;[\s\S]*?if \(!mapRef\.current \|\| \(!simple && \(!boundsRef\.current \|\| !hasBounds\)\) \|\| heatmapState !== 'ready'\) return undefined;[\s\S]*?const latestBounds = boundsRef\.current;[\s\S]*?latestBounds\.minLatitude/,
   'Heatmap should keep latest bounds in a ref so Leaflet is not torn down during fast zoom when GPS payloads update.',
 );
 
@@ -196,7 +196,7 @@ assert.match(
 );
 assert.match(
   heatmapSource,
-  /latestPointsRef\.current = points;[\s\S]*?const renderMode = heatmap\?\.diagnostics\?\.complete === false \? 'preview' : 'full';[\s\S]*?requestAnimationFrame\(\(\) => overlay\.syncRouteDots\(renderMode\)\)[\s\S]*?}, \[heatmap\?\.diagnostics\?\.complete, points\]\);[\s\S]*?}, \[hasBounds, heatmapState\]\);/,
+  /latestPointsRef\.current = points;[\s\S]*?const renderMode = heatmap\?\.diagnostics\?\.complete === false \? 'preview' : 'full';[\s\S]*?requestAnimationFrame\(\(\) => overlay\.syncRouteDots\(renderMode\)\)[\s\S]*?}, \[heatmap\?\.diagnostics\?\.complete, points\]\);[\s\S]*?}, \[hasBounds, heatmapState, simple\]\);/,
   'Heatmap should use preview redraws while GPS pages append and reserve full redraws for complete payloads without remounting Leaflet on bounds object changes.',
 );
 assert.doesNotMatch(

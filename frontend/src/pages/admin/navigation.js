@@ -14,7 +14,7 @@ export const TAB_ICONS = {
   overview: 'dashboard',
   users: 'groups',
   courseMaps: 'map',
-  shoes: 'footprint',
+  shoes: 'shoe_outline',
   jobs: 'sync',
   audit: 'history',
   settings: 'settings',

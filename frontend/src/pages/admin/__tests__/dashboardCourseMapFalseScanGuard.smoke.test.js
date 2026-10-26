@@ -10,14 +10,14 @@ const previewSource = readFileSync(path.join(here, "../../../components/AdminCou
 
 assert.match(
   dashboardSource,
-  /preview=\{liveCourseMapPreview\}[\s\S]*allowImageFallback=\{false\}/,
-  'Dashboard live compare panel should not fall back to the raw upload image when the map has not been aligned.',
+  /previewTab === "pending" \? pendingCourseMapPreview : liveCourseMapPreview/,
+  'Dashboard should select the pending or live snapshot using the active preview tab.',
 );
 
 assert.match(
   dashboardSource,
-  /preview=\{pendingCourseMapPreview\}[\s\S]*allowImageFallback=\{false\}/,
-  'Dashboard pending compare panel should not present an unaligned upload as if HermesRuns had already scanned a course map.',
+  /preview=\{preview\}[\s\S]*allowImageFallback=\{false\}/,
+  'Neither preview tab should present an unaligned source image as an aligned course map.',
 );
 
 assert.match(
@@ -40,7 +40,7 @@ assert.match(
 
 assert.match(
   previewSource,
-  /const showPreviewSummary = Boolean\(previewSummary\) && !hasRenderableAlignment;/,
+  /const showPreviewSummary = Boolean\(previewSummary\) && !hasAlignedRoute;/,
   'AdminCourseMapPreview should detect unaligned previews that still have a backend rejection summary.',
 );
 

@@ -2,8 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
+import HowWorkedOut from '../../components/HowWorkedOut';
+import PaceCurveLink from '../../components/PaceCurveLink';
+import Vo2maxEstimatesLink from '../../components/Vo2maxEstimatesLink';
+import EnduranceCheck from './EnduranceCheck';
 import { useTheme } from '../../contexts/ThemeContext';
-import { fetchActivitySummaries } from '../../api/activityApi.ts';
+import { fetchAnalysisActivitySummaries } from '../../api/activityApi.ts';
 import AppIcon from '../../components/AppIcon';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
 import AnalysisSubpageNav from '../../components/AnalysisSubpageNav';
@@ -25,6 +29,7 @@ import {
   vdotToPaceSecondsPerKm,
 } from '../../utils/vdot';
 import { formatPaceSeconds } from '../../utils/format';
+import { prepareAnalysisRuns } from '../../utils/analysisInsights';
 import { selectRacePrediction } from '../../utils/predictionSelection.ts';
 import { hasMeaningfulWeatherTrendAdjustment } from '../../utils/predictionTrend.js';
 import {
@@ -155,7 +160,7 @@ export default function PredictionDetail() {
     (async () => {
       setLoadState('loading');
       try {
-        const list = await fetchActivitySummaries();
+        const list = prepareAnalysisRuns(await fetchAnalysisActivitySummaries());
         list.sort((a, b) => new Date(b.startTime || b.startDate || 0) - new Date(a.startTime || a.startDate || 0));
         setRuns(list);
         setLoadState('ready');
@@ -166,7 +171,11 @@ export default function PredictionDetail() {
   }, [isAuthenticated, navigate, reloadKey]);
 
   const allVdotEntries = useMemo(() => collectAllVdotEntries(runs), [runs]);
-  const rollingSeries = useMemo(() => computeRollingRepresentativeSeries(allVdotEntries), [allVdotEntries]);
+  const rollingSeries = useMemo(() => {
+    const now = Date.now();
+    return computeRollingRepresentativeSeries(allVdotEntries)
+      .filter(point => point.x >= now - Math.max(...HISTORY_RANGES.map(range => range.days)) * 86400000 && point.x <= now);
+  }, [allVdotEntries]);
   const currentVdot = useMemo(() => estimateCurrentVdot(runs), [runs]);
   const representativeVdot = currentVdot.representativeVdot || 0;
   const adjustedVdot = currentVdot.adjustedVdot || representativeVdot;
@@ -500,6 +509,10 @@ export default function PredictionDetail() {
                     <span className="prediction-v2-bar" aria-hidden="true"><i style={{ width: `${confidenceScore}%` }} /></span>
                   </div>
                 ) : null}
+                <HowWorkedOut textKey="methods.prediction_detail" anchor="race-predictions-and-their-history" />
+                <PaceCurveLink />
+                <Vo2maxEstimatesLink />
+                <EnduranceCheck runs={runs} distanceMeters={distance.meters} />
                 {useWeatherAdjustedPrediction ? (
                   <div className="prediction-v2-weather">
                     <span>{t('analysis.pred_weather_title')}</span>

@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const srcRoot = path.resolve(here, '../../..');
 const landingSource = readFileSync(path.join(here, '../Landing.jsx'), 'utf8');
+const methodsSource = readFileSync(path.join(here, '../LandingMethods.jsx'), 'utf8');
 const contentSource = readFileSync(path.join(here, '../landingV3Content.js'), 'utf8');
 const css = readFileSync(path.join(srcRoot, 'styles/landing-v3.css'), 'utf8');
 const assetsDir = path.join(srcRoot, 'assets/landing-v3');
@@ -74,7 +75,7 @@ for (const match of withoutComments.matchAll(/@font-face\s*\{[^}]*font-family:\s
 }
 
 // ── Copy: every key resolves in both locales, none is orphaned, and the launch rules hold ───────────────────
-const referenced = new Set([...`${landingSource}\n${contentSource}`.matchAll(/'landing\.([a-z0-9_]+)'/g)].map((match) => match[1]));
+const referenced = new Set([...`${landingSource}\n${methodsSource}\n${contentSource}`.matchAll(/'landing\.([a-z0-9_]+)'/g)].map((match) => match[1]));
 const loadLanding = async (locale) => (await import(pathToFileURL(path.join(srcRoot, `i18n/locales/${locale}/pages.js`)).href)).default.landing;
 const en = await loadLanding('en');
 const zh = await loadLanding('zh-CN');
@@ -90,7 +91,7 @@ for (const key of homeKeys) {
   assert.ok(en[key].length > 0 && zh[key].length > 0, `landing.${key} should not be empty.`);
 }
 // The payments line is the one string the owner clears when Stripe goes live, so it must stay a key of its own.
-assert.ok(referenced.has('studio_pricing_supporter_status'), 'The Supporter card should read its status line from landing.studio_pricing_supporter_status.');
+assert.ok(referenced.has('home_supporter_status'), 'The Supporter card should read its status line from the public dictionary.');
 assert.match(landingSource, /status \? <p className="lv3-plan-note">/, 'The status line should only render while the string is not empty.');
 
 // Launch rules: no testimonials, user counts or ratings until there are real ones to show.

@@ -107,7 +107,7 @@ public class ProfileApplicationService {
 
         return new ProfileDashboardResponse(
                 profile(runner),
-                toRunSummaryFeedItems(activitySummaries, ActivityLocalDates.zoneOf(runner)),
+                toRunSummaryFeedItems(activitySummaries, runner),
                 null,
                 null,
                 null,
@@ -122,7 +122,7 @@ public class ProfileApplicationService {
         List<ActivityRepository.AnalysisActivitySummaryProjection> activitySummaries = findRunnerRunSummaries(runner);
         return new TodayDashboardResponse(
                 profile(runner),
-                toRunSummaryFeedItems(activitySummaries, ActivityLocalDates.zoneOf(runner)),
+                toRunSummaryFeedItems(activitySummaries, runner),
                 safeValue(() -> automatedCoachService.getTodayWithReadiness(runner), null),
                 safeValue(() -> acclimatizationService.buildContext(runner), null),
                 safeValue(() -> findRunnerRaces(runner), List.of()),
@@ -155,23 +155,24 @@ public class ProfileApplicationService {
     }
 
     private List<Map<String, Object>> toRunSummaryFeedItems(
-            List<ActivityRepository.AnalysisActivitySummaryProjection> activities,
-            java.time.ZoneId zone
+            List<ActivityRepository.AnalysisActivitySummaryProjection> activities, Runner runner
     ) {
         if (activities == null || activities.isEmpty()) {
             return List.of();
         }
-        return activities.stream().map(activity -> toRunSummaryFeedItem(activity, zone)).toList();
+        return activities.stream().map(activity -> toRunSummaryFeedItem(activity, runner)).toList();
     }
 
-    private Map<String, Object> toRunSummaryFeedItem(ActivityRepository.AnalysisActivitySummaryProjection activity, java.time.ZoneId zone) {
+    private Map<String, Object> toRunSummaryFeedItem(ActivityRepository.AnalysisActivitySummaryProjection activity, Runner runner) {
         Map<String, Object> body = new HashMap<>();
         body.put("id", activity.getId());
         body.put("name", activity.getName());
         body.put("distanceKm", activity.getDistanceKm());
         body.put("movingTimeSeconds", activity.getMovingTimeSeconds());
+        java.time.ZoneId zone = ActivityLocalDates.zoneOf(runner);
         body.put("startDate", ActivityLocalDates.localStartDate(activity.getStartDate(), activity.getStartTime(), activity.getStravaApiSourced(), zone));
         body.put("startTime", ActivityLocalDates.localStart(activity.getStartTime(), activity.getStravaApiSourced(), zone));
+        body.putAll(ActivityLocalDates.responseFields(activity.getStartTime(), Boolean.TRUE.equals(activity.getStravaApiSourced()), runner));
         body.put("distanceMeters", activity.getDistanceMeters());
         body.put("durationSeconds", activity.getDurationSeconds());
         body.put("averageHeartRate", activity.getAverageHeartRate());

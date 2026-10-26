@@ -1,0 +1,13 @@
+import { describe, expect, it } from 'vitest';
+import { parseActivity, validateFiles } from '../core/parser.js';
+import { GPX, TCX, file } from './fixtures.js';
+describe('authorized activity files',()=>{
+  it('reads namespace GPX and retains full geometry and multisport metadata',()=>{const a=parseActivity(GPX,'loop.gpx');expect(a.name).toBe('Independent riverside loop');expect(a.pointCount).toBe(3);expect(a.sport).toBe('ride');expect(a.distanceKm).toBeGreaterThan(2);expect(a.movingSeconds).toBe(600);expect(a.quality.movingTimeEstimated).toBe(true);expect(a.trainer).toBeNull();});
+  it('retains a swimming TCX summary without GPS',()=>{const a=parseActivity(TCX,'pool.tcx');expect(a.sport).toBe('swim');expect(a.pointCount).toBe(0);expect(a.distanceKm).toBe(1);expect(a.movingSeconds).toBe(1200);expect(a.ascentM).toBeNull();expect(a.startTime).toBe('2026-10-18T20:00:00.000Z');});
+  it('rejects malformed XML, declarations and route-only GPX',()=>{for(const xml of ['<gpx><trk>','<!DOCTYPE gpx><gpx/>','<gpx><rte/></gpx>'])expect(()=>parseActivity(xml,'bad.gpx')).toThrow();});
+  it('rejects ambiguous offset-free timestamps',()=>{expect(()=>parseActivity(GPX.replaceAll('Z</time>','</time>'),'ambiguous.gpx')).toThrow('UTC offset');});
+  it('preserves explicit subtype and flags without inventing missing values',()=>{const xml=GPX.replace('</type>','</type><extensions><activitySubtype>race</activitySubtype><commute>false</commute><trainer>true</trainer></extensions>');const a=parseActivity(xml,'race.gpx');expect(a.subtype).toBe('race');expect(a.commute).toBe(false);expect(a.trainer).toBe(true);expect(a.source.originalSport).toBe('cycling');});
+  it('rejects negative metrics and reversed chronology',()=>{expect(()=>parseActivity(TCX.replace('1000</DistanceMeters>','-1</DistanceMeters>'),'bad.tcx')).toThrow('zero or more');expect(()=>parseActivity(GPX.replace('12:05:00Z','11:05:00Z'),'reverse.gpx')).toThrow('ordered');});
+  it('rejects multi-activity files and unsupported FIT without a fake success',()=>{expect(()=>parseActivity(GPX.replace('</gpx>','<trk/></gpx>'),'multi.gpx')).toThrow('one activity');expect(()=>validateFiles([file('ride.fit')])).toThrow('backend importer');});
+  it('checks empty, per-file, total and count limits',()=>{expect(()=>validateFiles([])).toThrow();expect(()=>validateFiles([{name:'empty.gpx',size:0}])).toThrow();expect(()=>validateFiles([{name:'large.gpx',size:51*1024*1024}])).toThrow();expect(()=>validateFiles(Array.from({length:21},()=>file()))).toThrow('20');expect(()=>validateFiles(Array.from({length:3},()=>({name:'data.tcx',size:40*1024*1024})))).toThrow('100 MiB');});
+});

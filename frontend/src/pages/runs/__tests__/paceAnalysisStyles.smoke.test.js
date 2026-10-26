@@ -19,7 +19,7 @@ for (const { name, text } of sources) {
   assert.doesNotMatch(text, /run-detail-v2__pace-bar\b/, `${name} must not reuse the splits table's pace-bar class.`);
   assert.doesNotMatch(text, /run-detail-v2__pace(?![-\w])/, `${name} must not reuse the splits table's pace cell class.`);
 }
-assert.match(css, /\.run-detail-v2__pace-bar \{ width: 40%/, 'The splits table keeps its own pace-bar rule.');
+assert.match(css, /\.run-detail-v2__pace-bar \{ width: 55%/, 'The splits table keeps its own pace-bar rule.');
 
 // Every class the pace card draws with has a rule, so nothing is left unstyled by a typo.
 const used = new Set();

@@ -22,8 +22,8 @@ assert.doesNotMatch(
 
 assert.match(
   dashboardSource,
-  /admin-coursemap-rail__preview[\s\S]*preview=\{pending \|\| live\}/,
-  'Dashboard should reuse the aligned course-map preview renderer inside the workbench rail cards, not collapse processed assets back to raw poster thumbnails.'
+  /className="admin-ref-review-row"[\s\S]*courseMapQueueRowProps.onSelect\(item\)/,
+  'Dashboard course rows should select the course displayed in the shared aligned preview.'
 );
 
 assert.match(
@@ -76,8 +76,8 @@ assert.match(
 
 assert.match(
   previewSource,
-  /admin-review-preview__image-layer|admin-review-preview__map-layer/,
-  'Admin course-map preview should render image and map inside explicit overlay layers, not as side-by-side flex children.'
+  /admin-review-preview__map-layer/,
+  'Admin course-map preview should keep the geographic map inside its explicit map layer.'
 );
 
 assert.match(
@@ -106,7 +106,7 @@ assert.match(
 
 assert.match(
   previewSource,
-  /map\.createPane\(name\)[\s\S]*createPreviewPane\('admin-review-preview__tile-pane',\s*180\)[\s\S]*createPreviewPane\('admin-review-preview__source-pane',\s*260\)[\s\S]*createPreviewPane\('admin-review-preview__route-shadow-pane',\s*420\)[\s\S]*createPreviewPane\('admin-review-preview__route-pane',\s*430\)[\s\S]*createPreviewPane\('admin-review-preview__marker-pane',\s*440\)/,
+  /map\.createPane\(name\)[\s\S]*createPreviewPane\('admin-review-preview__tile-pane',\s*180\)[\s\S]*createPreviewPane\('admin-review-preview__route-shadow-pane',\s*420\)[\s\S]*createPreviewPane\('admin-review-preview__route-pane',\s*430\)[\s\S]*createPreviewPane\('admin-review-preview__marker-pane',\s*440\)/,
   'Admin course-map preview should create explicit Leaflet panes so OSM tiles remain the background and extracted routes render on top.'
 );
 
@@ -116,10 +116,10 @@ assert.match(
   'Admin course-map preview should pin the OpenStreetMap tile layer to the bottom pane.'
 );
 
-assert.match(
+assert.doesNotMatch(
   previewSource,
-  /L\.imageOverlay\(imageUrl,[\s\S]*pane:\s*'admin-review-preview__source-pane'[\s\S]*opacity:\s*0\.22/,
-  'Admin course-map preview should keep any aligned source image as a faint reference above OSM, not as the dominant background.'
+  /L\.imageOverlay|admin-review-preview__image-layer|admin-review-preview__source-pane/,
+  'Admin course-map map mode should contain OSM tiles and geographic routes without source images or source-image panes.'
 );
 
 assert.match(

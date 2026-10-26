@@ -265,11 +265,13 @@ test.describe('F01 happy path: the cards of one run', () => {
 test.describe('F01 edge: states of the cards', () => {
   test('F01-E1 a run without heart rate: the effort is estimated from pace, and the zones card says why it is empty', async ({ page, seed, api }) => {
     await openRun(page, 'nohr');
-    await expect(effortCard(page)).toContainText('Estimated from pace, matched to your heart-rate runs');
+    await expect(effortCard(page)).toContainText('Estimated from pace');
+    await expect(effortCard(page)).toContainText('rough estimate from pace');
     await expect(zonesCard(page)).toContainText('This run has no heart-rate stream, so there is no time in zones to show.');
     await expect(page.locator('main')).toContainText('Average HR');
     const metrics = (await api.get(`/api/activities/${seed.ids.nohr}/training-metrics`)).json;
-    expect(metrics.effort.source).toBe('PACE_CALIBRATED');
+    // The shared seed has eight eligible heart-rate runs; calibration needs ten.
+    expect(metrics.effort.source).toBe('PACE_MODEL');
     expect(metrics.heartRate.hasStream).toBe(false);
   });
 
@@ -366,7 +368,8 @@ test.describe('F01 perceived exertion', () => {
       await api.patch(`/api/activities/${seed.ids.nohr}`, { perceivedExertion: null });
     }
     await page.reload();
-    await expect(effortCard(page)).toContainText('Estimated from pace, matched to your heart-rate runs');
+    await expect(effortCard(page)).toContainText('Estimated from pace');
+    await expect(effortCard(page)).toContainText('rough estimate from pace');
   });
 
   test('F01-H14 rate a run that has heart rate: the heart rate keeps deciding the score', async ({ page, api, seed }) => {

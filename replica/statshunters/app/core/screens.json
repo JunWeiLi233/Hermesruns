@@ -1,0 +1,187 @@
+[
+  {
+    "screen_id": "S01",
+    "name": "Guest entry",
+    "release": "R0"
+  },
+  {
+    "screen_id": "S02",
+    "name": "Heatmap",
+    "release": "R0"
+  },
+  {
+    "screen_id": "S03",
+    "name": "Activity filters",
+    "release": "R0"
+  },
+  {
+    "screen_id": "S04",
+    "name": "Map settings",
+    "release": "R0"
+  },
+  {
+    "screen_id": "S05",
+    "name": "Activities",
+    "release": "R1"
+  },
+  {
+    "screen_id": "S06",
+    "name": "Selected activity",
+    "release": "R0"
+  },
+  {
+    "screen_id": "S07",
+    "name": "Statistics overview",
+    "release": "R1"
+  },
+  {
+    "screen_id": "S08",
+    "name": "Regional statistics",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S09",
+    "name": "Routes",
+    "release": "R2"
+  },
+  {
+    "screen_id": "S10",
+    "name": "Badges",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S11",
+    "name": "Photos",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S12",
+    "name": "Share management",
+    "release": "R4"
+  },
+  {
+    "screen_id": "S13",
+    "name": "Account settings",
+    "release": "R1"
+  },
+  {
+    "screen_id": "S14",
+    "name": "Email access",
+    "release": "R0"
+  },
+  {
+    "screen_id": "S15",
+    "name": "Help",
+    "release": "R1"
+  },
+  {
+    "screen_id": "S16",
+    "name": "Sync progress",
+    "release": "R0"
+  },
+  {
+    "screen_id": "S17",
+    "name": "Precision dialog",
+    "release": "R2"
+  },
+  {
+    "screen_id": "S18",
+    "name": "Square planner",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S19",
+    "name": "Map/tile download",
+    "release": "R5"
+  },
+  {
+    "screen_id": "S20",
+    "name": "Heatmap recording",
+    "release": "R5"
+  },
+  {
+    "screen_id": "S21",
+    "name": "Art/image builder",
+    "release": "R4"
+  },
+  {
+    "screen_id": "S22",
+    "name": "Clubs",
+    "release": "R4"
+  },
+  {
+    "screen_id": "S23",
+    "name": "Emails/archive",
+    "release": "R4"
+  },
+  {
+    "screen_id": "S24",
+    "name": "Route upload/edit",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S25",
+    "name": "Bulk activity actions",
+    "release": "R2"
+  },
+  {
+    "screen_id": "S26",
+    "name": "Badge detail",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S27",
+    "name": "Eddington statistics",
+    "release": "R2"
+  },
+  {
+    "screen_id": "S28",
+    "name": "Tile statistics",
+    "release": "R2"
+  },
+  {
+    "screen_id": "S29",
+    "name": "Provider description",
+    "release": "R5"
+  },
+  {
+    "screen_id": "S30",
+    "name": "Tile comparison",
+    "release": "R5"
+  },
+  {
+    "screen_id": "S31",
+    "name": "Center map",
+    "release": "R0"
+  },
+  {
+    "screen_id": "S32",
+    "name": "Activity view settings",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S33",
+    "name": "Reload activities",
+    "release": "R2"
+  },
+  {
+    "screen_id": "S34",
+    "name": "Compare periods",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S35",
+    "name": "Gear inventory",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S36",
+    "name": "Gear purchase/sale",
+    "release": "R3"
+  },
+  {
+    "screen_id": "S37",
+    "name": "Gear maintenance",
+    "release": "R3"
+  }
+]

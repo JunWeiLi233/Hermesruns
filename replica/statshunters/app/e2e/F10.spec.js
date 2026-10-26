@@ -1,0 +1,2 @@
+import {test,expect,login,open,screen} from './fixtures.js';
+test('F10-H1 period totals exact tables and chart metric',async({page},info)=>{await login(page);await open(page,'statistics');await expect(page.getByRole('heading',{name:'By month',exact:true})).toBeVisible();await page.getByRole('button',{name:'Show exact table',exact:true}).first().click();await expect(page.getByRole('table').first()).toBeVisible();await page.getByLabel('Chart metric',{exact:true}).selectOption('ascent');await screen(page,info,'period-statistics');});

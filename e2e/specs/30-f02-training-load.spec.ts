@@ -30,10 +30,13 @@ async function readLoad(page: Page): Promise<Snapshot> {
   const text = await mainText(page);
   const numbers = text.match(/Acute \(7d\) (\d+) Chronic \(28d\) (\d+) Ratio ([\d.]+)/);
   expect(numbers, `the chart legend reads "Acute (7d) 40 Chronic (28d) 52 Ratio 0.77": ${text.slice(0, 400)}`).toBeTruthy();
-  const header = text.match(/workload ratio ([\d.]+) (Underload|Productive|Overreach|High load)/);
-  expect(header, `the header reads "acute : chronic workload ratio 0.77 Underload": ${text.slice(0, 260)}`).toBeTruthy();
+  const headerRatio = await page.locator('.analysis-load-v2-ratio > strong').innerText();
+  const band = await page.locator('.analysis-load-v2-ratio .analysis-load-v2-zone').innerText();
+  expect(headerRatio).toMatch(/^\d+\.\d{2}$/);
+  expect(['Underload', 'Productive zone', 'Above productive range', 'High load']).toContain(band);
   const heading = await page.getByRole('heading', { level: 1 }).innerText();
-  return { acute: Number(numbers![1]), chronic: Number(numbers![2]), ratio: Number(numbers![3]), band: header![2], heading };
+  expect(Number(headerRatio), 'header ratio agrees with the chart legend').toBe(Number(numbers![3]));
+  return { acute: Number(numbers![1]), chronic: Number(numbers![2]), ratio: Number(numbers![3]), band, heading };
 }
 
 test.describe('F02 load balance, seeded runner', () => {
@@ -41,15 +44,14 @@ test.describe('F02 load balance, seeded runner', () => {
     await openLoad(page);
     const load = await readLoad(page);
     expect(Math.abs(load.ratio - load.acute / load.chronic), `${load.acute} / ${load.chronic} against ${load.ratio}`).toBeLessThan(0.02);
-    const header = (await mainText(page)).match(/workload ratio ([\d.]+)/);
-    expect(Number(header![1])).toBe(load.ratio);
+    expect(Number(await page.locator('.analysis-load-v2-ratio > strong').innerText())).toBe(load.ratio);
   });
 
   test('F02-H2 the band named is the band the ratio falls in: under 0.8, 0.8 to 1.3, over 1.3', async ({ page }) => {
     await openLoad(page);
     const load = await readLoad(page);
-    // Above 1.3 the page says Overreach and, when the ratio gets high enough, "High load"; the legend lists only the first.
-    const allowed = load.ratio < 0.8 ? ['Underload'] : load.ratio <= 1.3 ? ['Productive'] : ['Overreach', 'High load'];
+    // The compact legend uses Productive / Overreach; the verdict names the same bands in full.
+    const allowed = load.ratio < 0.8 ? ['Underload'] : load.ratio <= 1.3 ? ['Productive zone'] : ['Above productive range', 'High load'];
     expect(allowed).toContain(load.band);
   });
 
@@ -118,10 +120,14 @@ test.describe('F02 load balance, seeded runner', () => {
     const load = await readLoad(page);
     await page.goto('/analysis');
     await expect(page.getByRole('region', { name: 'Race predictions' })).toBeVisible();
-    await expect(page.getByRole('heading', { level: 2, name: 'VO2max trend' })).toBeVisible();
+    const vdotHeading = page.getByRole('heading', { level: 2, name: 'The runs behind this number', exact: true });
+    await expect(vdotHeading).toBeVisible();
+    const evidenceLink = vdotHeading.getByRole('link', { name: 'The runs behind this number', exact: true });
+    await expect(evidenceLink).toHaveText('Estimated VDOT trend');
+    await expect(evidenceLink).toHaveAttribute('href', '/analysis#vo2max-estimates');
     const hub = await mainText(page);
     expect(hub).toContain(`ACWR ${load.ratio.toFixed(2)}`);
-    const vo2Text = await page.getByRole('article').filter({ has: page.getByRole('heading', { level: 2, name: 'VO2max trend' }) }).locator('strong').first().innerText();
+    const vo2Text = await page.getByRole('article').filter({ has: vdotHeading }).locator('strong').first().innerText();
     const vo2 = [vo2Text, vo2Text.trim()];
     await page.goto('/prediction/5k');
     await expect(page.getByRole('region', { name: 'Supporting Evidence' })).toBeVisible();
@@ -166,7 +172,7 @@ test.describe('F02 load balance, edge states', () => {
       expect(after.acute, 'acute load after a 25 km run at 4:30 /km').toBeGreaterThan(before.acute * 1.5);
       expect(after.ratio).toBeGreaterThan(before.ratio);
       expect(after.ratio).toBeGreaterThan(1.3);
-      expect(['Overreach', 'High load']).toContain(after.band);
+      expect(['Above productive range', 'High load']).toContain(after.band);
 
       expect((await api.delete(`/api/activities/${hardId}`)).status).toBeLessThan(300);
       hardId = null;

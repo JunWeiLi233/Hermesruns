@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiJson } from '../../api';
+import useRecommendationRevision from '../../hooks/useRecommendationRevision';
 import { logUrl, mergeWeeks, newerPageTo, nextPageTo, prependWeeks, showsLatestWeek } from '../../utils/trainingLog';
 
 /** Whether an answer has the parts the page draws. Anything else is treated as a failed load, not drawn half. */
@@ -26,7 +27,8 @@ function isTrainingLog(data) {
  * loadMore and loadNewer say, when they are done, whether they added weeks.
  */
 export default function useTrainingLog({ runType = '', tags = [], to = '' } = {}) {
-  const filterKey = JSON.stringify([runType, tags, to]);
+  const recommendationRevision = useRecommendationRevision();
+  const filterKey = JSON.stringify([runType, tags, to, recommendationRevision]);
   const [state, setState] = useState({ status: 'loading', log: null, jumped: false, more: 'idle', newer: 'idle' });
   const [attempt, setAttempt] = useState(0);
   const currentKey = useRef(filterKey);

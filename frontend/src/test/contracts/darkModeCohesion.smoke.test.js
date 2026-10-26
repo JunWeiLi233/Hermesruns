@@ -55,7 +55,7 @@ for (const [file, owner, token, scope] of [
   ['muscle-training-week-v2.css', '.mt-week-v2', '--mw-ink', /\.mt-/],
   ['analysis-load-balance-v2.css', '.analysis-load-v2', '--lb-ink', /\.analysis-load-v2|\.analysis-insight-detail-page\.is-load-balance/],
   ['import-modal-v2.css', '.import-v2-card', '--im-ink', /\.import-v2/],
-  ['today-run-v2.css', '.today-run-command-canvas', '--tr-ink', /\.today-run-session-page|\.tr-v2/],
+  ['today-run-v2.css', '.today-run-command-canvas', '--tr-ink', /\.today-run-session-page|\.today-run-command-page|\.tr-v2/],
   ['shoes-v2.css', '.shoe-v2-stage', '--sv-ink', /\.shoe-v2|\.shoe-inventory-/],
   ['shoe-scan-modal-v2.css', '.scan-v2-card', '--sc-ink', /\.scan-v2|\.shoe-scan-modal/],
   ['analysis-injury-v2.css', '.analysis-injury-v2', '--ir-ink', /\.analysis-injury-v2|\.analysis-insight-detail-page\.is-injury-risk/],

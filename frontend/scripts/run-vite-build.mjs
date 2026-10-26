@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import fs from 'node:fs'
+import { collectMissingDocumentAssets } from './static-document-assets.mjs'
 
 const frontendDir = fileURLToPath(new URL('.', import.meta.url))
 const projectRoot = path.resolve(frontendDir, '..')
@@ -107,44 +108,13 @@ function collectMissingPaths(sourceDir, targetDir, prefix = '') {
 // A previously shipped index.html referenced asset chunks that did not exist in
 // the published static dir (observed 2026-08-24 19:11), breaking the app at
 // runtime while the build reported success. Instead of warning, fail loudly:
-// every local asset referenced by the produced index.html must exist.
-function collectMissingIndexAssets(staticDir) {
-  const indexPath = path.join(staticDir, 'index.html')
-  if (!fs.existsSync(indexPath)) return ['index.html']
-
-  const html = fs.readFileSync(indexPath, 'utf8')
-  const references = new Set()
-
-  for (const match of html.matchAll(/(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
-    let ref = match[1].trim()
-    if (!ref) continue
-    ref = ref.split('#')[0].split('?')[0]
-    if (!ref) continue
-    if (/^[a-z][a-z0-9+.-]*:/i.test(ref)) continue // http:, https:, data:, mailto:, ...
-    if (ref.startsWith('//')) continue
-    const relative = ref.replace(/^\/+/, '')
-    if (!relative) continue
-    // Route links such as /signup and /privacy are valid SPA navigation, not
-    // static files that Vite should emit. Only validate references that look
-    // like concrete files; this keeps the completeness guard focused on
-    // broken script, stylesheet, image, and other asset paths.
-    const fileName = relative.split('/').pop() ?? ''
-    if (!fileName.includes('.')) continue
-    references.add(relative)
-  }
-
-  const missing = []
-  for (const ref of references) {
-    if (!fs.existsSync(path.join(staticDir, ...ref.split('/')))) missing.push(ref)
-  }
-  return missing.sort()
-}
+// every local asset referenced by the shell or a public document must exist.
 
 function assertIndexAssetsExist(staticDir, label) {
-  const missing = collectMissingIndexAssets(staticDir)
+  const missing = collectMissingDocumentAssets(staticDir)
   if (missing.length === 0) return
 
-  console.error(`[frontend] ${label} is INCOMPLETE: index.html references ${missing.length} missing asset(s):`)
+  console.error(`[frontend] ${label} is INCOMPLETE: published documents reference ${missing.length} missing file(s):`)
   missing.forEach((ref) => console.error(` - ${ref}`))
   console.error('[frontend] Failing the build instead of shipping an index.html that references nonexistent chunks.')
   process.exit(1)
@@ -295,6 +265,7 @@ function computeSourceFingerprint(extraArgs) {
     const hash = createHash('sha256')
     const rootFiles = [
       'index.html',
+      'public.html',
       'package.json',
       'package-lock.json',
       'vite.config.js',
@@ -310,7 +281,7 @@ function computeSourceFingerprint(extraArgs) {
       const stats = fs.statSync(filePath)
       hash.update(`#${name}\0${stats.size}\0${Math.round(stats.mtimeMs)}\n`)
     }
-    for (const dirName of ['public', 'src']) {
+    for (const dirName of ['public', 'src', 'scripts']) {
       const dir = path.join(projectRoot, dirName)
       if (!fs.existsSync(dir)) continue
       hash.update(`#${dirName}\n`)
@@ -348,12 +319,16 @@ function saveFingerprint(fingerprint) {
 }
 
 function publishedOutputLooksComplete() {
+  for (const name of ['home', 'terms', 'privacy']) {
+    if (!fs.existsSync(path.join(backendStaticDir, 'public-pages', `${name}.html`))) return false
+    if (fs.existsSync(backendLiveStaticDir) && !fs.existsSync(path.join(backendLiveStaticDir, 'public-pages', `${name}.html`))) return false
+  }
   if (!fs.existsSync(path.join(backendStaticDir, 'index.html'))) return false
   const publishedAssets = fs.existsSync(backendAssetsDir) ? fs.readdirSync(backendAssetsDir) : []
   if (!publishedAssets.some((name) => name.endsWith('.js'))) return false
   if (fs.existsSync(backendLiveStaticDir) && !fs.existsSync(path.join(backendLiveStaticDir, 'index.html'))) return false
-  if (collectMissingIndexAssets(backendStaticDir).length > 0) return false
-  if (fs.existsSync(backendLiveStaticDir) && collectMissingIndexAssets(backendLiveStaticDir).length > 0) return false
+  if (collectMissingDocumentAssets(backendStaticDir).length > 0) return false
+  if (fs.existsSync(backendLiveStaticDir) && collectMissingDocumentAssets(backendLiveStaticDir).length > 0) return false
   return true
 }
 
@@ -489,7 +464,7 @@ function publishBuildOutput() {
   }
 
   for (const entry of fs.readdirSync(buildOutputDir, { withFileTypes: true })) {
-    if (entry.name === 'assets') continue
+    if (entry.name === 'assets' || entry.name === 'public-page-assets.json') continue
 
     const sourcePath = path.join(buildOutputDir, entry.name)
     const targetPath = path.join(backendStaticDir, entry.name)
@@ -557,6 +532,12 @@ if (result.status !== 0) {
 }
 
 try {
+  const publicPages = spawnSync(process.execPath, [path.join(frontendDir, 'prerender-public-pages.mjs'), buildOutputDir], {
+    stdio: 'inherit', cwd: projectRoot, env: process.env, shell: false,
+  })
+  if (publicPages.error || publicPages.status !== 0) {
+    throw new Error(`Public-page rendering failed: ${publicPages.error?.message || publicPages.status}`)
+  }
   publishBuildOutput()
   if (!sourceMapsEnabled) {
     const sanitized = removeSourceMapArtifacts(backendStaticDir)

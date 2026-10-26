@@ -1,6 +1,7 @@
 export type ApiErrorPayload = {
   error?: string;
   message?: string;
+  code?: string;
 };
 
 export interface PaginatedResponse<T> {

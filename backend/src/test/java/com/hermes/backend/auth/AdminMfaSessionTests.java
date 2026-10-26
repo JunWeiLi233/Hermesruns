@@ -12,8 +12,8 @@ class AdminMfaSessionTests {
 
     @Test
     void ordinarySessionIssuanceNeverCreatesAdminMfaProof() {
-        AuthService authService = new AuthService(mock(RunnerRepository.class), mock(PasswordHasher.class));
         Runner admin = new Runner();
+        AuthService authService = serviceFor(admin);
         admin.setRole("ADMIN");
         admin.setAdminMfaVerifiedAt(LocalDateTime.now());
         admin.setAdminMfaMethod("PASSKEY");
@@ -27,8 +27,8 @@ class AdminMfaSessionTests {
 
     @Test
     void mfaSessionIssuanceCreatesShortLivedAdminProof() {
-        AuthService authService = new AuthService(mock(RunnerRepository.class), mock(PasswordHasher.class));
         Runner admin = new Runner();
+        AuthService authService = serviceFor(admin);
         admin.setRole("ADMIN");
 
         authService.issueMfaVerifiedAdminSessionToken(admin, "PASSKEY");
@@ -36,5 +36,12 @@ class AdminMfaSessionTests {
         assertThat(admin.getAdminMfaVerifiedAt()).isAfter(LocalDateTime.now().minusMinutes(1));
         assertThat(admin.getAdminMfaMethod()).isEqualTo("PASSKEY");
         assertThat(authService.hasFreshAdminMfa(admin)).isTrue();
+    }
+
+    private AuthService serviceFor(Runner runner) {
+        runner.setId(1L);
+        RunnerRepository repository = mock(RunnerRepository.class);
+        org.mockito.Mockito.when(repository.findByIdForUpdate(1L)).thenReturn(java.util.Optional.of(runner));
+        return new AuthService(repository, mock(PasswordHasher.class));
     }
 }

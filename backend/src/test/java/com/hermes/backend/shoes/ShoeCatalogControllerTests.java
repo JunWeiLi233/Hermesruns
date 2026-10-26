@@ -26,7 +26,7 @@ class ShoeCatalogControllerTests {
         ShoeCatalogBrand nike = brand(1L, "Nike");
         ShoeCatalogModel pegasus = model(11L, nike, "Pegasus 41", null, "Pegasus 41", "daily");
         when(brandRepository.findAllByOrderByNameAsc()).thenReturn(List.of(nike));
-        when(modelRepository.findByBrandIdOrderByNameAsc(1L)).thenReturn(List.of(pegasus));
+        when(modelRepository.findAllByOrderByBrand_NameAscNameAsc()).thenReturn(List.of(pegasus));
         ShoeCatalogController controller = new ShoeCatalogController(
                 mock(AuthService.class),
                 brandRepository,

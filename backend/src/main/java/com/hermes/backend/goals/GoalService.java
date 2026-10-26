@@ -3,6 +3,7 @@ package com.hermes.backend.goals;
 import com.hermes.backend.activity.ActivityLocalDates;
 import com.hermes.backend.activity.ActivityType;
 import com.hermes.backend.coaching.TrainingLogRepository;
+import com.hermes.backend.coaching.AutomatedCoachService;
 import com.hermes.backend.runner.Runner;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -49,7 +50,11 @@ public class GoalService {
      * @param enough true when there is enough recent running to suggest anything; false tells the card to say it needs a few weeks
      *               of running first, which is not the same as having every suggested goal already
      */
-    public record SuggestionsResponse(LocalDate today, String timeZone, boolean enough, List<GoalSuggestions.Suggestion> suggestions) {
+    public record SuggestionsResponse(LocalDate today, String timeZone, boolean enough, List<GoalSuggestions.Suggestion> suggestions,
+            AutomatedCoachService.CoachTodayDto recommendation) {
+        public SuggestionsResponse(LocalDate today, String timeZone, boolean enough, List<GoalSuggestions.Suggestion> suggestions) {
+            this(today, timeZone, enough, suggestions, null);
+        }
     }
 
     /** A goal for that period and metric already exists. */
@@ -69,6 +74,21 @@ public class GoalService {
     private final GoalRepository goals;
     private final TrainingLogRepository runs;
     private final Clock clock;
+    @Autowired(required = false)
+    private com.hermes.backend.coaching.AutomatedCoachService coach;
+
+    /** New plans carry a calendar; older reviewed coach DTOs use the account calendar. */
+    private static ZoneId suggestionZone(Runner runner, Object plan) {
+        if (plan != null) {
+            try {
+                Object value = plan.getClass().getMethod("timeZone").invoke(plan);
+                if (value instanceof String zone && !zone.isBlank()) return ZoneId.of(zone);
+            } catch (ReflectiveOperationException | java.time.DateTimeException unavailable) {
+                // Keep the existing reviewed training implementation compatible.
+            }
+        }
+        return ActivityLocalDates.zoneOf(runner);
+    }
 
     @Autowired
     public GoalService(GoalRepository goals, TrainingLogRepository runs) {
@@ -90,10 +110,13 @@ public class GoalService {
         return respond(runner, runId);
     }
 
-    /** Goals worth setting, from the runner's last weeks of running; see {@link GoalSuggestions}. */
-    @Transactional(readOnly = true)
+    /** Weekly suggestions follow the selected plan; longer tracking periods retain their historical basis. */
+    @Transactional
     public SuggestionsResponse suggest(Runner runner) {
-        ZoneId zone = ActivityLocalDates.zoneOf(runner);
+        var prescription = coach != null ? coach.getTodayWithReadiness(runner) : null;
+        // Suggestions follow the plan's calendar. Stored tracking-goal progress
+        // continues to use the account calendar in respond().
+        ZoneId zone = suggestionZone(runner, prescription != null ? prescription.plan() : null);
         LocalDate today = LocalDate.now(clock.withZone(zone));
         Set<String> existing = new LinkedHashSet<>();
         for (Goal goal : goals.findByRunnerIdOrderByIdAsc(runner.getId())) {
@@ -117,8 +140,13 @@ public class GoalService {
         }
         List<GoalSuggestions.Day> days = new ArrayList<>();
         byDay.forEach((day, sum) -> days.add(new GoalSuggestions.Day(day, sum[0], sum[1], (int) sum[2], sum[3])));
-        return new SuggestionsResponse(today, zone.getId(), GoalSuggestions.enoughRunning(days, today),
-                GoalSuggestions.suggest(days, today, existing));
+        boolean enough = GoalSuggestions.enoughRunning(days, today);
+        boolean published = prescription != null && prescription.plan() != null
+                && prescription.plan().reasonCodes() != null && prescription.plan().reasonCodes().contains("VERSIONED_PLAN");
+        boolean planReady = prescription != null && GoalSuggestions.hasUsablePlan(prescription.plan())
+                && (published || GoalSuggestions.enoughRunningForPlan(days, today));
+        return new SuggestionsResponse(today, zone.getId(), enough || planReady,
+                GoalSuggestions.suggest(days, today, existing, prescription == null ? null : prescription.plan()), prescription);
     }
 
     /** @throws IllegalArgumentException when a value is refused; {@link GoalConflictException} when the goal exists already */

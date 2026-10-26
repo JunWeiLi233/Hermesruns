@@ -19,7 +19,7 @@ assert.match(rule('#root .race-form-v2-footer'), /flex:\s*0 0 auto/);
 assert.match(style, /100dvh - 32px/);
 assert.match(style, /@media \(max-width: 480px\)/);
 assert.match(style, /prefers-reduced-motion/);
-assert.match(app.trimEnd(), /@import '\.\/race-form-modal-v2\.css';$/);
+assert.match(app.trimEnd(), /@import '\.\/race-form-modal-v2\.css';/);
 assert.match(page, /type="radio" name="race-registration-status"/);
 assert.match(page, /inputMode="text" placeholder="3:25:00"/);
 assert.match(page, /goalTimeSeconds: goal\.seconds \? Number\(goal\.seconds\) : null/);

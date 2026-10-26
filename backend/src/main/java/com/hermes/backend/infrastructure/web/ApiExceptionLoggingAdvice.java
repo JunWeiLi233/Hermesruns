@@ -21,6 +21,7 @@ import org.springframework.web.context.request.async.AsyncRequestNotUsableExcept
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Logs unhandled API exceptions (5xx) without leaking details to clients.
@@ -87,13 +88,25 @@ public class ApiExceptionLoggingAdvice {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(Map.of("error", "Method not allowed."));
     }
 
-    /** An upload over the multipart limit is the client's to fix: 413 with the limit, not a 500 (BUG-021). */
+    /** An upload over the multipart limit is a client error and exposes only the configured limit. */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<?> handleUploadTooLarge(MaxUploadSizeExceededException ex, HttpServletRequest request) {
+    public ResponseEntity<?> handleOversizedUpload(MaxUploadSizeExceededException ex, HttpServletRequest request) {
         log.warn("Upload over the size limit ip={} method={} uri={}", RequestIpResolver.clientIp(request),
                 request == null ? "" : request.getMethod(), request == null ? "" : request.getRequestURI());
-        return ResponseEntity.status(413)
+        return ResponseEntity.status(HttpStatus.CONTENT_TOO_LARGE)
                 .body(Map.of("error", "That file is too large to upload. The limit is " + maxFileSize + ".", "code", "FILE_TOO_LARGE"));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<?> handleStatus(ResponseStatusException ex, HttpServletRequest request) {
+        if (ex.getStatusCode().is5xxServerError()) {
+            log.error("API failure method={} uri={} status={}",
+                    request == null ? "" : request.getMethod(),
+                    request == null ? "" : request.getRequestURI(), ex.getStatusCode().value(), ex);
+        }
+        String message = ex.getStatusCode().is5xxServerError() ? "Server error"
+                : ex.getReason() == null ? "Request rejected" : ex.getReason();
+        return ResponseEntity.status(ex.getStatusCode()).headers(ex.getHeaders()).body(Map.of("error", message));
     }
 
     @ExceptionHandler(Exception.class)

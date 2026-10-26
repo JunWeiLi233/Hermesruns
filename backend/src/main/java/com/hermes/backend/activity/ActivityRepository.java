@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -49,6 +50,10 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
     Optional<Activity> findByIdForUpdate(@Param("activityId") Long activityId);
 
     Optional<Activity> findByIdAndRunner(Long id, Runner runner);
+
+    @Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT a FROM Activity a WHERE a.id = :activityId AND a.runner = :runner")
+    Optional<Activity> findByIdAndRunnerForUpdate(@Param("activityId") Long activityId, @Param("runner") Runner runner);
 
     List<Activity> findByIdInAndRunner(Collection<Long> ids, Runner runner);
 
@@ -106,7 +111,13 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
      * requested most-recent N run entities instead of the runner's entire history.
      * Callers pass an already clamped positive limit (1..500) — the cap is not re-applied here.
      */
+    @EntityGraph(attributePaths = {"runner", "shoe", "shoe.runner"})
     List<Activity> findByRunnerAndActivityTypeOrderByIdDesc(Runner runner, ActivityType activityType, Limit limit);
+
+    /** Keyset continuation: no OFFSET scan or count query, even deep in a runner's history. */
+    @EntityGraph(attributePaths = {"runner", "shoe", "shoe.runner"})
+    List<Activity> findByRunnerAndActivityTypeAndIdLessThanOrderByIdDesc(
+            Runner runner, ActivityType activityType, Long beforeId, Limit limit);
 
     @Query(value = """
             select a.id
@@ -192,6 +203,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.metrics.totalElevationGain AS totalElevationGain,
               a.metrics.pacePenaltySecPerKm AS pacePenaltySecPerKm,
               a.metrics.weatherAdjusted AS weatherAdjusted,
+              a.runType AS runType,
+              a.sourceFileName AS sourceFileName,
               shoe.id AS shoeId,
               shoe.brand AS shoeBrand,
               shoe.model AS shoeModel,
@@ -225,6 +238,8 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.metrics.totalElevationGain AS totalElevationGain,
               a.metrics.pacePenaltySecPerKm AS pacePenaltySecPerKm,
               a.metrics.weatherAdjusted AS weatherAdjusted,
+              a.runType AS runType,
+              a.sourceFileName AS sourceFileName,
               shoe.id AS shoeId,
               shoe.brand AS shoeBrand,
               shoe.model AS shoeModel,
@@ -281,6 +296,7 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
               a.distanceKm AS distanceKm,
               a.distanceMeters AS distanceMeters,
               COALESCE(a.startTime, a.createdAt) AS effectiveStartTime,
+              a.startTime AS startTime,
               a.stravaApiSourced AS stravaApiSourced,
               (CASE WHEN a.startTime IS NULL THEN true ELSE false END) AS undated
             FROM Activity a
@@ -347,6 +363,9 @@ public interface ActivityRepository extends JpaRepository<Activity, Long> {
         Double getTotalElevationGain();
         Integer getPacePenaltySecPerKm();
         Boolean getWeatherAdjusted();
+        /** What kind of run the runner says it was (see RunTypes), null for a run that is none of them. */
+        String getRunType();
+        String getSourceFileName();
         Long getShoeId();
         String getShoeBrand();
         String getShoeModel();

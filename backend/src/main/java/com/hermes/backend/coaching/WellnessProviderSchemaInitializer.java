@@ -1,8 +1,10 @@
 package com.hermes.backend.coaching;
 
+import com.hermes.backend.activity.ImportProvider;
 import java.sql.Connection;
 import java.util.List;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
@@ -11,9 +13,12 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 /** Hibernate schema update does not expand existing string-enum constraints. */
 @Configuration
+@ConditionalOnProperty(name = "app.schema-compatibility.enabled", havingValue = "true", matchIfMissing = true)
 public class WellnessProviderSchemaInitializer {
     private static final List<String> TABLES = List.of(
-            "daily_sleep_data", "daily_hrv_data", "daily_wellness_summary", "daily_stress_data");
+            "daily_sleep_data", "daily_hrv_data", "daily_wellness_summary", "daily_stress_data", "body_composition_data");
+    private static final List<String> PROVIDERS = java.util.Arrays.stream(ImportProvider.values())
+            .map(Enum::name).toList();
 
     @Bean
     @DependsOn("entityManagerFactory")
@@ -45,11 +50,11 @@ public class WellnessProviderSchemaInitializer {
             String predicate = (String) constraint.get("predicate");
             if (!isLegacyProviderCheck(predicate)) continue;
             String name = quote((String) constraint.get("name"));
-            // One atomic ALTER retains the old condition and accepts exactly one
-            // additional provider; other checks and NOT NULL remain untouched.
+            // One atomic ALTER expands only the provider domain; other checks
+            // and NOT NULL remain untouched.
             jdbc.execute("ALTER TABLE " + quote(schema) + "." + quote(table)
                     + " DROP CONSTRAINT " + name + ", ADD CONSTRAINT " + name
-                    + " CHECK ((" + predicate + ") OR provider = 'MANUAL')");
+                    + " CHECK ((" + predicate + ") OR provider IN (" + providerLiterals() + "))");
         }
     }
 
@@ -70,9 +75,12 @@ public class WellnessProviderSchemaInitializer {
                     WHERE OBJECT_SCHEMA = ? AND OBJECT_NAME = ? AND ENUM_IDENTIFIER = ?
                     ORDER BY VALUE_ORDINAL
                     """, String.class, schema, actualTable, column.get("DTD_IDENTIFIER"));
-            if (!values.contains("MANUAL")) {
+            if (!PROVIDERS.containsAll(values)) {
+                throw new IllegalStateException("Unexpected existing wellness provider enum.");
+            }
+            if (!values.containsAll(PROVIDERS)) {
                 var literals = new java.util.ArrayList<>(values.stream().map(this::literal).toList());
-                literals.add("'MANUAL'");
+                PROVIDERS.stream().filter(value -> !values.contains(value)).map(this::literal).forEach(literals::add);
                 jdbc.execute("ALTER TABLE " + qualified + " ALTER COLUMN " + quote(actualColumn)
                         + " ENUM(" + String.join(",", literals) + ")"
                         + ("NO".equals(column.get("IS_NULLABLE")) ? " NOT NULL" : ""));
@@ -90,12 +98,16 @@ public class WellnessProviderSchemaInitializer {
                        WHERE u.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA AND u.CONSTRAINT_NAME = c.CONSTRAINT_NAME
                          AND LOWER(u.COLUMN_NAME) = 'provider')
                 """, schema, actualTable);
+        // H2 DDL auto-commits. Reject an unexpected interrupted replacement
+        // before modifying any of the checks on this table.
+        constraints.forEach(constraint -> isLegacyProviderCheck((String) constraint.get("predicate")));
         for (var constraint : constraints) {
             String predicate = (String) constraint.get("predicate");
             if (!isLegacyProviderCheck(predicate)) continue;
             String name = (String) constraint.get("name");
-            String replacementName = name + "_manual";
-            String replacementPredicate = "(" + predicate + ") OR " + quote(actualColumn) + " = 'MANUAL'";
+            String replacementName = name + "_providers";
+            String replacementPredicate = "(" + predicate + ") OR " + quote(actualColumn)
+                    + " IN (" + providerLiterals() + ")";
             // H2 commits DDL implicitly: add the replacement before removing the
             // old check, so there is never a window without validation.
             var previousAttempt = jdbc.queryForList("""
@@ -117,8 +129,19 @@ public class WellnessProviderSchemaInitializer {
     }
 
     private static boolean isLegacyProviderCheck(String predicate) {
-        return !predicate.contains("'MANUAL'")
-                && predicate.contains("'GARMIN'") && predicate.contains("'STRAVA'");
+        if (!predicate.contains("'GARMIN'") || !predicate.contains("'STRAVA'")) return false;
+        var values = java.util.regex.Pattern.compile("'((?:''|[^'])*)'").matcher(predicate).results()
+                .map(match -> match.group(1).replace("''", "'"))
+                .collect(java.util.stream.Collectors.toSet());
+        if (!PROVIDERS.containsAll(values)) {
+            throw new IllegalStateException("Unexpected existing wellness provider constraint.");
+        }
+        return !values.containsAll(PROVIDERS);
+    }
+
+    private static String providerLiterals() {
+        return PROVIDERS.stream().map(value -> "'" + value + "'")
+                .collect(java.util.stream.Collectors.joining(","));
     }
 
     private static String normalizedCheck(String predicate) {
@@ -132,7 +155,7 @@ public class WellnessProviderSchemaInitializer {
         var originalValues = inValues(original, column);
         var existingValues = inValues(existing, column);
         if (originalValues == null || existingValues == null) return false;
-        originalValues.add("MANUAL");
+        originalValues.addAll(PROVIDERS);
         return originalValues.equals(existingValues);
     }
 

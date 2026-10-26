@@ -23,6 +23,7 @@ import org.hibernate.annotations.ColumnDefault;
         indexes = {
                 @Index(name = "idx_activity_runner", columnList = "runner_id"),
                 @Index(name = "idx_activity_runner_type", columnList = "runner_id, activityType"),
+                @Index(name = "idx_activity_runner_type_id", columnList = "runner_id, activityType, id"),
                 @Index(name = "idx_activity_runner_start_time", columnList = "runner_id, startTime"),
                 @Index(name = "idx_activity_provider_checksum", columnList = "provider, source_checksum"),
                 @Index(name = "idx_activity_strava_id", columnList = "stravaId"),
@@ -31,7 +32,7 @@ import org.hibernate.annotations.ColumnDefault;
                 @Index(name = "idx_activity_route_match_group", columnList = "route_match_group_id")
         }
 )
-public class Activity extends ActivityEditableFields {
+public class Activity extends ActivitySessionAnalysisFields {
 
     /** GPS stream marker for runs whose Strava stream has no usable latlng data (e.g. treadmill runs). */
     public static final String GPS_STREAM_STATE_NO_GPS = "NO_GPS";

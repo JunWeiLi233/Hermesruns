@@ -1,41 +1,36 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createServer } from 'vite';
+import react from '@vitejs/plugin-react';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const indexSource = readFileSync(path.join(here, "../../../index.html"), 'utf8');
-const appSource = readFileSync(path.join(here, "../../App.jsx"), 'utf8');
-
-assert.match(
-  indexSource,
-  /<noscript>\s*<div id="hermes-seo-fallback"[\s\S]*?<\/div>\s*<\/noscript>/,
-  'The SEO fallback must render only when JavaScript is disabled.',
-);
-assert.doesNotMatch(
-  appSource,
-  /SeoFallbackCleanup/,
-  'The React app should not need to remove a live duplicate fallback page.',
-);
-assert.match(
-  indexSource,
-  /--fallback-paper:\s*#f4efe6/,
-  'The fallback should use the React landing page warm-paper surface.',
-);
-assert.match(
-  indexSource,
-  /--fallback-coral:\s*#f07561/,
-  'The fallback should use the React landing page coral accent.',
-);
-assert.match(
-  indexSource,
-  /font:\s*16px\/1\.7\s+"Inter",\s*"Manrope"/,
-  'The fallback should use the React landing page typography stack.',
-);
-assert.match(
-  indexSource,
-  /\.hermes-seo-fallback__feature-grid\s*\{[^}]*background:\s*#0a0a0b/s,
-  'The fallback feature deck should match the React landing page dark section.',
-);
-
-console.log('[PASS] SEO fallback is isolated and visually aligned with the React landing page.');
+// No-JavaScript content is rendered from the exact components used in the app.
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
+const server = await createServer({ root, configFile: false, plugins: [react()], appType: 'custom',
+  logLevel: 'error', server: { middlewareMode: true, watch: null, hmr: false } });
+try {
+  const { renderPublicPage } = await server.ssrLoadModule('/src/publicPageEntry.jsx');
+  const home = renderPublicPage('/');
+  assert.match(home.content, /<h1[^>]*>Run the race you trained for[.]/);
+  assert.ok(home.content.includes(home.metadata.description));
+  assert.match(home.content, /Read the formulas/);
+  assert.match(home.content, /How HermesRuns works/);
+  assert.match(home.content, /Race-equation VDOT/);
+  assert.match(home.content, /38\.3/);
+  assert.match(home.content, /How much running history do I need/);
+  assert.doesNotMatch(home.content, /Export everything|injury risk is low/);
+  assert.ok(home.content.includes('>Methods</a>'));
+  assert.doesNotMatch(home.content, /hermes-seo-fallback/);
+  for (const route of ['/terms', '/privacy']) {
+    const page = renderPublicPage(route);
+    assert.equal(page.metadata.canonicalUrl, 'https://hermesruns.com' + route);
+    assert.match(page.content, /id="legal-document-title"/);
+    assert.match(page.content, /October 17, 2026/);
+    assert.equal(page.metadata.structuredData.dateModified, '2026-10-17');
+    assert.ok(!page.content.includes('Run the race you trained for.'));
+  }
+  assert.throws(() => renderPublicPage('/profile'), /Not a public page/);
+} finally {
+  await server.close();
+}
+console.log('[PASS] Public no-JavaScript content uses the actual route components.');

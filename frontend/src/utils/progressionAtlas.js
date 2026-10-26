@@ -1,3 +1,5 @@
+import { getActivityDateKey } from './timeZone.js';
+
 export const PROGRESSION_TIMEFRAMES = ['day', 'week', 'month', 'year', 'total', '1m', '3m', '6m', '12m'];
 
 // The ranges that can be set beside the stretch of the same length just before them: this 3 months against the 3 months before.
@@ -56,7 +58,13 @@ function endOfCurrentDay(date) {
 }
 
 function getRunStartedAt(run) {
-  return new Date(run?.startTime || run?.startDate || NaN);
+  const key = getActivityDateKey(run);
+  const clock = run?.accountLocalTime || (run?.startTime || run?.startDate || '').slice(11, 19) || '12:00:00';
+  return key ? new Date(`${key}T${clock}`) : new Date(NaN);
+}
+
+function calendarKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function formatProgressionWindowLabel(start, end, timeframe, lang) {
@@ -245,7 +253,7 @@ export function buildProgressionAtlas(runs, timeframe, lang, now = new Date(), o
   const grouped = filteredAsc.reduce((map, run) => {
     const startedAt = getRunStartedAt(run);
     const bucketDate = startOfDay(startedAt);
-    const key = bucketDate.toISOString().slice(0, 10);
+    const key = calendarKey(bucketDate);
     const existing = map.get(key) || {
       key,
       date: bucketDate,
@@ -289,7 +297,7 @@ export function buildProgressionAtlas(runs, timeframe, lang, now = new Date(), o
   if (filteredAsc.length > 0) {
     chartSeries.push({ key: 'baseline', date: rangeStart, distanceKm: 0, sessions: 0, cumulativeDistance: 0, x: 0, y: chartBaseLine });
     for (const date = new Date(rangeStart); date <= rangeEnd; date.setDate(date.getDate() + 1)) {
-      const key = date.toISOString().slice(0, 10);
+      const key = calendarKey(date);
       const entry = grouped.get(key);
       cumulativeDistance += entry?.distanceKm || 0;
       const nextDay = new Date(date);

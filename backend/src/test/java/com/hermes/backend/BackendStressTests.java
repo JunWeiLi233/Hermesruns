@@ -28,6 +28,7 @@ import com.hermes.backend.runner.RunnerRepository;
 import com.hermes.backend.shoes.ShoeRepository;
 import com.hermes.backend.shoes.ShoeTrackerService;
 import com.hermes.backend.strength.MuscleTrainingMetricsService;
+import com.hermes.backend.strength.MuscleTrainingPreference;
 import java.lang.reflect.Method;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,6 +47,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -53,8 +55,10 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -131,6 +135,7 @@ class BackendStressTests {
         sharedRunner.setAiDailyScansUsed(0);
         sharedRunner.setAiDailyResetDate(LocalDate.now());
 
+        when(runnerRepository.findByIdForUpdate(1L)).thenReturn(java.util.Optional.of(sharedRunner));
         when(runnerRepository.save(any(Runner.class))).thenAnswer(inv -> inv.getArgument(0));
         when(runnerRepository.sumAiDailyScansUsedForDate(any(LocalDate.class))).thenReturn(0L);
 
@@ -167,8 +172,8 @@ class BackendStressTests {
     }
 
     @Test
-    @DisplayName("STRESS: AiUsageService — normalizeDailyWindow has TOCTOU race on reset date")
-    void aiUsageService_normalizeDailyWindow_toctouRace() throws Exception {
+    @DisplayName("STRESS: AiUsageService — advisory quota reads never persist stale daily resets")
+    void aiUsageService_advisoryQuotaReadsDoNotPersistStaleDailyReset() throws Exception {
         RunnerRepository runnerRepository = mock(RunnerRepository.class);
         AiUsageService service = new AiUsageService(runnerRepository, 5, 200, 20);
 
@@ -177,11 +182,6 @@ class BackendStressTests {
         runner.setAiDailyScansUsed(3);
         runner.setAiDailyResetDate(LocalDate.now().minusDays(1));
 
-        AtomicInteger saveCount = new AtomicInteger(0);
-        when(runnerRepository.save(any(Runner.class))).thenAnswer(inv -> {
-            saveCount.incrementAndGet();
-            return inv.getArgument(0);
-        });
         when(runnerRepository.sumAiDailyScansUsedForDate(any())).thenReturn(0L);
 
         int threadCount = 5;
@@ -196,7 +196,13 @@ class BackendStressTests {
                 } catch (Exception e) {
                     return;
                 }
-                service.checkQuota(runner);
+                Runner requestSnapshot = new Runner();
+                requestSnapshot.setId(runner.getId());
+                requestSnapshot.setAiDailyScansUsed(runner.getAiDailyScansUsed());
+                requestSnapshot.setAiDailyResetDate(runner.getAiDailyResetDate());
+                assertThat(service.checkQuota(requestSnapshot)).isNull();
+                assertThat(requestSnapshot.getAiDailyScansUsed()).isZero();
+                assertThat(requestSnapshot.getAiDailyResetDate()).isEqualTo(LocalDate.now());
             }));
         }
 
@@ -205,12 +211,9 @@ class BackendStressTests {
         }
         executor.shutdown();
 
-        assertThat(saveCount.get()).isGreaterThan(0);
-
-        if (saveCount.get() > 1) {
-            System.out.println("[STRESS BUG] AiUsageService normalizeDailyWindow: " + saveCount.get()
-                    + " redundant saves from " + threadCount + " threads. Only 1 save should occur.");
-        }
+        verify(runnerRepository, never()).save(any());
+        assertThat(runner.getAiDailyScansUsed()).isEqualTo(3);
+        assertThat(runner.getAiDailyResetDate()).isEqualTo(LocalDate.now().minusDays(1));
     }
 
     // ================================================================
@@ -325,8 +328,8 @@ class BackendStressTests {
     // ================================================================
 
     @Test
-    @DisplayName("STRESS: AutomatedCoachService — concurrent ensureScheduleHorizon recovers from DataIntegrityViolation")
-    void coachService_concurrentEnsureScheduleHorizon_recoversFromIntegrityViolation() {
+    @DisplayName("STRESS: AutomatedCoachService — schedule persistence failure never reuses the failed session")
+    void coachService_schedulePersistenceFailureDoesNotQueryTheFailedSession() {
         Runner runner = runner(1L);
         CoachRunnerStateRepository stateRepository = mock(CoachRunnerStateRepository.class);
         CoachScheduledWorkoutRepository scheduleRepository = mock(CoachScheduledWorkoutRepository.class);
@@ -334,29 +337,30 @@ class BackendStressTests {
         CoachFeedbackAlertRepository alertRepository = mock(CoachFeedbackAlertRepository.class);
 
         CoachRunnerState existingState = aggregatedState(runner);
-        LocalDate today = LocalDate.now();
-        List<CoachScheduledWorkout> completeSchedule = fullSchedule(runner, today, 14);
-
         when(stateRepository.findByRunner(runner)).thenReturn(Optional.of(existingState));
         when(blockRepository.findByRunnerAndActiveTrue(runner)).thenReturn(Optional.empty());
-
-        doReturn(List.of())
-                .doReturn(completeSchedule)
-                .when(scheduleRepository)
-                .findByRunnerAndScheduledDateBetween(runner, today, today.plusDays(13));
+        when(scheduleRepository.findByRunnerAndScheduledDateBetween(any(), any(), any())).thenReturn(List.of());
+        var persistenceFailure = new DataIntegrityViolationException("duplicate schedule");
         when(scheduleRepository.saveAll(anyList()))
-                .thenThrow(new DataIntegrityViolationException("duplicate schedule"));
+                .thenThrow(persistenceFailure);
 
         AutomatedCoachService service = service(stateRepository, scheduleRepository, blockRepository, alertRepository);
 
-        assertThatCode(() -> service.getCoachState(runner)).doesNotThrowAnyException();
-        verify(scheduleRepository).saveAll(anyList());
+        // Real-JPA commit-race coverage proves competing requests serialize. If storage still fails for any reason,
+        // the transaction must unwind; another repository query cannot repair Hibernate's failed persistence context.
+        assertThatThrownBy(() -> service.getCoachState(runner)).isSameAs(persistenceFailure);
+        var scheduleCalls = inOrder(scheduleRepository);
+        scheduleCalls.verify(scheduleRepository).findByRunnerAndScheduledDateBetweenOrderByScheduledDateAsc(any(), any(), any());
+        scheduleCalls.verify(scheduleRepository).findByRunnerAndScheduledDateBetween(any(), any(), any());
+        scheduleCalls.verify(scheduleRepository).saveAll(anyList());
+        scheduleCalls.verifyNoMoreInteractions();
     }
 
     @Test
-    @DisplayName("STRESS: AutomatedCoachService — concurrent getOrCreateState uses the state the other request created")
-    void coachService_concurrentGetOrCreateState_usesTheStateTheOtherRequestCreated() {
+    @DisplayName("STRESS: AutomatedCoachService — runner lock precedes state lookup and existing state is reused")
+    void coachService_concurrentGetOrCreateState_locksBeforeReadingState() {
         Runner runner = runner(1L);
+        RunnerRepository runnerRepository = mock(RunnerRepository.class);
         CoachRunnerStateRepository stateRepository = mock(CoachRunnerStateRepository.class);
         CoachScheduledWorkoutRepository scheduleRepository = mock(CoachScheduledWorkoutRepository.class);
         CoachTrainingBlockRepository blockRepository = mock(CoachTrainingBlockRepository.class);
@@ -364,11 +368,8 @@ class BackendStressTests {
 
         CoachRunnerState recoveredState = aggregatedState(runner);
 
-        doReturn(Optional.empty())
-                .doReturn(Optional.of(recoveredState))
-                .doReturn(Optional.of(recoveredState))
-                .when(stateRepository)
-                .findByRunner(runner);
+        when(runnerRepository.findByIdForUpdate(runner.getId())).thenReturn(Optional.of(runner));
+        when(stateRepository.findByRunner(runner)).thenReturn(Optional.of(recoveredState));
         when(stateRepository.save(any(CoachRunnerState.class))).thenAnswer(invocation -> {
             CoachRunnerState state = invocation.getArgument(0);
             if (state == recoveredState) {
@@ -380,11 +381,12 @@ class BackendStressTests {
                 .thenReturn(fullSchedule(runner, LocalDate.now(), 14));
         when(blockRepository.findByRunnerAndActiveTrue(runner)).thenReturn(Optional.empty());
 
-        AutomatedCoachService service = service(stateRepository, scheduleRepository, blockRepository, alertRepository);
+        AutomatedCoachService service = service(runnerRepository, stateRepository, scheduleRepository, blockRepository, alertRepository);
 
         assertThatCode(() -> service.getCoachState(runner)).doesNotThrowAnyException();
-        // The first lookup found nothing, but by the time this request had the runner's row the other one had created the state:
-        // it is used, and a second one is never inserted (the real thing would fail on the unique index and break the transaction).
+        var initialization = inOrder(stateRepository, runnerRepository);
+        initialization.verify(runnerRepository).findByIdForUpdate(runner.getId());
+        initialization.verify(stateRepository).findByRunner(runner);
         verify(stateRepository, never()).save(argThat(state -> state != recoveredState));
         verify(stateRepository).save(recoveredState);
     }
@@ -530,20 +532,16 @@ class BackendStressTests {
 
     @Test
     @DisplayName("STRESS: MuscleTraining — ACWR computation with no runs returns null safely")
-    void muscleTraining_computeAcwr_noRuns_returnsNull() throws Exception {
+    void muscleTraining_computeAcwr_noRuns_returnsNull() {
         List<Activity> runs = List.of();
-        Method computeAcwr = MuscleTrainingMetricsService.class
-                .getDeclaredMethod("computeAcwr", List.class);
-        computeAcwr.setAccessible(true);
-
         MuscleTrainingMetricsService service = new MuscleTrainingMetricsService();
-        Object result = computeAcwr.invoke(service, runs);
+        Double result = service.buildMetrics(runs, null, new MuscleTrainingPreference()).acwr();
         assertThat(result).isNull();
     }
 
     @Test
     @DisplayName("STRESS: MuscleTraining — ACWR with very high acute load produces finite result")
-    void muscleTraining_computeAcwr_highAcuteLoad_noInfinityOrNaN() throws Exception {
+    void muscleTraining_computeAcwr_highAcuteLoad_noInfinityOrNaN() {
         List<Activity> runs = new ArrayList<>();
         for (int i = 0; i < 30; i++) {
             Activity a = new Activity();
@@ -552,21 +550,16 @@ class BackendStressTests {
             a.setDistanceKm(50.0);
             a.setMovingTimeSeconds(18000);
             a.setStartTime(LocalDateTime.now().minusDays(30 - i));
+            a.setStravaApiSourced(true);
             a.setAverageHeartRate(180.0);
             runs.add(a);
         }
 
-        Method computeAcwr = MuscleTrainingMetricsService.class
-                .getDeclaredMethod("computeAcwr", List.class);
-        computeAcwr.setAccessible(true);
-
         MuscleTrainingMetricsService service = new MuscleTrainingMetricsService();
-        Object result = computeAcwr.invoke(service, runs);
-
-        if (result instanceof Double acwr) {
-            assertThat(Double.isFinite(acwr)).isTrue();
-            assertThat(Double.isNaN(acwr)).isFalse();
-        }
+        Double result = service.buildMetrics(runs, null, new MuscleTrainingPreference()).acwr();
+        assertThat(result).isNotNull().isPositive();
+        assertThat(Double.isFinite(result)).isTrue();
+        assertThat(Double.isNaN(result)).isFalse();
     }
 
     // ================================================================
@@ -695,8 +688,18 @@ class BackendStressTests {
             CoachTrainingBlockRepository blockRepository,
             CoachFeedbackAlertRepository alertRepository
     ) {
+        return service(mock(RunnerRepository.class), stateRepository, scheduleRepository, blockRepository, alertRepository);
+    }
+
+    private static AutomatedCoachService service(
+            RunnerRepository runnerRepository,
+            CoachRunnerStateRepository stateRepository,
+            CoachScheduledWorkoutRepository scheduleRepository,
+            CoachTrainingBlockRepository blockRepository,
+            CoachFeedbackAlertRepository alertRepository
+    ) {
         return new AutomatedCoachService(
-                mock(RunnerRepository.class),
+                runnerRepository,
                 mock(ActivityRepository.class),
                 stateRepository,
                 scheduleRepository,

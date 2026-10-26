@@ -2,18 +2,19 @@
 // In HermesRuns: a card called Goals on the Training log and on the Profile page, and a read-only one on each run's page. A goal is a
 // week, a month or a year, of distance, time, number of runs or climb; its progress is added up from the runner's runs each time.
 //
-// A throwaway runner with six weeks of running and a run today (fixtures/history.ts), so that the week, the month and the year going on
+// A throwaway runner with thirty weeks of running and a run today (fixtures/history.ts), so that the week, the month and the year going on
 // each have a run in them whatever day the suite is run. Every number on a goal is checked against the API's answer, and the API's
 // answer against the runs the history was built with, put into weeks, months and years here by their day.
 import type { Locator, Page } from '@playwright/test';
 import { Api, newRunner } from '../fixtures/api.ts';
 import { addDays, utcDay, weekStartOf } from '../fixtures/format.ts';
+import { gpxRun } from '../fixtures/gpx.ts';
 import { importHistoryRun, runOn, sharedHistoryRunner, waitForEffort, type HistoryRun, type RunnerWithHistory } from '../fixtures/history.ts';
 import { pageOpener } from '../fixtures/pages.ts';
 import { a11yViolations, contrastProblems, expect, expectNoHorizontalOverflow, expectNoRawKeys, test } from '../fixtures/test.ts';
 
-const WEEKS = 6;
-const ROUTE = '/training-log';
+const WEEKS = 30;
+const ROUTE = '/runs#training-log';
 
 type Period = 'WEEK' | 'MONTH' | 'YEAR';
 type Metric = 'DISTANCE' | 'TIME' | 'COUNT' | 'ELEVATION';
@@ -54,6 +55,16 @@ let runner: RunnerWithHistory;
 const pages = pageOpener();
 test.afterEach(() => pages.closeAll());
 
+async function setProfileUnits(api: Api, units: 'metric' | 'imperial' = 'metric'): Promise<void> {
+  const profile = (await api.get('/api/training/me')).json;
+  if (profile.units === units) return;
+  const saved = await api.request('PATCH', '/api/training/me', {
+    body: { units }, headers: { 'If-Match': String(profile.revision), 'Idempotency-Key': crypto.randomUUID() },
+  });
+  expect(saved.status).toBe(200);
+}
+
+
 async function clearGoals(api: Api): Promise<void> {
   const answer = (await api.get('/api/goals')).json as GoalsAnswer;
   for (const goal of answer.goals) expect((await api.delete(`/api/goals/${goal.id}`)).status).toBe(200);
@@ -65,10 +76,28 @@ test.beforeAll(async () => {
   await clearGoals(runner.api);
 });
 // Every test starts without goals, and leaves none.
-test.beforeEach(async () => clearGoals(runner.api));
+test.beforeEach(async () => { await setProfileUnits(runner.api); await clearGoals(runner.api); });
 test.afterAll(async () => clearGoals(runner.api));
 
 const goalsOf = async (who: { api: Api } = runner): Promise<GoalsAnswer> => (await who.api.get('/api/goals')).json;
+
+/** Sum the full account year independently of goals, following the log's bounded windows. */
+async function loggedClimbThisYear(api: Api): Promise<number> {
+  type Log = { today: string; from: string; weeks: Array<{ days: Array<{ date: string; runs: Array<{ elevationGainM: number | null }> }> }> };
+  let to = '';
+  let total = 0;
+  for (let window = 0; window < 3; window += 1) {
+    const response = await api.get(`/api/training/log?weeks=26${to ? `&to=${to}` : ''}`);
+    expect(response.status).toBe(200);
+    const log = response.json as Log;
+    const yearStart = periodStart('YEAR', log.today);
+    total += log.weeks.flatMap(week => week.days).filter(day => day.date >= yearStart && day.date <= log.today)
+      .flatMap(day => day.runs).reduce((sum, run) => sum + (run.elevationGainM ?? 0), 0);
+    if (log.from <= yearStart) return total;
+    to = addDays(log.from, -1);
+  }
+  throw new Error('training log windows did not cover the full account year');
+}
 
 async function setGoal(api: Api, period: Period, metric: Metric, target: number): Promise<Goal> {
   const res = await api.post('/api/goals', { period, metric, target });
@@ -146,12 +175,13 @@ async function openCard(page: Page): Promise<void> {
   await expect(goalsCard(page).getByRole('button', { name: 'Set a goal' })).toBeVisible();
 }
 
-async function addThroughDialog(page: Page, period: Period, metric: Metric, target: string): Promise<void> {
+async function addThroughDialog(page: Page, period: Period, metric: Metric, target: string, distanceUnit?: 'kilometres' | 'miles'): Promise<void> {
   await goalsCard(page).getByRole('button', { name: 'Set a goal' }).click();
   const box = dialog(page);
   await expect(box).toBeVisible();
   await box.getByRole('radio', { name: PERIOD_WORD[period], exact: true }).check();
   await box.getByRole('radio', { name: METRIC_RADIO[metric], exact: true }).check();
+  if (distanceUnit) await expect(box.locator('.goal-form__input').getByText(distanceUnit, { exact: true })).toBeVisible();
   await box.getByLabel('Target').fill(target);
   await box.getByRole('button', { name: 'Save goal' }).click();
   await expect(box).toHaveCount(0);
@@ -271,9 +301,7 @@ test.describe('F03 goals (M6)', () => {
     await expect(row).not.toContainText('to go');
     // Climb: the long runs are files with elevation, and the importer adds up their climb (BUG-036), so the year of climb is theirs.
     const climb = answer.goals.find((goal) => goal.metric === 'ELEVATION') as Goal;
-    const log = (await runner.api.get('/api/training/log?weeks=26')).json as { today: string; weeks: Array<{ days: Array<{ date: string; runs: Array<{ elevationGainM: number | null }> }> }> };
-    const climbThisYear = log.weeks.flatMap((w) => w.days).filter((day) => day.date >= periodStart('YEAR', log.today) && day.date <= log.today)
-      .flatMap((day) => day.runs).reduce((sum, run) => sum + (run.elevationGainM ?? 0), 0);
+    const climbThisYear = await loggedClimbThisYear(runner.api);
     expect(climbThisYear, 'the long runs of the year carry a climb').toBeGreaterThan(100);
     expect(Math.abs(climb.progress - climbThisYear)).toBeLessThan(1);
     await expect(rowOf(page, 'Yearly climb')).toContainText(`${amount('ELEVATION', climb.progress)} of 20,000 m this year`);
@@ -355,16 +383,16 @@ test.describe('F03 goals (M6)', () => {
 
     // In miles the box and the row speak miles, the server keeps kilometres.
     await clearGoals(runner.api);
-    const context = page.context();
-    await context.addInitScript(() => localStorage.setItem('hermes_unit', 'mile'));
-    await page.goto(ROUTE);
-    await openCard(page);
-    await addThroughDialog(page, 'WEEK', 'DISTANCE', '25');
+    await page.close();
+    await setProfileUnits(runner.api, 'imperial');
+    const milesPage = await pages.open(browser, baseURL, guard, runner, ROUTE);
+    await openCard(milesPage);
+    await addThroughDialog(milesPage, 'WEEK', 'DISTANCE', '25', 'miles');
     const goal = (await goalsOf()).goals[0];
     expect(goal.target).toBeCloseTo(25 * 1.609344, 2);
-    await expect(rowOf(page, 'Weekly distance')).toContainText('of 25 mi this week');
-    await rowOf(page, 'Weekly distance').getByRole('button', { name: 'Change the target of Weekly distance' }).click();
-    await expect(dialog(page, 'Change the target of Weekly distance').getByLabel('Target')).toHaveValue('25');
+    await expect(rowOf(milesPage, 'Weekly distance')).toContainText('of 25 mi this week');
+    await rowOf(milesPage, 'Weekly distance').getByRole('button', { name: 'Change the target of Weekly distance' }).click();
+    await expect(dialog(milesPage, 'Change the target of Weekly distance').getByLabel('Target')).toHaveValue('25');
   });
 
   // ---- Suggested goals (M8) ------------------------------------------------------------------------------------------------------------
@@ -380,6 +408,7 @@ test.describe('F03 goals (M6)', () => {
     today: string;
     timeZone: string;
     enough: boolean;
+    recommendation: { plan: { targetWeeklyKm: number; sessionsPerWeek: number } };
     suggestions: Suggestion[];
   }
   const suggestionsOf = async (who: { api: Api } = runner): Promise<SuggestionsAnswer> => (await who.api.get('/api/goals/suggestions')).json;
@@ -396,38 +425,64 @@ test.describe('F03 goals (M6)', () => {
     return { usual: Array.from(weeks.values()).reduce((sum, km) => sum + km, 0) / weeks.size, weeks: weeks.size };
   }
 
-  test('F03-E1 with no goals the card offers goals worked out from the runner\'s own weeks, each with the working behind it', async ({ browser, baseURL, guard }) => {
+  test('F03-E1 prescribed weekly goals and historical monthly and yearly goals retain their own arithmetic', async ({ browser, baseURL, guard }) => {
     const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
     await openCard(page);
     const answer = await suggestionsOf();
     expect(answer.enough).toBe(true);
-    expect(answer.suggestions.length).toBeGreaterThanOrEqual(3);
+    expect(answer.suggestions.length).toBeGreaterThanOrEqual(4);
 
-    // The first is a weekly distance a little above the usual week, rounded to a number a person would pick, and the usual week is
-    // the arithmetic of the runs the history was built with.
+    // The selected plan prescribes the week; the historical weekly mean explains the comparison.
     const first = answer.suggestions[0];
     const { usual, weeks } = usualWeek(answer.today);
     expect([first.period, first.metric, first.unit]).toEqual(['WEEK', 'DISTANCE', 'km']);
-    expect(first.basis).toMatchObject({ kind: 'weekly-average', span: weeks, stretchPercent: 10 });
+    expect(first.basis).toMatchObject({ kind: 'coach-plan', span: weeks, stretchPercent: 0 });
     expect(Math.abs(first.basis.usual - usual), 'the usual week').toBeLessThan(0.15 * weeks);
-    expect(first.target).toBeGreaterThan(first.basis.usual);
-    expect(first.target).toBeLessThanOrEqual(first.basis.usual * 1.1 + 5);
-    expect(first.target % 5).toBe(0);
+    expect(first.target).toBe(answer.recommendation.plan.targetWeeklyKm);
+    expect(answer.suggestions[1].target).toBe(answer.recommendation.plan.sessionsPerWeek);
+    expect(answer.suggestions[1].basis.kind).toBe('coach-plan');
 
-    // The card says all of it, three at a time.
+    // The plan owns the week. Longer periods still use the historical rules, independently summed here.
+    const rows = (await runner.api.get('/api/activities/analysis')).json as Array<{ startTime: string; distanceKm: number }>;
+    const firstMonth = new Date(`${answer.today.slice(0, 7)}-01T12:00:00Z`);
+    const months = [1, 2, 3].map(back => {
+      const from = new Date(firstMonth); from.setUTCMonth(from.getUTCMonth() - back);
+      return from.toISOString().slice(0, 7);
+    });
+    const monthly = months.map(month => rows.filter(row => row.startTime.startsWith(month)))
+      .filter(runs => runs.length).map(runs => runs.reduce((sum, run) => sum + run.distanceKm, 0));
+    const yearStart = addDays(answer.today, -364);
+    const yearly = rows.filter(row => row.startTime.slice(0, 10) >= yearStart && row.startTime.slice(0, 10) <= answer.today)
+      .reduce((sum, run) => sum + run.distanceKm, 0);
+    for (const [period, kind, usual, stretch] of [
+      ['MONTH', 'monthly-average', monthly.reduce((a, b) => a + b, 0) / monthly.length, 0.10],
+      ['YEAR', 'yearly-total', yearly, 0.05],
+    ] as const) {
+      const historical = answer.suggestions.find(item => item.period === period && item.metric === 'DISTANCE');
+      expect(historical).toBeTruthy();
+      expect(historical!.basis.kind).toBe(kind);
+      expect(historical!.basis.usual).toBeCloseTo(Math.round(usual * 10) / 10, 1);
+      const step = usual < 20 ? 1 : usual < 60 ? 5 : usual < 200 ? 10 : usual < 600 ? 25 : usual < 2000 ? 50 : 100;
+      let target = Math.round(usual * (1 + stretch) / step) * step;
+      if (target <= usual) target = Math.floor(usual / step) * step + step;
+      expect(historical!.target).toBe(target);
+    }
+    expect(new Set(answer.suggestions.map(item => `${item.period}/${item.metric}`)).size).toBe(answer.suggestions.length);
+
+    // Every offered goal remains reachable beside its recommendation evidence.
     const block = suggestedBlock(page);
     await expect(block).toBeVisible();
-    const items = block.getByRole('listitem');
-    await expect(items).toHaveCount(3);
+    const items = block.locator('.goals-v2__suggest-list > li');
+    await expect(items).toHaveCount(answer.suggestions.length);
     await expect(items.first()).toContainText(`Weekly distance: ${amount('DISTANCE', first.target)}`);
-    await expect(items.first()).toContainText(`Your usual week over the ${weeks} weeks you ran lately: ${amount('DISTANCE', first.basis.usual)}. This is 10% more.`);
+    await expect(items.first()).toContainText(`Uses your current training plan's weekly target. Your usual recorded week: ${amount('DISTANCE', first.basis.usual)}.`);
     await expect(items.nth(1)).toContainText(`Weekly runs: ${amount('COUNT', answer.suggestions[1].target)}`);
-    await expect(items.nth(1)).toContainText('This keeps it up.');
+    await expect(items.nth(1)).toContainText("Uses your current training plan's weekly target.");
     await expect(block).toContainText('Worked out from your own recent running, with the numbers shown.');
     // The Profile page holds the same card.
     await page.goto('/profile');
     await expect(suggestedBlock(page)).toBeVisible({ timeout: 20_000 });
-    await expect(suggestedBlock(page).getByRole('listitem').first()).toContainText(`Weekly distance: ${amount('DISTANCE', first.target)}`);
+    await expect(suggestedBlock(page).locator('.goals-v2__suggest-list > li').first()).toContainText(`Weekly distance: ${amount('DISTANCE', first.target)}`);
   });
 
   test('F03-H6 setting a suggested goal as it is puts it in the list at the suggested target and takes it off the suggestions', async ({ browser, baseURL, guard }) => {
@@ -441,9 +496,9 @@ test.describe('F03 goals (M6)', () => {
     const answer = await goalsOf();
     expect(answer.goals).toHaveLength(1);
     expect([answer.goals[0].period, answer.goals[0].metric, answer.goals[0].target]).toEqual(['WEEK', 'DISTANCE', first.target]);
-    // It is a goal now, so it is not suggested; the next one takes its place on the list.
-    await expect(suggestedBlock(page).getByRole('listitem').first()).not.toContainText('Weekly distance');
-    await expect(suggestedBlock(page).getByRole('listitem')).toHaveCount(3);
+    // It is a goal now, so only the other period/metric suggestions remain.
+    await expect(suggestedBlock(page).locator('.goals-v2__suggest-list > li').first()).not.toContainText('Weekly distance');
+    await expect(suggestedBlock(page).locator('.goals-v2__suggest-list > li')).toHaveCount((await suggestionsOf()).suggestions.length);
     expect((await suggestionsOf()).suggestions.some((s) => s.period === 'WEEK' && s.metric === 'DISTANCE')).toBe(false);
   });
 
@@ -466,28 +521,30 @@ test.describe('F03 goals (M6)', () => {
     await expect(rowOf(page, 'Weekly distance')).toContainText(`of ${amount('DISTANCE', first.target - 3)} this week`);
   });
 
-  test('F03-E12 a runner with too little running is told what it takes, and is offered nothing', async ({ browser, baseURL, guard }) => {
+  test('F03-E12 a short recent history supports prescribed weekly goals while historical month and year suggestions stay unavailable', async ({ browser, baseURL, guard }) => {
     const made = await newRunner('goals-few');
     await importHistoryRun(made.api, 3, 'easy', 6, 340, 138, 'E2E few one');
     await importHistoryRun(made.api, 10, 'easy', 6, 340, 138, 'E2E few two');
     const answer = await suggestionsOf(made);
-    expect(answer.enough).toBe(false);
-    expect(answer.suggestions).toEqual([]);
+    expect(answer.enough).toBe(true);
+    expect(answer.suggestions.length).toBeGreaterThan(0);
+    expect(answer.suggestions.every(item => item.period === 'WEEK' && item.basis.kind === 'coach-plan')).toBe(true);
+    expect(answer.suggestions.find(item => item.metric === 'DISTANCE')?.target).toBe(answer.recommendation.plan.targetWeeklyKm);
 
     const page = await pages.open(browser, baseURL, guard, { token: made.api.token as string, email: made.email }, ROUTE);
     await openCard(page);
-    await expect(goalsCard(page)).toContainText('Suggestions appear after a few weeks of running: at least 6 runs across 4 of the last 8 weeks.');
-    await expect(suggestedBlock(page)).toHaveCount(0);
+    await expect(suggestedBlock(page)).toContainText("Uses your current training plan's weekly target.");
+    await expect(suggestedBlock(page).locator('.goals-v2__suggest-list > li')).toHaveCount(answer.suggestions.length);
   });
 
   test('F03-E13 the suggestions are in Chinese in Chinese, with no raw key, and can be set with the keyboard', async ({ browser, baseURL, guard }) => {
-    const page = await pages.open(browser, baseURL, guard, runner, ROUTE);
+    const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(ROUTE);
     const block = page.getByRole('region', { name: '为你推荐' });
     await expect(block).toBeVisible({ timeout: 20_000 });
     await expect(block).toContainText('每周距离：');
-    await expect(block).toContainText('平常一周是');
+    await expect(block).toContainText('当前训练计划');
     await expectNoRawKeys(page);
     const first = (await suggestionsOf()).suggestions[0];
     await block.getByRole('button', { name: /采用建议目标 每周距离/ }).focus();
@@ -698,16 +755,32 @@ test.describe('F03 goals (M6)', () => {
     expect((await goalsOf()).goals).toMatchObject([{ period: 'MONTH', metric: 'DISTANCE', target: 150 }]);
   });
 
-  test.fixme('F03-E4 a goal that crosses a time-zone or daylight-saving boundary counts the right days (needs the runner\'s time zone and the BUG-003 decision on file-run times)', async () => {});
+  test('F03-E4 the runner calendar puts UTC-Monday runs on opposite sides of the New York week boundary', async ({ browser, baseURL, guard }) => {
+    const made = await newRunner('goals-ny-boundary');
+    expect((await made.api.patch('/api/profile/me/time-zone', { timeZone: 'America/New_York' })).status).toBe(200);
+    const accountToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const monday = weekStartOf(accountToday);
+    const before = await made.api.importRun('ny-before-week.gpx', gpxRun({ name: 'NY Sunday from UTC Monday', start: new Date(`${monday}T03:30:00Z`), distanceM: 3000, pace: 360, hr: 140 }));
+    const after = await made.api.importRun('ny-in-week.gpx', gpxRun({ name: 'NY Monday from UTC Monday', start: new Date(`${monday}T05:30:00Z`), distanceM: 3000, pace: 360, hr: 140 }));
+    const goal = await setGoal(made.api, 'WEEK', 'COUNT', 2);
+    expect(goal.periodStart).toBe(monday);
+    expect(goal.periodEnd).toBe(addDays(monday, 6));
+    expect(goal.progress).toBe(1);
+    expect(goal.previous.progress).toBe(1);
+    const outside = (await made.api.get(`/api/goals?runId=${before}`)).json;
+    const inside = (await made.api.get(`/api/goals?runId=${after}`)).json;
+    expect(outside.timeZone).toBe('America/New_York');
+    expect(outside.goals[0].thisRun).toBeNull();
+    expect(inside.goals[0].thisRun).toBe(1);
+    const page = await pages.open(browser, baseURL, guard, { token: made.api.token as string, email: made.email }, ROUTE);
+    await expect(rowOf(page, 'Weekly runs')).toContainText('1 run of 2 runs this week');
+  });
 
   test('F03-E5 a climb goal adds up the climb figures runs carry (here the seeded runner\'s runs, Strava-style and files with elevation)', async ({ browser, baseURL, guard, seed }) => {
     const mine = new Api(seed.baseUrl, seed.a.token);
     await clearGoals(mine);
     try {
-      const log = (await mine.get('/api/training/log?weeks=26')).json as { today: string; weeks: Array<{ days: Array<{ date: string; runs: Array<{ elevationGainM: number | null }> }> }> };
-      const climbSince = (start: string) => log.weeks.flatMap((week) => week.days).filter((day) => day.date >= start && day.date <= log.today)
-        .flatMap((day) => day.runs).reduce((sum, run) => sum + (run.elevationGainM ?? 0), 0);
-      const expectedYear = climbSince(periodStart('YEAR', log.today));
+      const expectedYear = await loggedClimbThisYear(mine);
       expect(expectedYear, 'the seeded runner has climb this year').toBeGreaterThan(100);
       const goal = await setGoal(mine, 'YEAR', 'ELEVATION', 50_000);
       expect(Math.abs(goal.progress - expectedYear)).toBeLessThan(1);
@@ -768,7 +841,7 @@ test.describe('F03 goals (M6)', () => {
     await page.goto(ROUTE);
     await expect(goalsCard(page)).toHaveAttribute('aria-busy', 'true');
     await expect(goalsCard(page).getByRole('status').filter({ hasText: 'Loading your goals...' })).toBeAttached();
-    await expect(page.getByRole('heading', { level: 1, name: 'Training log' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Training log' }).first()).toBeVisible();
     await openCard(page);
     await expect(goalsCard(page)).not.toHaveAttribute('aria-busy', 'true');
   });

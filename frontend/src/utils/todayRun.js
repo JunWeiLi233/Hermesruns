@@ -1,6 +1,7 @@
-import { formatPace, formatDistance } from './format';
+import { formatPace } from './format';
 import { estimateCurrentVdot, computeTrainingPaces } from './vdot';
 import { resolvePersonalizedCoachRecommendation } from './personalizedCoachPlan';
+import { calendarDate, getAccountDate, getActivityDateKey } from './timeZone';
 
 function hrToVo2Fraction(avgHr, hrMax) {
   if (!avgHr || !hrMax || hrMax <= 0) return null;
@@ -84,7 +85,7 @@ function computeRecoveryState(runs, vdot) {
   return { recoveryHoursLeft: Math.min(96, Math.round(maxRemainingHours)), hasData };
 }
 
-function computeTrainingLoadSnapshot(runs, bestVdot) {
+function computeTrainingLoadSnapshot(runs, bestVdot, timeZone) {
   if (runs.length < 3) return null;
 
   let estimatedHRmax = 0;
@@ -94,9 +95,8 @@ function computeTrainingLoadSnapshot(runs, bestVdot) {
 
   const dailyLoads = {};
   runs.forEach((run) => {
-    const date = new Date(run.startTime || run.startDate);
-    if (Number.isNaN(date.getTime())) return;
-    const dateKey = date.toISOString().split('T')[0];
+    const dateKey = getActivityDateKey(run, timeZone);
+    if (Number.isNaN(calendarDate(dateKey).getTime())) return;
 
     const durationMin = (run.movingTimeSeconds || 0) / 60;
     if (durationMin <= 0) return;
@@ -123,16 +123,16 @@ function computeTrainingLoadSnapshot(runs, bestVdot) {
   const dateKeys = Object.keys(dailyLoads).sort();
   if (!dateKeys.length) return null;
 
-  const start = new Date(dateKeys[0]);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date();
-  end.setHours(0, 0, 0, 0);
+  // UTC coordinates represent account calendar days, not elapsed instants.
+  // Use the same coordinate for buckets and iteration, including DST days.
+  const start = calendarDate(dateKeys[0]);
+  const end = calendarDate(getAccountDate(timeZone));
 
   const allDates = [];
   const cursor = new Date(start);
   while (cursor <= end) {
     allDates.push(cursor.toISOString().split('T')[0]);
-    cursor.setDate(cursor.getDate() + 1);
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
   }
   if (allDates.length < 7) return null;
 
@@ -197,7 +197,7 @@ function classifyHardRuns(runs) {
   });
 }
 
-function computeMicrocycleSnapshot(runs, nowMs) {
+function computeMicrocycleSnapshot(runs, nowMs, timeZone) {
   const d7 = 7 * 24 * 60 * 60 * 1000;
   const d14 = 14 * 24 * 60 * 60 * 1000;
   const tagged = classifyHardRuns(runs);
@@ -214,7 +214,8 @@ function computeMicrocycleSnapshot(runs, nowMs) {
     if (age <= d14) km14 += item.km;
     if (age <= d7) {
       km7 += item.km;
-      runDays7.add(new Date(t).toISOString().slice(0, 10));
+      const dateKey = getActivityDateKey(item.run, timeZone);
+      if (dateKey) runDays7.add(dateKey);
       if (item.isHard) hard7 += 1;
     }
     if (item.isHard && (lastHardAt === null || t > lastHardAt)) {
@@ -243,115 +244,31 @@ function getRecommendationTone(type, t) {
   }
 }
 
-function buildPlan(type, t, metrics) {
-  const easyPace = metrics.easyPace;
-  const thresholdPace = metrics.thresholdPace;
-  const intervalPace = metrics.intervalPace;
-
-  if (type === t('today_run.personalized_type_rest')) {
-    return [
-      { label: t('today_run.plan_step_1'), value: t('today_run.personalized_plan_rest') },
-    ];
-  }
-
-  if (type === t('profile.today_run_type_recovery')) {
-    return [
-      { label: t('today_run.plan_step_1'), value: t('today_run.plan_recovery_1') },
-      { label: t('today_run.plan_step_2'), value: t('today_run.plan_recovery_2', { pace: easyPace }) },
-      { label: t('today_run.plan_step_3'), value: t('today_run.plan_recovery_3') },
-    ];
-  }
-
-  if (type === t('profile.today_run_type_quality')) {
-    return [
-      { label: t('today_run.plan_step_1'), value: t('today_run.plan_quality_1') },
-      { label: t('today_run.plan_step_2'), value: t('today_run.plan_quality_2', { pace: thresholdPace }) },
-      { label: t('today_run.plan_step_3'), value: t('today_run.plan_quality_3', { pace: intervalPace }) },
-      { label: t('today_run.plan_step_4'), value: t('today_run.plan_quality_4') },
-    ];
-  }
-
-  if (type === t('profile.today_run_type_easy')) {
-    return [
-      { label: t('today_run.plan_step_1'), value: t('today_run.plan_easy_1') },
-      { label: t('today_run.plan_step_2'), value: t('today_run.plan_easy_2', { pace: easyPace }) },
-      { label: t('today_run.plan_step_3'), value: t('today_run.plan_easy_3') },
-    ];
-  }
-
-  if (type === t('profile.today_run_type_restart')) {
-    return [
-      { label: t('today_run.plan_step_1'), value: t('today_run.plan_restart_1') },
-      { label: t('today_run.plan_step_2'), value: t('today_run.plan_restart_2') },
-      { label: t('today_run.plan_step_3'), value: t('today_run.plan_restart_3') },
-    ];
-  }
-
-  return [
-    { label: t('today_run.plan_step_1'), value: t('today_run.plan_base_1') },
-    { label: t('today_run.plan_step_2'), value: t('today_run.plan_base_2', { pace: easyPace }) },
-    { label: t('today_run.plan_step_3'), value: t('today_run.plan_base_3') },
-  ];
-}
-
-function buildReasons(recommendation, t, metrics) {
-  const reasons = [];
-
-  if (metrics.bestVdot > 0) {
-    reasons.push(t('today_run.reason_vdot', { vdot: metrics.bestVdot.toFixed(1) }));
-  }
-  if (metrics.recoveryHours > 0) {
-    reasons.push(t('today_run.reason_recovery', { hours: metrics.recoveryHours }));
-  }
-  if (metrics.acwr !== null) {
-    reasons.push(t('today_run.reason_acwr', { acwr: metrics.acwr.toFixed(2) }));
-  }
-  if (metrics.hardRuns7d != null && metrics.qualityCap != null) {
-    reasons.push(t('today_run.reason_hard_days', { hard: metrics.hardRuns7d, cap: metrics.qualityCap }));
-  }
-  reasons.push(recommendation.purpose);
-  return reasons;
-}
-
-export function getTodayRunRecommendation({ runs, races, t, lang, unit, weatherContext, forceRecovery, coachPayload }) {
+export function getTodayRunRecommendation({ runs, t, lang, unit, weatherContext, coachPayload, timeZone = 'UTC', todayKey: accountToday }) {
+  timeZone = timeZone || 'UTC';
+  // File imports now supply an explicit instant. Adapt it once for all existing
+  // history/VDOT calculations; retain legacy wall-time fallback without inferring a zone.
+  runs = runs.map(run => run.activityInstant ? { ...run, startTime: run.activityInstant } : run);
   const totalKm = runs.reduce((s, r) => s + resolveRunDistanceKm(r), 0);
   const totalSec = runs.reduce((s, r) => s + (r.movingTimeSeconds || 0), 0);
   const now = new Date();
   const nowMs = now.getTime();
   const msPerDay = 24 * 60 * 60 * 1000;
-
-  // Identify next race
-  const upcomingRaces = (Array.isArray(races) ? races : [])
-    .filter((race) => {
-      const date = new Date(race?.eventDate);
-      return !Number.isNaN(date.getTime()) && date.getTime() >= now.setHours(0, 0, 0, 0) && race?.registrationStatus !== 'CANCELED';
-    })
-    .sort((a, b) => new Date(a.eventDate) - new Date(b.eventDate));
-
-  const nextRace = upcomingRaces[0] || null;
-  const daysToRace = nextRace
-    ? Math.max(0, Math.round((new Date(nextRace.eventDate).getTime() - new Date().setHours(0, 0, 0, 0)) / msPerDay))
-    : null;
-
+  const todayKey = accountToday || getAccountDate(coachPayload?.plan?.timeZone || timeZone, now);
   const recent7 = runs.filter((run) => {
     const date = new Date(run.startTime || run.startDate);
-    return !Number.isNaN(date.getTime()) && (now - date) / msPerDay <= 7;
+    return !Number.isNaN(date.getTime()) && (nowMs - date.getTime()) / msPerDay <= 7;
   });
   const recent14 = runs.filter((run) => {
     const date = new Date(run.startTime || run.startDate);
-    return !Number.isNaN(date.getTime()) && (now - date) / msPerDay <= 14;
+    return !Number.isNaN(date.getTime()) && (nowMs - date.getTime()) / msPerDay <= 14;
   });
   const recent7Km = recent7.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
   const recent14Km = recent14.reduce((sum, run) => sum + resolveRunDistanceKm(run), 0);
-  const lastRun = runs[0] || null;
-  const daysSinceLastRun = lastRun
-    ? Math.max(0, Math.floor((now - new Date(lastRun.startTime || lastRun.startDate)) / msPerDay))
-    : null;
-
   const bestVdot = estimateCurrentVdot(runs).representativeVdot;
   const trainingPaces = bestVdot > 0 ? computeTrainingPaces(bestVdot) : null;
   const recoveryState = computeRecoveryState(runs, bestVdot);
-  const trainingLoad = computeTrainingLoadSnapshot(runs, bestVdot);
+  const trainingLoad = computeTrainingLoadSnapshot(runs, bestVdot, timeZone);
 
   const penalty = weatherContext?.available ? (weatherContext.pacePenaltySecPerKm || 0) : 0;
 
@@ -379,201 +296,17 @@ export function getTodayRunRecommendation({ runs, races, t, lang, unit, weatherC
 
   const recoveryHours = recoveryState.recoveryHoursLeft || 0;
   const acwr = trainingLoad?.acwr ?? null;
-  const micro = computeMicrocycleSnapshot(runs, nowMs);
+  const micro = computeMicrocycleSnapshot(runs, nowMs, timeZone);
 
-  // Dynamic Recalibration: Detect missed sessions in the last 3 days
-  const d3 = 3 * 24 * 60 * 60 * 1000;
-  const recent3 = runs.filter((run) => (nowMs - resolveRunTimeMs(run)) <= d3);
-  const hasGapInLast3 = recent3.length === 0 && runs.length > 0;
-
-  const sleep = coachPayload?.state?.lastSleepScore;
-  const stress = coachPayload?.state?.lastStressScore;
-
-  let recommendation;
-
-  // 0. Manual Downshift Override
-  if (forceRecovery) {
-    recommendation = {
-      type: t('profile.today_run_type_recovery'),
-      title: t('today_run.downshift_active_title'),
-      distance: t('profile.today_run_distance_recovery'),
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose: t('today_run.downshift_active_copy'),
-    };
-  } else if (daysToRace === 0) {    recommendation = {
-      type: t('profile.today_run_type_quality'),
-      title: t('today_run.race_day_title', { race: nextRace.name }),
-      distance: formatDistance(Number(nextRace.distanceKm || 42.195), 1, lang),
-      pace: t('today_run.race_day_pace'),
-      normalPace: t('today_run.race_day_pace'),
-      purpose: t('today_run.race_day_purpose'),
-    };
-  } else if (daysToRace !== null && daysToRace <= 3) {
-    // Sharp Taper (1-3 days before race)
-    recommendation = {
-      type: t('profile.today_run_type_recovery'),
-      title: t('today_run.taper_sharp_title'),
-      distance: '2-4 km',
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose: t('today_run.taper_sharp_purpose', { days: daysToRace }),
-    };
-  } else if (daysToRace !== null && daysToRace <= 7) {
-    // Taper Week
-    recommendation = {
-      type: t('profile.today_run_type_easy'),
-      title: t('today_run.taper_week_title'),
-      distance: '5-7 km',
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose: t('today_run.taper_week_purpose'),
-    };
-  } else if (!runs.length) {
-    recommendation = {
-      type: t('profile.today_run_type_restart'),
-      title: t('profile.today_run_title_restart'),
-      distance: t('profile.today_run_distance_restart'),
-      pace: t('profile.today_run_pace_restart'),
-      normalPace: t('profile.today_run_pace_restart'),
-      purpose: t('profile.today_run_purpose_restart'),
-    };
-  } else if ((sleep != null && sleep < 50) || (stress != null && stress > 75)) {
-    const isSleepIssue = sleep != null && sleep < 50;
-    const isStressIssue = stress != null && stress > 75;
-    const fallbackPurpose = isSleepIssue && isStressIssue
-      ? 'Garmin wellness sync shows poor sleep and high stress. Prioritize recovery today.'
-      : isSleepIssue
-        ? 'Garmin wellness sync shows poor sleep. Prioritize recovery today.'
-        : 'Garmin wellness sync shows high stress. Prioritize recovery today.';
-
-    let purpose = t('today_run.wellness_alert_purpose');
-    if (!purpose || purpose === 'today_run.wellness_alert_purpose') purpose = fallbackPurpose;
-
-    let title = t('today_run.wellness_alert_title');
-    if (!title || title === 'today_run.wellness_alert_title') title = 'Wellness Alert';
-
-    recommendation = {
-      intent: 'recovery',
-      type: t('profile.today_run_type_recovery'),
-      title,
-      distance: t('profile.today_run_distance_recovery'),
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose,
-    };
-  } else if (recoveryState.hasData && recoveryHours > 24) {
-    // High Debt: Downgrade intensity regardless of other signals
-    recommendation = {
-      intent: 'recovery',
-      type: t('profile.today_run_type_recovery'),
-      title: t('profile.today_run_title_recovery'),
-      distance: t('profile.today_run_distance_recovery'),
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose: t('today_run.recalibration_recovery_debt', { hours: recoveryHours }),
-    };
-  } else if (hasGapInLast3 && bestVdot > 0) {
-    // Missed sessions: Don't jump straight to Quality
-    recommendation = {
-      intent: 'comeback',
-      type: t('profile.today_run_type_base'),
-      title: t('today_run.recalibration_gap_title'),
-      distance: '6-8 km',
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose: t('today_run.recalibration_gap_purpose'),
-    };
-  } else if (micro.hoursSinceHard !== null && micro.hoursSinceHard < 36) {
-    recommendation = {
-      intent: 'easy',
-      type: t('profile.today_run_type_easy'),
-      title: t('profile.today_run_title_base'),
-      distance: t('profile.today_run_distance_base', {
-        distance: micro.km14 >= 20 ? '6-8 km' : '4-6 km',
-      }),
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose: t('profile.today_run_purpose_recovery_analysis', {
-        hours: Math.max(0, Math.round(36 - micro.hoursSinceHard)),
-      }),
-    };
-  } else if (acwr !== null && acwr > 1.2) {
-    recommendation = {
-      intent: 'recovery',
-      type: t('profile.today_run_type_recovery'),
-      title: t('profile.today_run_title_load_high'),
-      distance: t('profile.today_run_distance_load_high'),
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose: t('profile.today_run_purpose_load_high', { acwr: acwr.toFixed(2) }),
-    };
-  } else if (
-    acwr !== null
-    && acwr < 0.85
-    && bestVdot > 0
-    && micro.hard7 < micro.qualityCap
-    && recoveryHours <= 18
-  ) {
-    recommendation = {
-      intent: 'quality',
-      type: t('profile.today_run_type_quality'),
-      title: t('profile.today_run_title_quality'),
-      distance: t('profile.today_run_distance_quality_analysis'),
-      pace: thresholdPace,
-      normalPace: normalThresholdPace,
-      purpose: t('profile.today_run_purpose_quality_analysis', { vdot: bestVdot.toFixed(1) }),
-    };
-  } else if (daysSinceLastRun !== null && daysSinceLastRun >= 2) {
-    recommendation = {
-      intent: 'comeback',
-      type: t('profile.today_run_type_easy'),
-      title: t('profile.today_run_title_comeback'),
-      distance: t('profile.today_run_distance_comeback', {
-        distance: recent14Km >= 30 ? '8-10 km' : '6-8 km',
-      }),
-      pace: easyPace,
-      normalPace: normalEasyPace,
-      purpose: t('profile.today_run_purpose_comeback'),
-    };
-  } else if (
-    bestVdot > 0
-    && recent7Km >= 22
-    && recoveryHours <= 12
-    && micro.hard7 < micro.qualityCap
-  ) {
-    recommendation = {
-      intent: 'quality',
-      type: t('profile.today_run_type_quality'),
-      title: t('profile.today_run_title_threshold'),
-      distance: t('profile.today_run_distance_threshold'),
-      pace: thresholdPace,
-      normalPace: normalThresholdPace,
-      purpose: t('profile.today_run_purpose_threshold'),
-    };
-  } else {
-    recommendation = {
-      intent: 'base',
-      type: t('profile.today_run_type_base'),
-      title: t('profile.today_run_title_base'),
-      distance: t('profile.today_run_distance_base', {
-        distance: recent14Km >= 20 ? '7-9 km' : '5-7 km',
-      }),
-      pace: bestVdot > 0 ? easyPace : intervalPace,
-      normalPace: bestVdot > 0 ? normalEasyPace : normalIntervalPace,
-      purpose: bestVdot > 0
-        ? t('profile.today_run_purpose_base_analysis', { vdot: bestVdot.toFixed(1) })
-        : t('profile.today_run_purpose_base'),
-    };
-  }
-  const personalized = forceRecovery ? null : resolvePersonalizedCoachRecommendation({
-    coachPayload,
-    t,
-    lang,
-    unit,
-    weatherPenaltySecPerKm: penalty,
+  const personalized = resolvePersonalizedCoachRecommendation({
+    coachPayload, t, lang, unit, todayKey,
   });
-  if (personalized) recommendation = personalized.recommendation;
+  const recommendation = personalized?.recommendation || {
+    intent: 'unavailable', source: 'unavailable', workoutType: null,
+    type: t('today_run.shared_plan_waiting'), title: t('today_run.shared_plan_waiting'),
+    distance: '—', distanceKm: null, pace: '—', normalPace: '—',
+    purpose: t('today_run.shared_plan_unavailable'),
+  };
 
   const tone = getRecommendationTone(recommendation.type, t);
   const metrics = {
@@ -581,6 +314,7 @@ export function getTodayRunRecommendation({ runs, races, t, lang, unit, weatherC
     recoveryHours,
     recoveryHasData: recoveryState.hasData,
     acwr,
+    coachLoadEvidence: personalized ? { source: 'personalized-planner' } : null,
     totalKm,
     totalSec,
     recent7Km,
@@ -602,8 +336,8 @@ export function getTodayRunRecommendation({ runs, races, t, lang, unit, weatherC
     recommendation,
     tone,
     metrics,
-    plan: personalized?.steps || buildPlan(recommendation.type, t, metrics),
-    reasons: personalized?.reasons || buildReasons(recommendation, t, metrics),
+    plan: personalized?.steps || [],
+    reasons: personalized?.reasons || [recommendation.purpose],
     personalizedPlan: personalized?.plan || null,
   };
 }

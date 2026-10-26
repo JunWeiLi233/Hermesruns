@@ -304,6 +304,10 @@ final class RaceKnownOrderedCourseCatalog {
         if (isAmsterdamCourseContext(raceName, city, country)) {
             return assessAmsterdamCourseRoute(routePoints, geometryService);
         }
+        if (normalize(raceName).contains("honolulu") && normalize(raceName).contains("marathon")
+                && normalize(city).equals("honolulu")) {
+            return assessHonoluluCourseRoute(routePoints, geometryService);
+        }
         if (!isBostonCourseContext(raceName, city, country)) {
             return new KnownCourseRouteVerdict(true, "no race-specific course geography gate");
         }
@@ -332,6 +336,24 @@ final class RaceKnownOrderedCourseCatalog {
             return new KnownCourseRouteVerdict(false, "Boston Marathon route misses the Natick-Wellesley-Newton course corridor");
         }
         return new KnownCourseRouteVerdict(true, "Boston Marathon course geography accepted");
+    }
+
+    private static KnownCourseRouteVerdict assessHonoluluCourseRoute(
+            List<RoutePoint> points, RaceCourseMapGeometryService geometryService) {
+        if (points == null || points.size() < 2) {
+            return new KnownCourseRouteVerdict(false, "Honolulu Marathon route has no usable geometry");
+        }
+        RoutePoint start = points.get(0), finish = points.get(points.size() - 1);
+        if (geometryService.haversineKm(start.lat(), start.lng(), 21.2944, -157.8465) > 1.5
+                || geometryService.haversineKm(finish.lat(), finish.lng(), 21.2698, -157.8226) > 1.5) {
+            return new KnownCourseRouteVerdict(false, "Honolulu Marathon must start at Ala Moana and finish at Kapiolani Park");
+        }
+        if (!passesNear(points, 21.3069, -157.8618, 2.0, geometryService)
+                || !passesNear(points, 21.2610, -157.8065, 1.5, geometryService)
+                || !passesNear(points, 21.2945, -157.6985, 2.0, geometryService)) {
+            return new KnownCourseRouteVerdict(false, "Honolulu Marathon misses the downtown, Diamond Head, or Hawaii Kai course corridor");
+        }
+        return new KnownCourseRouteVerdict(true, "Honolulu Marathon organizer corridor accepted");
     }
 
     private static KnownCourseRouteVerdict assessAmsterdamCourseRoute(

@@ -94,7 +94,9 @@ class AdminRouteExtractionJobStatusTests {
         requests().perform(get("/api/admin/marathon-pipeline/jobs/{id}", jobId)
                         .header("Authorization", "Bearer " + authService.issueSessionToken(admin)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.state").value("SUCCESS"));
+                .andExpect(jsonPath("$.state").value("SUCCESS"))
+                .andExpect(jsonPath("$.result.matchExportResult.persistedAsset.raceName").value("Race"))
+                .andExpect(jsonPath("$.result.matchExportResult.persistedAsset.runner").doesNotExist());
     }
 
     @Test
@@ -107,6 +109,7 @@ class AdminRouteExtractionJobStatusTests {
                         .header("Authorization", "Bearer " + authService.issueSessionToken(admin)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.state").value("SUCCESS"))
-                .andExpect(jsonPath("$.result.matchExportResult.persistedAsset.raceName").value("Race"));
+                .andExpect(jsonPath("$.result.matchExportResult.persistedAsset.raceName").value("Race"))
+                .andExpect(jsonPath("$.result.matchExportResult.persistedAsset.runner").doesNotExist());
     }
 }

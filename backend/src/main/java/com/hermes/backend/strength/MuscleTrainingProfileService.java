@@ -1,7 +1,12 @@
 package com.hermes.backend.strength;
 
 import com.hermes.backend.runner.Runner;
+import com.hermes.backend.activity.ActivityLocalDates;
+import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,9 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class MuscleTrainingProfileService {
 
     private final MuscleTrainingPreferenceRepository preferenceRepository;
+    private final Clock clock;
 
     public MuscleTrainingProfileService(MuscleTrainingPreferenceRepository preferenceRepository) {
+        this(preferenceRepository, Clock.systemDefaultZone());
+    }
+
+    @Autowired
+    public MuscleTrainingProfileService(MuscleTrainingPreferenceRepository preferenceRepository, Clock clock) {
         this.preferenceRepository = preferenceRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -54,6 +66,8 @@ public class MuscleTrainingProfileService {
         return preferenceRepository.findByRunner(runner).orElseGet(() -> {
             MuscleTrainingPreference created = new MuscleTrainingPreference();
             created.setRunner(runner);
+            created.setCycleStartDate(LocalDate.now(clock.withZone(ActivityLocalDates.zoneOf(runner)))
+                    .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)));
             return preferenceRepository.save(created);
         });
     }

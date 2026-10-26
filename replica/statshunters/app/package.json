@@ -1,0 +1,11 @@
+{
+  "name": "hermes-explorer-workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ../../../frontend/node_modules/vite/bin/vite.js --config vite.config.mjs",
+    "build": "node ../../../frontend/node_modules/vite/bin/vite.js build --config vite.config.mjs",
+    "test": "node ../../../frontend/node_modules/vitest/vitest.mjs run --config vite.config.mjs --maxWorkers=1 --no-file-parallelism",
+    "lint": "node ../../../frontend/node_modules/eslint/bin/eslint.js . --config eslint.config.mjs"
+  }
+}

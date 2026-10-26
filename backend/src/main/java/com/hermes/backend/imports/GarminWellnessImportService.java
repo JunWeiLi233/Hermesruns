@@ -46,6 +46,9 @@ public class GarminWellnessImportService {
     private final BodyCompositionDataRepository bodyCompositionRepository;
     private final CoachRunnerStateRepository coachRunnerStateRepository;
     private final ObjectMapper objectMapper;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationEventPublisher events;
     private final ConcurrentMap<Long, WellnessSyncTracker> syncStates = new ConcurrentHashMap<>();
 
     private final ExecutorService executor = Executors.newFixedThreadPool(
@@ -280,6 +283,9 @@ public class GarminWellnessImportService {
             tracker.addDaysPersisted(daysPersisted);
 
             updateCoachFromWellness(runner);
+            if (wellnessSaved + sleepSaved + hrvSaved + stressSaved > 0 && events != null) {
+                events.publishEvent(new com.hermes.backend.coaching.RecoveryUpdatedEvent(runner.getId()));
+            }
 
             if (daysPersisted != days.size()) {
                 tracker.markFailed("Some wellness days could not be saved; the next sync will retry the gap.");

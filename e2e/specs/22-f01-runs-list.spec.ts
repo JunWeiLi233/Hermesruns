@@ -1,7 +1,9 @@
 // The Runs list: the recon's Training log (S11) is its closest relative in HermesRuns. It is where F01 starts.
 import type { Page } from '@playwright/test';
 import { toSeconds } from '../fixtures/format.ts';
-import { contextFor, expect, signedIn, test } from '../fixtures/test.ts';
+import { newRunner } from '../fixtures/api.ts';
+import { daysAgo, gpxRun } from '../fixtures/gpx.ts';
+import { contextFor, contextWith, expect, signedIn, test } from '../fixtures/test.ts';
 
 test.use({ storageState: signedIn('a') });
 
@@ -163,14 +165,17 @@ test.describe('Runs list', () => {
   });
 
   test('F01-E33 a month with a single run says "1 run", not "1 runs"', async ({ browser, baseURL, guard }) => {
-    const context = await contextFor(browser, 'c', baseURL as string, guard);
+    const made = await newRunner('singular-month');
+    await made.api.importRun('single.gpx', gpxRun({ name: 'E2E Single monthly run', start: daysAgo(2), distanceM: 3000, pace: 330 }));
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
     try {
       const page = await context.newPage();
       await page.goto('/runs');
       await expect(page.getByRole('region', { name: 'Full History' })).toBeVisible();
       await expect(page.getByRole('region', { name: 'Full History' }).getByRole('heading', { level: 2 }).first()).toBeVisible();
       const headings = await page.getByRole('region', { name: 'Full History' }).getByRole('heading', { level: 2 }).allInnerTexts();
-      expect(headings.length).toBeGreaterThan(0);
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toMatch(/\b1 run\b/);
       expect(headings.filter((text) => /\b1 runs\b/.test(text)), 'month headings that count one run').toEqual([]);
     } finally {
       await context.close();

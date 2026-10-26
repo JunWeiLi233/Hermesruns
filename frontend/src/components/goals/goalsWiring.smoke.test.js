@@ -41,7 +41,7 @@ assert.doesNotMatch(dialogRules.split('@media')[0].replace(/\/\*[\s\S]*?\*\//g, 
 
 // The card sits on three pages and none of them fetches goals itself.
 const profile = read('./pages/profile/ProfileDashboard.jsx');
-assert.equal((profile.match(/<GoalsCard defer \/>/g) ?? []).length, 1, 'The Profile page mounts the goals card once, deferred.');
+assert.equal((profile.match(/<GoalsCard defer\b[^>]*\/>/g) ?? []).length, 1, 'The Profile page mounts the goals card once, deferred.');
 assert.doesNotMatch(profile, /\/api\/goals/, 'The Profile page must not fetch goals itself (its first paint is pinned).');
 assert.equal((read('./pages/training-log/TrainingLog.jsx').match(/<GoalsCard \/>/g) ?? []).length, 1, 'The Training log mounts the goals card once.');
 const runDetail = read('./pages/runs/RunDetail.jsx');

@@ -31,6 +31,7 @@ export default function AuthenticatedPageChrome({
   parentLabel = null,
   parentRoute = null,
   activeKey = null,
+  breadcrumbLabel = null,
 }) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export default function AuthenticatedPageChrome({
   const resolvedProfile = profile || loadedProfile;
   const navItems = useMemo(
     () => getRunnerShellNavItems({ t, lang, activeKey }),
-    [activeKey, lang, t],
+    [lang, t, activeKey],
   );
   const pageTitle = title || resolveShellTitle(location.pathname, t);
   const profileName = String(resolvedProfile?.displayName || resolvedProfile?.email || 'HERMESRUNS').trim();
@@ -126,15 +127,15 @@ export default function AuthenticatedPageChrome({
             <RunnerShellTopNav
               navItems={navItems}
               activeLabel={pageTitle}
-              parentLabel={parentLabel || t('settings.heading')}
-              parentRoute={parentRoute || '/settings'}
+              parentLabel={parentLabel || breadcrumbLabel || (title ? t('profile.dashboard_nav_dashboard') : t('settings.heading'))}
+              parentRoute={parentRoute || (title ? '/profile' : '/settings')}
               navigate={navigate}
             />
           </div>
           <div className="runner-shell-topbar-actions">
             <div className="runner-shell-topbar-profile-actions analysis-stitch-topbar-profile-actions">
               <TopbarNotifications onOpenRuns={() => navigate('/runs')} />
-              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current={title ? undefined : 'page'}>
+              <button type="button" className="runner-shell-icon-btn" onClick={() => navigate('/settings')} aria-label={t('analysis.stitch_open_settings')} aria-current={location.pathname.startsWith('/settings') ? 'page' : undefined}>
                 <AppIcon name="settings" className="runner-dashboard-side-link-icon" />
               </button>
               <TopbarUserMenu initials={profileInitial} label={t('components.account_menu.title')} showProfile />

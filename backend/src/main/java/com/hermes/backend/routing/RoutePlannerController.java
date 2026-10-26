@@ -98,6 +98,7 @@ public class RoutePlannerController {
 
             Map<String, Object> response = new HashMap<>();
             response.put("id", saved != null ? saved.getId() : null);
+            response.put("targetDistanceKm", request.targetDistanceKm());
             response.put("waypoints", result.waypoints);
             response.put("actualDistanceKm", round2(result.actualDistanceKm));
             response.put("elevationGainMeters", round2(result.elevationGainMeters));

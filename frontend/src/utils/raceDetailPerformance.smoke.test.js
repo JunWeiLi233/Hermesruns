@@ -14,8 +14,14 @@ assert.match(
 
 assert.doesNotMatch(
   racesDetailSource,
-  /if \(loadState === 'loading'\)/,
-  'RacesDetail should not blank the whole page while runner-specific data is still hydrating.'
+  /setLoadState\('loading'\)/,
+  'Supplemental runner data must not reset the ready race page to its initial skeleton.'
+);
+
+assert.match(
+  racesDetailSource,
+  /if \(loadState === 'loading'\) return <PageSkeleton variant="race-detail" \/>/,
+  'The initial race data wait should use the same layout as the route chunk fallback.'
 );
 
 assert.doesNotMatch(

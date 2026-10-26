@@ -122,7 +122,7 @@ assert.doesNotMatch(
 
 assert.match(
   read('../package.json'),
-  /"test:contracts":\s*"node scripts\/run-tests\.mjs"/,
+  /"test:contracts":\s*"node scripts\/run-tests\.mjs(?: && [^"]+)?"/,
   'npm test should keep using the contract runner that discovers this guardrail.',
 );
 

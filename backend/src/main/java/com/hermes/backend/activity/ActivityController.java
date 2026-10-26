@@ -111,8 +111,7 @@ public class ActivityController {
         int requested = limit == null ? defaultLimit : limit;
         int bounded = Math.max(1, Math.min(requested, maxLimit));
         List<Activity> runs = activityDataAccess.findRunsForRunner(activeUser.get(), bounded);
-        java.time.ZoneId zone = ActivityLocalDates.zoneOf(activeUser.get());
-        return ResponseEntity.ok(runs.stream().map(run -> ActivityRoutePreviewHelper.toRunFeedItem(run, zone)).toList());
+        return ResponseEntity.ok(runs.stream().map(activity -> ActivityRoutePreviewHelper.toRunFeedItem(activity, activeUser.get())).toList());
     }
 
     @GetMapping("/route-previews")
@@ -248,6 +247,8 @@ public class ActivityController {
                             run.getPacePenaltySecPerKm(),
                             run.getWeatherAdjusted()
                     );
+                    Map<String, Object> time = ActivityLocalDates.responseFields(
+                            run.getStartTime(), Boolean.TRUE.equals(run.getStravaApiSourced()), activeUser.get());
                     return new AnalysisActivitySummary(
                             run.getId(),
                             run.getName(),
@@ -264,7 +265,14 @@ public class ActivityController {
                             correction.weatherAdjusted(),
                             correction.weatherAdjustedMovingTimeSeconds(),
                             correction.weatherAdjustedPaceSecPerKm(),
-                            correction.weatherCorrectionFactor()
+                            correction.weatherCorrectionFactor(),
+                            (String) time.get("activityInstant"),
+                            (String) time.get("timeRepresentation"),
+                            (String) time.get("accountLocalDate"),
+                            (String) time.get("accountLocalTime"),
+                            (String) time.get("accountTimeZone"),
+                            run.getRunType(),
+                            run.getSourceFileName()
                     );
                 })
                 .toList();
@@ -770,6 +778,13 @@ public class ActivityController {
             Boolean weatherAdjusted,
             Integer weatherAdjustedMovingTimeSeconds,
             Double weatherAdjustedPaceSecPerKm,
-            Double weatherCorrectionFactor
+            Double weatherCorrectionFactor,
+            String activityInstant,
+            String timeRepresentation,
+            String accountLocalDate,
+            String accountLocalTime,
+            String accountTimeZone,
+            String runType,
+            String sourceFileName
     ) {}
 }

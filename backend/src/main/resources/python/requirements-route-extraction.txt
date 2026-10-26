@@ -1,6 +1,6 @@
 numpy>=1.26,<3
 opencv-python-headless>=4.10,<5
-Pillow>=12.3,<13
+Pillow>=13.0.0,<14
 scikit-image>=0.24,<1
 transformers>=5.10,<6
 accelerate>=1.15,<2

@@ -1,0 +1,34 @@
+#root .hd-content .hd-team-card {
+  padding: 26px 28px 16px;
+  border-radius: var(--hd-radius-xl);
+  background: var(--hd-bg-card) !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  color: var(--hd-text-primary);
+}
+.hd-team-head { display: flex; align-items: center; gap: 18px; }
+.hd-team-emblem { display: grid; flex: none; place-items: center; width: 58px; height: 58px; border-radius: 18px; background: var(--hd-accent-soft); color: var(--hd-accent); }
+.hd-team-emblem svg { width: 30px; height: 30px; }
+.hd-team-copy { flex: 1; min-width: 0; }
+.hd-team-copy .hd-card-title { margin: 4px 0 6px; }
+.hd-team-copy p { margin: 0; color: var(--hd-text-secondary); font-size: 13px; line-height: 1.6; }
+.hd-content .hd-team-open { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 10px 18px; border-radius: 999px; background: var(--hd-accent); color: var(--hd-bg-card); font-size: 13px; font-weight: 700; text-decoration: none; }
+.hd-team-open svg { width: 16px; height: 16px; }
+.hd-team-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--hd-line); }
+.hd-content .hd-team-shortcuts a { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 46px; padding: 10px 14px; border-radius: 12px; color: var(--hd-text-secondary); font-size: 13px; font-weight: 650; text-decoration: none; transition: background .15s, color .15s; }
+.hd-team-shortcuts svg { flex: none; width: 18px; height: 18px; }
+.hd-team-shortcuts .hd-team-shortcut-arrow { width: 15px; height: 15px; margin-left: auto; }
+.hd-content .hd-team-shortcuts a:hover { color: var(--hd-accent); background: var(--hd-accent-soft); }
+.hd-content .hd-team-card a:focus-visible { outline: 2px solid var(--hd-accent); outline-offset: 4px; }
+@media (max-width: 640px) {
+  #root .hd-content .hd-team-card { padding: 20px 18px 12px; }
+  .hd-team-head { flex-wrap: wrap; gap: 14px; }
+  .hd-team-emblem { width: 48px; height: 48px; border-radius: 14px; }
+  .hd-content .hd-team-open { width: 100%; }
+  .hd-team-shortcuts { gap: 2px; margin-top: 16px; }
+  .hd-content .hd-team-shortcuts a { justify-content: center; flex-wrap: wrap; gap: 6px; padding: 10px 5px; }
+  .hd-team-shortcuts .hd-team-shortcut-arrow { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .hd-content .hd-team-shortcuts a { transition: none; } }

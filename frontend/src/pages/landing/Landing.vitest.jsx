@@ -6,6 +6,7 @@ import { ensureLocaleMessages, translate } from '../../i18n/translationRuntime.j
 import zhPages from '../../i18n/locales/zh-CN/pages.js';
 import { SUPPORT_MAILTO } from '../../utils/supportContact';
 import Landing from './Landing';
+import { METHODS_DOC_URL } from '../../utils/methodsDoc';
 
 const zh = zhPages.landing;
 
@@ -19,8 +20,9 @@ const state = vi.hoisted(() => ({
   navigate: vi.fn(),
 }));
 
-vi.mock('../../contexts/I18nContext', () => ({
+vi.mock('../../contexts/i18nContextState', () => ({
   useI18n: () => ({
+    lang: state.lang,
     t: (key, replacements) => (key in state.overrides
       ? state.overrides[key]
       : translate(state.lang, key, replacements, (missingKey) => state.missing.push(missingKey))),
@@ -45,6 +47,40 @@ afterEach(() => {
 });
 
 describe('landing page', () => {
+  it.each(['en', 'zh-CN'])('provides a standalone product answer and dated methods in %s', (lang) => {
+    state.lang = lang;
+    const { container } = mount();
+    const about = container.querySelector('#faq-about');
+    expect(about).not.toBeNull();
+    expect(about.open).toBe(true);
+    expect(about.querySelector('summary').textContent).toContain('HermesRuns');
+    expect(about.querySelector('.lv3-faq-a').textContent).toMatch(/^HermesRuns/);
+    expect(about.textContent).toMatch(/Strava.*Garmin.*GPX.*FIT.*TCX/);
+    expect(about.textContent).toContain('VDOT');
+    const updated = container.querySelector('#methods time');
+    expect(updated).toHaveAttribute('dateTime', '2026-10-20');
+    expect(updated.textContent).toContain(lang === 'en' ? 'October 20, 2026' : '2026年10月20日');
+    expect(container.querySelector('a[href="#faq-history"]')).not.toBeNull();
+    expect(container.querySelectorAll('#faq-history')).toHaveLength(1);
+  });
+  it.each(['en', 'zh-CN'])('explains the calculation and its sources before sign-up in %s', (lang) => {
+    state.lang = lang;
+    const { container } = mount();
+    const methods = screen.getByRole('region', { name: lang === 'en' ? 'How HermesRuns works' : 'HermesRuns 如何计算' });
+    expect(within(methods).getByText('38.3')).toBeInTheDocument();
+    expect(methods.querySelector('a[href$="/docs/README-ANALYSIS.md"]')).not.toBeNull();
+    expect(methods.querySelector('a[href*="github.com/JunWeiLi233/Hermesruns"]')).not.toBeNull();
+    expect(container.textContent).not.toMatch(/Export everything|injury risk is low|导出全部数据|受伤风险较低/);
+  });
+  it.each(['en', 'zh-CN'])('links the published formulas beside the claim and in the footer in %s', (lang) => {
+    state.lang = lang;
+    const { container } = mount();
+    const claim = container.querySelector('#promises');
+    const links = [...claim.querySelectorAll('a'), ...container.querySelectorAll('footer a')]
+      .filter((link) => link.href === METHODS_DOC_URL);
+    expect(links).toHaveLength(2);
+    expect(links.every((link) => link.textContent.trim().length > 0)).toBe(true);
+  });
   it('has one h1, one banner, one main and one footer, with the actions leading to sign-up and sign-in', () => {
     mount();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
@@ -88,8 +124,8 @@ describe('landing page', () => {
   it('opens the first question and keeps every answer in the page', () => {
     const { container } = mount();
     const items = [...container.querySelectorAll('details.lv3-faq-item')];
-    expect(items).toHaveLength(5);
-    expect(items.map((item) => item.open)).toEqual([true, false, false, false, false]);
+    expect(items).toHaveLength(8);
+    expect(items.map((item) => item.open)).toEqual([true, false, false, false, false, false, false, false]);
     expect(items.every((item) => item.querySelector('.lv3-faq-a')?.textContent.length > 20)).toBe(true);
   });
 
@@ -103,8 +139,8 @@ describe('landing page', () => {
     const view = mount();
     expect(screen.getByText('Payments open soon.')).toBeInTheDocument();
     view.unmount();
-    // The owner sets landing.studio_pricing_supporter_status to '' when payments go live.
-    state.overrides = { 'landing.studio_pricing_supporter_status': '' };
+    // The owner clears the public payment-status copy when payments go live.
+    state.overrides = { 'landing.home_supporter_status': '' };
     mount();
     expect(screen.queryByText('Payments open soon.')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Become a supporter' })).toBeInTheDocument();

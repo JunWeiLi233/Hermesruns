@@ -73,7 +73,7 @@ interface Log {
 
 const logOf = async (query = `weeks=${PAGE_WEEKS}`, who: RunnerWithHistory = runner): Promise<Log> => (await who.api.get(`/api/training/log?${query}`)).json;
 
-const heading = (page: Page): Locator => page.getByRole('heading', { level: 1, name: 'Training log' }).first();
+const heading = (page: Page): Locator => page.getByRole('heading', { level: 2, name: 'Training log', exact: true }).first();
 const logWeeks = (page: Page): Locator => page.locator('[data-week]');
 const runLinks = (page: Page): Locator => logWeeks(page).getByRole('link');
 const viewBar = (page: Page): Locator => page.getByRole('region', { name: 'View the log' });
@@ -86,6 +86,8 @@ const jumpField = (page: Page): Locator => viewBar(page).getByLabel('Jump to a d
 const rowOf = (page: Page, name: string): Locator => logWeeks(page).getByRole('listitem').filter({ has: page.getByRole('link', { name, exact: true }) });
 
 async function openLog(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/runs(?:\?[^#]*)?#training-log$/);
+  await expect(page.locator('#training-log')).toHaveAttribute('open', '');
   await expect(heading(page)).toBeVisible();
   await expect(logWeeks(page).first()).toBeVisible();
 }
@@ -380,8 +382,8 @@ test.describe('F02 the training log: the weeks (M5)', () => {
     await field.focus();
     await page.keyboard.type(order.map((type) => part[type]).join(''));
     await expect(page).toHaveURL(new RegExp(`to=${day}`));
+    await expect.poll(() => asked.at(-1), { message: 'the selected day starts its log request after the URL update' }).toBe(day);
     expect(asked.slice(before).filter((day) => day < '1970-01-01'), 'no request for the years on the way').toEqual([]);
-    expect(asked.at(-1)).toBe(utcDay(30));
   });
 
   test('F02-H10i a day before the first run starts a log with no runs, and says so, with a way back to the runs', async ({ browser, baseURL, guard }) => {
@@ -586,7 +588,7 @@ test.describe('F02 the training log: the weeks (M5)', () => {
     const page = await pages.open(browser, baseURL, guard, runner, null);
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto(`${ROUTE}?runType=RACE`);
-    await expect(page.getByRole('heading', { level: 1, name: '训练日志' }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('heading', { level: 2, name: '训练日志', exact: true }).first()).toBeVisible({ timeout: 15_000 });
     await expect(logWeeks(page)).toHaveCount(1);
     await expectNoRawKeys(page);
     expect(await page.locator('main').innerText()).not.toMatch(/Training log|Load earlier weeks|Clear filters/);

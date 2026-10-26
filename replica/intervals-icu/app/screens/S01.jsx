@@ -1,0 +1,5 @@
+import { Link } from 'react-router';
+import { Panel } from '../ui/components.jsx';
+export default function Home() {
+  return <><div className="tw-hero"><span className="ds-eyebrow">Athlete → Coach → Team</span><h2>A considered home for the training week.</h2><p>Bring sessions together, understand effort and make room for the next step.</p><div className="tw-actions"><Link className="ds-button ds-primary" to="/calendar">Open training calendar</Link><Link className="ds-button" to="/login">Use a sample account</Link></div></div><div className="tw-grid"><Panel title="Athlete workflow"><p>Import GPX/TCX or an original sample, review metrics and gaps, record perceived effort, and schedule a reusable workout.</p><Link to="/import">Start with an import</Link></Panel><Panel title="Coaching and teams"><p>Athletes choose who may read or coach. Team membership and athlete-data consent are separate, and assignments keep their own snapshots.</p><Link to="/athletes">Review the roster</Link></Panel></div></>;
+}

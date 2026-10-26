@@ -4,7 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const profileSource = readFileSync(path.join(here, "../ProfileDashboard.jsx"), 'utf8');
+const profileSource = readFileSync(path.join(here, "../ProfileDashboard.jsx"), 'utf8')
+  + readFileSync(path.join(here, '../WeeklyLoadCard.jsx'), 'utf8');
 const styleSource = readFileSync(path.join(here, "../../../styles/style.generated.css"), 'utf8');
 const redesignStyleSource = readFileSync(path.join(here, "../../../styles/_split/profile-dashboard-redesign.css"), 'utf8');
 const profileStyleSource = readFileSync(path.join(here, "../../../styles/_split/profile.css"), 'utf8');
@@ -18,7 +19,7 @@ assert.match(
 
 assert.match(
   profileSource,
-  /onMouseEnter=\{\(\) => setActiveWeeklyBar\(bar\)\}[\s\S]*onMouseLeave=\{\(\) => setActiveWeeklyBar\(null\)\}/,
+  /onMouseEnter=\{\(\) => setActiveIndex\(bar.index\)\}[\s\S]*onMouseLeave=\{\(\) => setActiveIndex\(null\)\}/,
   'Weekly progress tooltip should be driven by the hovered weekly bar.',
 );
 

@@ -229,7 +229,7 @@ public class TrainingLogService {
         double km = row.getDistanceKm() != null && row.getDistanceKm() > 0 ? row.getDistanceKm()
                 : row.getDistanceMeters() != null && row.getDistanceMeters() > 0 ? row.getDistanceMeters() / 1000.0 : 0;
         Double pace = km > 0 && moving > 0 ? round1(moving / km) : null;
-        return new LogRun(row.getId(), row.getName(), ActivityLocalDates.localStart(row.getStartTime(), row.getStravaApiSourced(), zone), round2(km), moving, pace,
+        return new LogRun(row.getId(), row.getName(), ActivityLocalDates.localStart(row.getStartTime(), row.getStravaApiSourced(), zone), km, moving, pace,
                 row.getEffortScore() == null ? null : round1(row.getEffortScore()), row.getEffortSource(),
                 row.getElevationGain() == null ? null : round1(row.getElevationGain()), row.getRunType(), runTags);
     }
@@ -251,7 +251,8 @@ public class TrainingLogService {
                 climb += run.elevationGainM() == null ? 0 : run.elevationGainM();
             }
         }
-        return new LogWeek(start, start.plusDays(6), runs, round2(km), seconds, round1(effort), round1(climb), dayRows);
+        // Preserve recorded precision; rounding each run or the subtotal changes the displayed weekly mileage.
+        return new LogWeek(start, start.plusDays(6), runs, km, seconds, round1(effort), round1(climb), dayRows);
     }
 
     private static double round1(double value) {

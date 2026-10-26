@@ -62,6 +62,21 @@ export function danielsVdot(distanceM: number, seconds: number): number {
   return oxygenCost(distanceM / minutes) / fractionOfVo2max(minutes);
 }
 
+/**
+ * The VO2max a run gives when it has a heart rate, by the rule HermesRuns documents (docs/README-ANALYSIS.md, "VDOT and VO2max"):
+ * the oxygen cost of the run's average speed, divided by the share of the highest heart rate the run was held at (kept between
+ * 0.60 and 0.98), and kept between 24 and 88. A rule of thumb, not Daniels' race equation.
+ */
+export function heartRateVo2max(distanceM: number, seconds: number, averageHr: number, highestHr: number): number {
+  const share = Math.min(0.98, Math.max(0.6, averageHr / highestHr));
+  return Math.min(88, Math.max(24, oxygenCost(distanceM / (seconds / 60)) / share));
+}
+
+/** The VO2max a run without a heart rate gives: Daniels' race equation over the whole run, kept between 24 and 88. */
+export function raceEquationVo2max(distanceM: number, seconds: number): number {
+  return Math.min(88, Math.max(24, danielsVdot(distanceM, seconds)));
+}
+
 /** The time in seconds a runner of this VDOT takes over `distanceM` metres. */
 export function danielsPredictSeconds(vdot: number, distanceM: number): number {
   let low = 3; // minutes
@@ -95,6 +110,16 @@ export function addDays(day: string, days: number): string {
   const date = new Date(`${day}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() + days);
   return date.toISOString().slice(0, 10);
+}
+
+/** A `yyyy-MM-dd` day moved by calendar months: the same day of the month, or the last day of a month that is too short (31 March a month back is 28 February). */
+export function addMonths(day: string, months: number): string {
+  const [year, month, dayOfMonth] = day.split('-').map(Number);
+  const index = year * 12 + (month - 1) + months;
+  const targetYear = Math.floor(index / 12);
+  const targetMonth = index - targetYear * 12;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(Math.min(dayOfMonth, lastDay)).padStart(2, '0')}`;
 }
 
 /** 3.14159 -> "3.1": one decimal, the way the fitness cards write a number. */

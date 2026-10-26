@@ -107,6 +107,33 @@ class RunStreamTests {
     }
 
     @Test
+    void nonfiniteDistancesCannotPoisonTheStreamOrItsBestEfforts() {
+        List<SamplePoint> points = new ArrayList<>();
+        points.add(point(0, Double.NaN));
+        points.add(point(1, Double.POSITIVE_INFINITY));
+        points.add(point(2, Double.NEGATIVE_INFINITY));
+        for (int second = 0; second <= 120; second++) {
+            points.add(point(10 + second, 100 + second * (1000.0 / 300.0)));
+            if (second == 30) points.add(point(41, Double.NaN));
+            if (second == 60) points.add(point(71, Double.POSITIVE_INFINITY));
+            if (second == 90) points.add(point(101, Double.NEGATIVE_INFINITY));
+        }
+
+        RunStream stream = RunStream.of(points, 0, 0);
+
+        assertThat(stream.t()).hasSize(121);
+        assertThat(stream.d()).hasSize(121);
+        for (double distance : stream.d()) assertThat(distance).isFinite();
+        assertThat(stream.d()[0]).isZero();
+        assertThat(stream.d()[120]).isEqualTo(400);
+        assertThat(BestEffortCalculator.compute(stream, List.of(BestEffortDistances.byKey("400m").orElseThrow())))
+                .singleElement().satisfies(effort -> {
+                    assertThat(effort.elapsedSeconds()).isEqualTo(120);
+                    assertThat(effort.distanceMeters()).isEqualTo(400);
+                });
+    }
+
+    @Test
     void aStreamThatIsTooShortOrHasNothingUsableSaysWhy() {
         assertThat(RunStream.of(null, 0.0, 0.0).problem()).isEqualTo(PaceProfileResponse.NO_POINTS);
         assertThat(RunStream.of(List.of(point(0, 0.0)), 0.0, 0.0).problem()).isEqualTo(PaceProfileResponse.NO_POINTS);

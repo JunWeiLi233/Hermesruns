@@ -4,7 +4,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { Api, eventually, newRunner } from '../fixtures/api.ts';
 import { daysAgo, gpxRun, intervalPace, rollingHills } from '../fixtures/gpx.ts';
-import { contextFor, contextWith, expect, signedIn, test } from '../fixtures/test.ts';
+import { contextWith, expect, signedIn, test } from '../fixtures/test.ts';
 
 test.use({ storageState: signedIn('c') });
 test.describe.configure({ mode: 'serial' });
@@ -23,12 +23,13 @@ async function resetZones(api: Api): Promise<void> {
 }
 
 const maxField = (page: Page): Locator => page.getByRole('textbox', { name: 'Max heart rate (bpm)' });
+const maxSave = (page: Page): Locator => maxField(page).locator('..').getByRole('button', { name: 'Save', exact: true });
 const boundary = (page: Page, zone: 2 | 3 | 4 | 5): Locator => page.getByRole('textbox', { name: `Zone ${zone} starts at (bpm)` });
 const zoneList = (page: Page): Locator => page.getByRole('list', { name: 'Your zones' });
 
 async function openTraining(page: Page): Promise<void> {
   await page.goto('/settings?section=training');
-  await expect(page.getByRole('heading', { level: 2, name: 'Training zones' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Heart-rate zones' })).toBeVisible();
   await expect(maxField(page)).toBeVisible();
 }
 
@@ -66,7 +67,7 @@ test.describe('F04 happy path', () => {
     await openTraining(page);
     await expect(maxField(page)).toHaveValue(String(DEFAULT_MAX));
     for (const [index, zone] of ([2, 3, 4, 5] as const).entries()) await expect(boundary(page, zone)).toHaveValue(String(AUTO_AT_190[index]));
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+    await expect(maxSave(page)).toBeDisabled();
     await expect(page.getByRole('button', { name: 'Save zones' })).toBeDisabled();
     await expect(zoneList(page).getByRole('listitem')).toHaveCount(5);
     await expect(zoneList(page).getByRole('listitem').nth(0)).toContainText('under 114 bpm');
@@ -74,9 +75,14 @@ test.describe('F04 happy path', () => {
     await expect(page.getByText('Changing your zones recalculates the effort and time in zones of all your past runs.')).toBeVisible();
   });
 
-  test('F04-H2 a max heart rate taken from your own runs is offered, and the offer alone changes nothing', async ({ browser, baseURL, seed, guard }) => {
-    // Runner A has 21 runs that carry a peak heart rate (the mock Strava runs); the offer needs 20, and runner C has fewer runs.
-    const context = await contextFor(browser, 'a', baseURL as string, guard);
+  test('F04-H2 a max heart rate taken from your own runs is offered, and the offer alone changes nothing', async ({ browser, baseURL, guard }) => {
+    // A controlled actor has enough peak readings; this case must not depend on another spec's seeded history.
+    const made = await newRunner('max-offer-profile');
+    for (let index = 0; index < 20; index += 1) {
+      await made.api.importRun(`offer-${index}.gpx`, gpxRun({ name: `F04 offer run ${index}`, start: daysAgo(2 + index), distanceM: 3000, pace: 330, hr: 170 + (index % 8) }));
+    }
+    expect((await made.api.put('/api/training/zones', { maxHeartRateBpm: 192 })).status).toBe(200);
+    const context = await contextWith(browser, { token: made.api.token as string, email: made.email }, baseURL as string, guard);
     try {
       const page = await context.newPage();
       await openTraining(page);
@@ -86,9 +92,9 @@ test.describe('F04 happy path', () => {
       expect(offered).toBeGreaterThanOrEqual(150);
       expect(offered).toBeLessThanOrEqual(230);
       await expect(maxField(page)).toHaveValue('192'); // what the runner has set; the offer changed nothing
-      const stored = (await new Api(seed.baseUrl, seed.a.token).get('/api/training/zones')).json;
+      const stored = (await made.api.get('/api/training/zones')).json;
       expect(stored.maxHeartRate).toEqual({ bpm: 192, source: 'PROFILE' });
-      // The button saves at once (no Save step), so it is not clicked here: this runner's zones belong to every other spec.
+      // The offer is advisory until the runner explicitly accepts it.
       await expect(offer).toBeEnabled();
       await page.reload();
       await expect(maxField(page)).toHaveValue('192');
@@ -117,7 +123,7 @@ test.describe('F04 happy path', () => {
   test('F04-H3 a new max heart rate moves the automatic boundaries to the same percentages, and the list says so', async ({ page, seed }) => {
     await openTraining(page);
     await maxField(page).fill('185');
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await maxSave(page).click();
     for (const [index, zone] of ([2, 3, 4, 5] as const).entries()) await expect(boundary(page, zone)).toHaveValue(String(AUTO_AT_185[index]));
     await expect(zoneList(page).getByRole('listitem').nth(1)).toContainText(`${AUTO_AT_185[0]}–${AUTO_AT_185[1] - 1} bpm`);
     const stored = (await new Api(seed.baseUrl, seed.c.token).get('/api/training/zones')).json;
@@ -135,8 +141,8 @@ test.describe('F04 happy path', () => {
     expect(before.heartRate.zones.find((zone: { zone: number; seconds: number }) => zone.zone === 4).seconds).toBe(0);
     await openTraining(page);
     await maxField(page).fill('185');
-    await page.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+    await maxSave(page).click();
+    await expect(maxSave(page)).toBeDisabled();
     // The recalculation runs in the background.
     const after = await eventually(async () => {
       const metrics = (await c.get(`/api/activities/${intervalsId}/training-metrics`)).json;
@@ -198,7 +204,7 @@ test.describe('F04 refused values', () => {
       await maxField(page).fill(value);
       await expect(page.getByRole('alert').filter({ hasText: 'Enter a whole number from 120 to 230.' })).toBeVisible();
       await expect(maxField(page)).toHaveAttribute('aria-invalid', 'true');
-      await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+      await expect(maxSave(page)).toBeDisabled();
       expect(puts, 'a value the screen refuses is not sent').toEqual([]);
       expect((await new Api(seed.baseUrl, seed.c.token).get('/api/training/zones')).json.maxHeartRate.source).toBe('DEFAULT');
     });
@@ -262,8 +268,8 @@ test.describe('F04 conditions', () => {
     });
     await openTraining(page);
     await maxField(page).fill('188');
-    await page.getByRole('button', { name: 'Save', exact: true }).dblclick();
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+    await maxSave(page).dblclick();
+    await expect(maxSave(page)).toBeDisabled();
     expect(puts).toHaveLength(1);
   });
 
@@ -280,11 +286,11 @@ test.describe('F04 conditions', () => {
     await openTraining(first);
     await openTraining(second);
     await maxField(first).fill('180');
-    await first.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(first.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+    await maxSave(first).click();
+    await expect(maxSave(first)).toBeDisabled();
     await maxField(second).fill('195');
-    await second.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(second.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+    await maxSave(second).click();
+    await expect(maxSave(second)).toBeDisabled();
     await first.reload();
     await expect(maxField(first)).toHaveValue('195');
   });
@@ -295,7 +301,7 @@ test.describe('F04 conditions', () => {
     await page.keyboard.press('Control+A');
     await page.keyboard.type('187');
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
+    await expect(maxSave(page)).toBeDisabled();
     expect((await new Api(seed.baseUrl, seed.c.token).get('/api/training/zones')).json.maxHeartRate.bpm).toBe(187);
   });
 
@@ -309,9 +315,15 @@ test.describe('F04 conditions', () => {
   });
 
   test('F04-E6 signed out: the zones cannot be read or changed', async ({ seed }) => {
+    const owner = new Api(seed.baseUrl, seed.c.token);
+    const before = (await owner.get('/api/training/zones')).json;
     const anonymous = new Api(seed.baseUrl, null);
     expect((await anonymous.get('/api/training/zones')).status).toBe(401);
-    expect((await anonymous.put('/api/training/zones', { maxHeartRateBpm: 180 })).status).toBe(401);
+    // The native training chain also requires CSRF protection for writes without a bearer token.
+    expect((await anonymous.put('/api/training/zones', { maxHeartRateBpm: 180 })).status).toBe(403);
+    const after = (await owner.get('/api/training/zones')).json;
+    expect(after.maxHeartRate).toEqual(before.maxHeartRate);
+    expect(after.heartRate).toEqual(before.heartRate);
   });
 
   test('F04-E7 an empty request, a body of the wrong shape and a huge number are refused, not a 500', async ({ seed }) => {
@@ -327,7 +339,7 @@ test.describe('F04 conditions', () => {
   test('F04-E8 in Chinese the training settings are translated and show no raw key', async ({ page }) => {
     await page.addInitScript(() => localStorage.setItem('hermes_lang', 'zh-CN'));
     await page.goto('/settings?section=training');
-    await expect(page.getByRole('heading', { level: 2, name: '训练区间' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: '心率区间' })).toBeVisible();
     const text = await page.locator('main').innerText();
     expect(text).not.toMatch(/\b(settings|training|common)\.[a-z0-9_]+/);
   });

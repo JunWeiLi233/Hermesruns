@@ -15,12 +15,12 @@ assert.match(heatmap, /const HEATMAP_SAMPLE_LIMIT = 12000/);
 assert.doesNotMatch(heatmap, /HEATMAP_SAMPLE_LIMIT = 25000/);
 assert.ok(fullIdx >= 0);
 assert.match(cache, /ACTIVITIES_TTL_MS = 120 \* 1000/);
-assert.match(analysis, /cachedApiJson\('\/api\/activities\/analysis'\)/);
+assert.match(analysis, /cachedApiJson\('\/api\/activities\/analysis'(?:, \{ signal \})?\)/);
 // Initial load and the shared import callback reuse one cached loader. The
 // modal invalidates activity resources before handing control back to it.
 assert.match(importModal, /invalidateResourceCache\('\/api\/activities'\);[\s\S]*?onSuccess\?\.\(importedCount\);/);
-assert.match(importModal, /onSuccess=\{\(\) => \{ onClose\?\.\(\); onImported\?\.\(\); \}\}/);
+assert.match(importModal, /onSuccess=\{\(\) => \{ onImported\?\.\(\); \}\}/);
 assert.match(analysis, /<ImportActivityModal[\s\S]*?onImported=\{loadAnalysisData\}/);
-assert.equal((analysis.match(/cachedApiJson\('\/api\/activities\/analysis'\)/g) || []).length, 1);
-assert.doesNotMatch(analysis, /apiJson\('\/api\/activities\/analysis'\)/);
+assert.equal((analysis.match(/cachedApiJson\('\/api\/activities\/analysis'(?:, \{ signal \})?\)/g) || []).length, 1);
+assert.doesNotMatch(analysis, /apiJson\('\/api\/activities\/analysis'(?:, \{ signal \})?\)/);
 console.log('frontendMemoryFootprint.smoke.test.js OK');

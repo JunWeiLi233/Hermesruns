@@ -1,0 +1,4 @@
+export const GPX=`<?xml version="1.0"?><gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1"><trk><name>Independent riverside loop</name><type>cycling</type><trkseg><trkpt lat="40.770" lon="-73.970"><ele>12</ele><time>2026-10-18T12:00:00Z</time></trkpt><trkpt lat="40.780" lon="-73.960"><ele>20</ele><time>2026-10-18T12:05:00Z</time></trkpt><trkpt lat="40.775" lon="-73.950"><ele>15</ele><time>2026-10-18T12:10:00Z</time></trkpt></trkseg></trk></gpx>`;
+export const TCX=`<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"><Activities><Activity Sport="Swimming"><Id>2026-10-18T22:00:00+02:00</Id><Lap StartTime="2026-10-18T22:00:00+02:00"><TotalTimeSeconds>1200</TotalTimeSeconds><DistanceMeters>1000</DistanceMeters></Lap></Activity></Activities></TrainingCenterDatabase>`;
+import { File as NodeFile } from 'node:buffer';
+export function file(name='example.gpx',source=GPX){return new NodeFile([source],name,{lastModified:1});}

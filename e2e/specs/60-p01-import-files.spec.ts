@@ -32,8 +32,17 @@ async function openImport(page: Page): Promise<ReturnType<Page['getByRole']>> {
   return dialog;
 }
 
+async function finishSuccessfulImport(dialog: ReturnType<Page['getByRole']>, imported: number): Promise<void> {
+  const outcome = dialog.getByRole('status', { name: 'Import result' });
+  await expect(outcome).toContainText(`Activities imported: ${imported}`);
+  await expect(outcome).toContainText('Duplicate activities skipped: 0');
+  await expect(outcome).toContainText('Files rejected: 0');
+  await dialog.getByRole('button', { name: 'Done', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+}
+
 test.describe('P01 through the import dialog', () => {
-  test('P01-H1 one GPX file: the dialog closes and the run is listed with the numbers the file holds', async ({ browser, baseURL, guard }) => {
+  test('P01-H1 one GPX file: review the outcome, then Done lists the run with the numbers the file holds', async ({ browser, baseURL, guard }) => {
     const name = `P01 first run ${unique}`;
     const context = await contextWith(browser, who, baseURL as string, guard);
     try {
@@ -42,7 +51,7 @@ test.describe('P01 through the import dialog', () => {
       await dialog.locator('input[type=file]').setInputFiles({ name: 'first.gpx', mimeType: 'application/gpx+xml', buffer: Buffer.from(route(name, { distanceM: 5000 })) });
       await expect(dialog.getByRole('status')).toContainText('Ready to import · 1');
       await dialog.getByRole('button', { name: 'Import 1 file(s)' }).click();
-      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await finishSuccessfulImport(dialog, 1);
       const row = page.getByRole('button', { name: new RegExp(name) });
       await expect(row).toBeVisible();
       await expect(row).toContainText('5.0 km');
@@ -61,6 +70,7 @@ test.describe('P01 through the import dialog', () => {
       const dialog = await openImport(page);
       await dialog.locator('input[type=file]').setInputFiles({ name: 'gzipped.gpx.gz', mimeType: 'application/gzip', buffer: zlib.gzipSync(Buffer.from(route(name))) });
       await dialog.getByRole('button', { name: 'Import 1 file(s)' }).click();
+      await finishSuccessfulImport(dialog, 1);
       await expect(page.getByRole('button', { name: new RegExp(name) })).toBeVisible();
     } finally {
       await context.close();
@@ -76,6 +86,7 @@ test.describe('P01 through the import dialog', () => {
       const dialog = await openImport(page);
       await dialog.locator('input[type=file]').setInputFiles({ name: 'export.zip', mimeType: 'application/zip', buffer: archive });
       await dialog.getByRole('button', { name: 'Import 1 file(s)' }).click();
+      await finishSuccessfulImport(dialog, names.length);
       for (const name of names) await expect(page.getByRole('button', { name: new RegExp(name) })).toBeVisible();
     } finally {
       await context.close();
@@ -94,7 +105,7 @@ test.describe('P01 through the import dialog', () => {
         buffer: Buffer.from(tcxRun({ name: 'unused', start, distanceM: 4000, pace: 300, hr: 160 })),
       });
       await dialog.getByRole('button', { name: 'Import 1 file(s)' }).click();
-      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await finishSuccessfulImport(dialog, 1);
       await expect.poll(async () => (await who.api.get('/api/activities')).json.some((run: { sourceFileName: string }) => run.sourceFileName === 'tcx-run.tcx')).toBe(true);
       const run = ((await who.api.get('/api/activities')).json as Array<{ id: number; sourceFileName: string; distanceKm: number }>).find((row) => row.sourceFileName === 'tcx-run.tcx')!;
       expect(run.distanceKm).toBeGreaterThan(3.9);
@@ -119,8 +130,10 @@ test.describe('P01 through the import dialog', () => {
       await dialog.getByRole('button', { name: 'Import 1 file(s)' }).dblclick();
       await expect.poll(() => runNames().then((names) => names.filter((runName) => runName === name).length), { timeout: 15_000 }).toBe(1);
       expect(posts, 'upload requests for one double-clicked Import').toHaveLength(1);
-      // The second click of a double click must not land on whatever is under the closed dialog.
+      await expect(dialog.getByRole('status', { name: 'Import result' })).toContainText('Activities imported: 1');
+      // The second click must keep the outcome review open and stay on the list.
       expect(new URL(page.url()).pathname, 'a double click on Import stays on the list').toBe('/runs');
+      await finishSuccessfulImport(dialog, 1);
     } finally {
       await context.close();
     }
@@ -137,10 +150,14 @@ test.describe('P01 through the import dialog', () => {
       ]);
       await dialog.getByRole('button', { name: 'Import 2 file(s)' }).click();
       // The dialog stays open and tells the runner what became of each file.
-      await expect(dialog.getByText('1 run imported.')).toBeVisible();
-      await expect(dialog.getByText('1 file could not be imported:')).toBeVisible();
-      await expect(dialog.getByText('corrupt-file.gpx')).toBeVisible();
-      await dialog.getByRole('button', { name: 'Done' }).click();
+      const outcome = dialog.getByRole('status', { name: 'Import result' });
+      await expect(outcome).toContainText('Activities imported: 1');
+      await expect(outcome).toContainText('Duplicate activities skipped: 0');
+      await expect(outcome).toContainText('Files rejected: 1');
+      await expect(outcome.locator('.import-v2-rejections')).toContainText('corrupt-file.gpx');
+      await expect(dialog.getByRole('button', { name: 'Retry selected files', exact: true })).toBeEnabled();
+      // A partial batch retains its selection for correction; Cancel closes that review.
+      await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
       await expect(dialog).toHaveCount(0);
       await expect(page.getByRole('button', { name: /P01 mixed fine/ })).toBeVisible();
     } finally {

@@ -49,7 +49,7 @@ function renderPage(entry = '/training-log') {
 }
 
 async function ready() {
-  await screen.findByRole('heading', { level: 1, name: t('training_log.title') });
+  await screen.findByRole('heading', { level: 2, name: t('training_log.title') });
   await screen.findAllByRole('article');
 }
 
@@ -73,13 +73,9 @@ describe('around the page', () => {
     const { container } = renderPage();
     await ready();
 
-    const chrome = screen.getByTestId('chrome');
-    expect(chrome).toHaveAttribute('data-title', t('training_log.title'));
-    expect(chrome).toHaveAttribute('data-parent-label', t('profile.dashboard_nav_activities'));
-    expect(chrome).toHaveAttribute('data-parent-route', '/runs');
-    expect(chrome).toHaveAttribute('data-active-key', 'activities');
-    expect(chrome).toHaveClass('training-log-page');
-    expect(container.querySelectorAll('h1')).toHaveLength(1);
+    expect(screen.queryByTestId('chrome')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: t('training_log.title') })).toHaveClass('training-log-v2');
+    expect(container.querySelectorAll('h1')).toHaveLength(0);
   });
 
   it('puts the goals card between the heading and the filters', async () => {
@@ -89,7 +85,7 @@ describe('around the page', () => {
     const goals = screen.getByTestId('goals-card');
     const filters = screen.getByRole('region', { name: t('training_log.filters_label') });
     expect(goals.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 1 }).compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: t('training_log.title') }).compareDocumentPosition(goals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('links to all runs and to the fitness chart', async () => {
@@ -98,6 +94,14 @@ describe('around the page', () => {
 
     const links = screen.getByRole('navigation', { name: t('training_log.links_label') });
     expect(within(links).getByRole('link', { name: t('training_log.link_runs') })).toHaveAttribute('href', '/runs');
+    expect(within(links).getByRole('link', { name: t('training_log.link_fitness') })).toHaveAttribute('href', '/analysis/load-balance#load-fitness');
+  });
+
+  it('keeps the fitness shortcut when the owning Runs page supplies the heading', async () => {
+    render(<MemoryRouter initialEntries={['/runs#training-log']}><TrainingLog showHeader={false} /></MemoryRouter>);
+    await screen.findAllByRole('article');
+    expect(screen.queryByRole('heading', { name: t('training_log.title') })).not.toBeInTheDocument();
+    const links = screen.getByRole('navigation', { name: t('training_log.links_label') });
     expect(within(links).getByRole('link', { name: t('training_log.link_fitness') })).toHaveAttribute('href', '/analysis/load-balance#load-fitness');
   });
 
@@ -730,7 +734,7 @@ describe('the metric the log looks at', () => {
   it('speaks Chinese', async () => {
     state.lang = 'zh-CN';
     renderPage('/training-log?metric=time');
-    await screen.findByRole('heading', { level: 1, name: '训练日志' });
+    await screen.findByRole('heading', { level: 2, name: '训练日志' });
     await screen.findAllByRole('article');
 
     expect(within(screen.getByRole('group', { name: '显示' })).getAllByRole('button').map((button) => button.textContent)).toEqual(['距离', '用时', '爬升', '强度']);
@@ -1142,7 +1146,7 @@ describe('in Chinese', () => {
   it('speaks Chinese everywhere, with the dates and the figures in the same places', async () => {
     state.lang = 'zh-CN';
     renderPage();
-    await screen.findByRole('heading', { level: 1, name: '训练日志' });
+    await screen.findByRole('heading', { level: 2, name: '训练日志' });
     await screen.findAllByRole('article');
 
     expect(screen.getByRole('link', { name: '全部跑步' })).toBeInTheDocument();

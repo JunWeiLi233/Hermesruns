@@ -11,6 +11,7 @@ COPY frontend/package*.json ./
 RUN npm ci --ignore-scripts
 
 COPY frontend/index.html ./
+COPY frontend/public.html ./
 COPY frontend/vite.config.js ./
 COPY frontend/postcss.config.js ./
 COPY frontend/tailwind.config.js ./
@@ -52,8 +53,8 @@ RUN apk add --no-cache python3 \
 ENV PATH="/opt/garmin/bin:${PATH}" \
     PYTHONDONTWRITEBYTECODE=1
 
-RUN addgroup -S hermes \
-    && adduser -S -G hermes hermes \
+RUN addgroup -S -g 101 hermes \
+    && adduser -S -u 100 -G hermes hermes \
     && chown -R hermes:hermes /app
 
 COPY --chown=hermes:hermes --from=backend-build /backend/target/*.jar app.jar
@@ -67,6 +68,10 @@ COPY --chown=hermes:hermes frontend/src/data/worldRaceCatalog.json ./frontend/sr
 COPY tools/garmin_connect_download.py tools/garmin_wellness_download.py tools/check_garmin_runtime.py ./tools/
 
 USER hermes
+
+# The deploy image must fail closed on incomplete production security settings.
+ENV SPRING_PROFILES_ACTIVE=production \
+    HERMES_ENV=production
 
 # Exercise both stdin/JSON workers with offline fixtures as the runtime user.
 # Missing scripts, dependencies, or incompatible provider APIs fail the build.

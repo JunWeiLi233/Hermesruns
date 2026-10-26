@@ -1,5 +1,6 @@
 import { useId, useRef, useState } from 'react';
 import { useI18n } from '../../contexts/I18nContext';
+import { MethodsLink } from '../HowWorkedOut';
 import { sortGoals } from '../../utils/goals';
 import GoalFormModal from './GoalFormModal';
 import GoalRow, { useGoalWords } from './GoalRow';
@@ -22,7 +23,7 @@ function Skeleton() {
  * itself (and, with `defer`, only when the browser is idle, so a page's first paint does not wait for it). Deleting asks
  * once, in the row; changing and setting use a dialog.
  */
-export default function GoalsCard({ defer = false, headingLevel = 2 }) {
+export default function GoalsCard({ defer = false, headingLevel = 2, showRecommendationEvidence = true }) {
   const { t } = useI18n();
   const words = useGoalWords();
   const { status, data, reload, create, changeTarget, remove } = useGoals({ defer });
@@ -38,7 +39,7 @@ export default function GoalsCard({ defer = false, headingLevel = 2 }) {
 
   const goals = data ? sortGoals(data.goals) : [];
   const goalsKey = goals.map((goal) => `${goal.period}/${goal.metric}`).join(',');
-  const suggested = useGoalSuggestions({ ready: Boolean(data), goalsKey });
+  const suggested = useGoalSuggestions({ ready: Boolean(data), goalsKey, timeZone: data?.timeZone });
 
   // Setting a suggested goal as it is: the same call as the dialog's, with the numbers the server worked out.
   async function setSuggested(suggestion) {
@@ -136,6 +137,7 @@ export default function GoalsCard({ defer = false, headingLevel = 2 }) {
         <GoalSuggestions
           enough={suggested.enough}
           suggestions={suggested.suggestions}
+          recommendation={showRecommendationEvidence ? suggested.recommendation : null}
           busyKey={busySuggestion}
           headingLevel={headingLevel + 1}
           onSet={setSuggested}
@@ -143,7 +145,7 @@ export default function GoalsCard({ defer = false, headingLevel = 2 }) {
         />
       ) : null}
       {problem ? <p className="goals-v2__error" role="alert">{problem}</p> : null}
-      {data && goals.length > 0 ? <p className="goals-v2__basis">{t('goals.basis')}</p> : null}
+      {data && goals.length > 0 ? <p className="goals-v2__basis">{t('goals.basis')} <MethodsLink anchor="goals" /></p> : null}
       <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
 
       {dialog ? (

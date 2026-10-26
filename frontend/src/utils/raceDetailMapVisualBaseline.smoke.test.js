@@ -52,8 +52,8 @@ assert.doesNotMatch(
 
 assert.match(
   racesDetailSource,
-  /const courseImagePane = map\.createPane\('race-detail-course-image'\);[\s\S]*const routeShadowPane = map\.createPane\('race-detail-route-shadow'\);[\s\S]*const routePane = map\.createPane\('race-detail-route'\);[\s\S]*const routeMarkerPane = map\.createPane\('race-detail-route-marker'\);/,
-  'RacesDetail should create dedicated Leaflet panes so the transparent course-map image sits above the basemap and below the AI-scanned route.',
+  /const routeShadowPane = map\.createPane\('race-detail-route-shadow'\);[\s\S]*const routePane = map\.createPane\('race-detail-route'\);[\s\S]*const routeMarkerPane = map\.createPane\('race-detail-route-marker'\);/,
+  'RacesDetail should create dedicated Leaflet panes for the route vector, backing stroke and start marker above the OSM basemap.',
 );
 
 assert.match(
@@ -70,7 +70,7 @@ assert.match(
 
 assert.doesNotMatch(
   racesDetailSource,
-  /L\.imageOverlay\(courseMapData\.imageUrl,/,
+  /L\.imageOverlay\(/,
   'RacesDetail should not draw the raw course-map image over the runner-facing Leaflet map when the goal is an extracted route on a real basemap.',
 );
 

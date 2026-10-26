@@ -6,10 +6,12 @@ import en from '../../../i18n/locales/en';
 import zh from '../../../i18n/locales/zh-CN';
 import { apiJson } from '../../../api';
 import { estimateCurrentVdot, predictRaceTimeCalibrated, RACE_DISTANCES } from '../../../utils/vdot';
+import { buildAnalysisSnapshot } from '../../../utils/analysisInsights';
 
 const state = vi.hoisted(() => ({ lang: 'en', chartData: null }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => ({ isAuthenticated: true, email: 'runner@example.test' }) }));
 vi.mock('../../../contexts/ThemeContext', () => ({ useTheme: () => ({ isDark: false }) }));
+vi.mock('../../../contexts/UnitContext', () => ({ useUnit: () => ({ unit: 'km', isMile: false }) }));
 vi.mock('../../../contexts/I18nContext', () => ({ useI18n: () => ({ lang: state.lang, t: (key, values = {}) => {
   const dictionary = state.lang === 'zh-CN' ? zh : en;
   const copy = key.split('.').reduce((value, part) => value?.[part], dictionary) || key;
@@ -74,7 +76,74 @@ it.each(RACE_DISTANCES)('uses the real forecast for $key and preserves the shell
   expect(container.querySelectorAll('.prediction-v2-ladder li')).toHaveLength(4);
   expect(state.chartData.datasets).toHaveLength(1);
   expect(state.chartData.datasets[0].data.every((value) => Number.isFinite(value) && value > 0)).toBe(true);
-  expect(apiJson).toHaveBeenCalledWith('/api/activities', {});
+  expect(apiJson).toHaveBeenCalledWith('/api/activities/analysis', {});
+});
+
+const parityRuns = [
+  ['2026-10-20T11:00:00Z', 9.988, 2850, 165.7, 172],
+  ['2026-10-19T11:00:00Z', 4.994, 1475, 154, 154],
+  ['2026-10-18T11:00:00Z', 3.496, 1260, null, null],
+  ['2026-10-17T09:00:00Z', 21.071, 6963, 153.3, 159],
+  ['2026-10-15T11:00:00Z', 5.993, 1980, 142, 142],
+  ['2026-10-12T11:00:00Z', 7.99, 2460, 160.2, 172],
+  ['2026-10-08T11:00:00Z', 4.994, 1550, 151, 151],
+  ['2026-09-22T11:00:00Z', 4.994, 1525, 152, 152],
+  ['2026-08-23T11:00:00Z', 4.994, 1600, 150, 150],
+];
+
+it.each(RACE_DISTANCES.flatMap((distance) => ['UTC', 'Pacific/Auckland'].map((accountTimeZone) => ({ ...distance, accountTimeZone }))))(
+  'keeps the overview $key forecast for fractional VDOT and $accountTimeZone account clocks',
+  async (distance) => {
+    vi.setSystemTime(new Date('2026-10-22T00:40:48.567Z'));
+    const accountClock = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: distance.accountTimeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+    });
+    activities = parityRuns.map(([activityInstant, distanceKm, movingTimeSeconds, averageHeartRate, maxHeartRate], index) => {
+      const startTime = accountClock.format(new Date(activityInstant)).replace(' ', 'T');
+      return {
+        id: index + 1, activityInstant, startTime, accountLocalDate: startTime.slice(0, 10),
+        accountTimeZone: distance.accountTimeZone, timeRepresentation: 'UTC_INSTANT',
+        distanceKm, movingTimeSeconds, averageHeartRate, maxHeartRate,
+      };
+    });
+    const originalActivities = structuredClone(activities);
+    const overview = buildAnalysisSnapshot(activities, 'en', 'km');
+    expect(overview.bestVdot).toBe(40.2);
+    const expected = overview.predictionRows.find((row) => row.key === distance.key);
+    if (distance.key === '10k') expect(expected.timeLabel).toBe('48:04');
+    const { container } = await openPage(distance.key);
+    expect(container.querySelector('.prediction-forecast-time')).toHaveTextContent(expected.timeLabel);
+    expect(container.querySelector('.prediction-v2-ladder .is-race .prediction-v2-ladder-time')).toHaveTextContent(expected.timeLabel);
+    expect(state.chartData.datasets[0].data.every((value) => Number.isFinite(value) && value > 0)).toBe(true);
+    expect(activities).toEqual(originalActivities);
+  },
+);
+
+it('keeps manual account-local evidence while excluding an activity whose actual instant is still in the future', async () => {
+  const manual = { ...activities[0], activityInstant: null, startTime: '2026-10-07T12:00:00',
+    accountLocalDate: '2026-10-07', accountTimeZone: 'Pacific/Auckland', timeRepresentation: 'LEGACY_LOCAL' };
+  const future = { ...activities[0], id: 999, activityInstant: '2026-10-09T12:00:00Z', startTime: '2026-10-10T01:00:00',
+    accountLocalDate: '2026-10-10', accountTimeZone: 'Pacific/Auckland', movingTimeSeconds: 1500 };
+  activities = [manual, future];
+  const expected = buildAnalysisSnapshot([manual], 'en', 'km').predictionRows.find((row) => row.key === '5k');
+  const { container } = await openPage('5k');
+  expect(container.querySelector('.prediction-forecast-time')).toHaveTextContent(expected.timeLabel);
+  expect(state.chartData.labels).toHaveLength(1);
+});
+
+it('shows the long-run check under the time, and leaves the time as the forecast has it', async () => {
+  const { container } = await openPage('marathon');
+  const check = screen.getByRole('region', { name: en.endurance_check.title });
+  const expectedTime = predictRaceTimeCalibrated(estimateCurrentVdot(activities).representativeVdot, 42195, activities) * 60;
+
+  expect(check).toHaveTextContent('Your longest run in the last 8 weeks was 10.0 km. The check looks for 31.6 km');
+  expect(check).toHaveTextContent('Runs in the last 8 weeks: 35. Average per week: 43.8 km.');
+  expect(container.querySelector('.prediction-forecast-time')).toHaveTextContent(displayedTime(expectedTime));
+
+  cleanup();
+  await openPage('5k');
+  expect(screen.getByRole('region', { name: en.endurance_check.title })).toHaveTextContent('which reaches the 3.8 km the check looks for');
 });
 
 it('updates the forecast and chart when the route distance changes', async () => {
@@ -86,6 +155,14 @@ it('updates the forecast and chart when the route distance changes', async () =>
   expect(container.querySelector('.prediction-v2-kicker')).toHaveTextContent('Marathon');
   expect(container.querySelector('.prediction-forecast-time').textContent).not.toBe(priorTime);
   expect(state.chartData.datasets[0].data.at(-1)).toBeGreaterThan(priorTrend);
+});
+
+it('limits the advertised prediction history to 90 days while retaining older VDOT evidence', async () => {
+  const old = { ...activities[0], id: 999, startTime: '2025-08-01T12:00:00Z' };
+  activities.push(old);
+  await openPage('5k');
+  expect(state.chartData.labels).toHaveLength(35);
+  expect(state.chartData.labels).not.toContain('Aug 1');
 });
 
 it.each([
@@ -213,7 +290,7 @@ it('says the runs could not be loaded when the request fails, invents no forecas
   const answerAsBefore = apiJson.getMockImplementation();
   let refused = false;
   apiJson.mockImplementation(async (path, ...rest) => {
-    if (path === '/api/activities' && !refused) {
+    if (path === '/api/activities/analysis' && !refused) {
       refused = true;
       throw new Error('Unavailable');
     }

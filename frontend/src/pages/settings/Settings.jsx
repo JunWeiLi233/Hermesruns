@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { apiJson } from '../../api';
 import { invalidateResourceCache } from '../../api/resourceCache';
@@ -93,7 +93,14 @@ export default function Settings() {
   const [garminImportModalOpen, setGarminImportModalOpen] = useState(false);
   const [stravaDisconnectOpen, setStravaDisconnectOpen] = useState(false);
   const [stravaNotice, setStravaNotice] = useState('');
+  const [stravaConnectError, setStravaConnectError] = useState('');
+  const stravaConnectScopeRef = useRef(null);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+
+  useEffect(() => {
+    stravaConnectScopeRef.current = {};
+    return () => { stravaConnectScopeRef.current = null; };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     try {
@@ -267,17 +274,30 @@ export default function Settings() {
   }
 
   async function connectStrava() {
+    const scope = stravaConnectScopeRef.current;
+    const requestPathname = window.location.pathname;
+    const stillHere = () => scope != null && stravaConnectScopeRef.current === scope
+      && window.location.pathname === requestPathname;
     setStravaLinking(true);
+    setStravaConnectError('');
+    setStravaNotice('');
     try {
       const data = await apiJson('/api/auth/strava/link-url', { method: 'POST' });
+      if (!stillHere()) return;
       if (data?.url) {
         window.location.href = data.url;
         return;
       }
-    } catch {
+      setStravaConnectError('profile.strava_link_start_failed');
+    } catch (error) {
+      if (!stillHere()) return;
+      const missingConfiguration = error?.status === 503
+        && (stravaStatus?.configured === false || /not configured/i.test(error?.message || ''));
+      setStravaConnectError(missingConfiguration ? 'common.strava_not_configured' : 'profile.strava_link_start_failed');
+    }
+    if (stillHere()) {
       setStravaLinking(false);
     }
-    setStravaLinking(false);
   }
 
   function handleStravaDisconnected(result) {
@@ -492,6 +512,7 @@ export default function Settings() {
         </header>
 
         <SettingsAtlasLayout
+          accountEmail={profile?.email || ''}
           initialSection={searchParams.get('section') || undefined}
           t={t}
           navigate={navigate}
@@ -508,7 +529,14 @@ export default function Settings() {
           stravaStatus={stravaStatus}
           stravaLabel={stravaLabel}
           stravaLinking={stravaLinking}
-          stravaNotice={stravaNotice}
+          stravaNotice={stravaConnectError ? (
+            <>
+              {t(stravaConnectError)}{' '}
+              <button type="button" className="st-v2-btn" onClick={connectStrava} disabled={stravaLinking}>
+                {t('settings.training_retry')}
+              </button>
+            </>
+          ) : stravaNotice}
           connectStrava={connectStrava}
           requestStravaDisconnect={() => setStravaDisconnectOpen(true)}
           timeZone={profile?.timeZone || ''}

@@ -47,7 +47,7 @@ function makeRun(index: number) {
 }
 
 function storeSnapshot(storage: ReturnType<typeof createStorage>, runs: unknown[], cachedAt = NOW) {
-  storage.setItem('hermes_runs_v2_runner@example.com', JSON.stringify({
+  storage.setItem('hermes_runs_v3_runner@example.com', JSON.stringify({
     runs,
     profile: { displayName: 'Runner' },
     stravaStatus: { linked: true },
@@ -87,17 +87,37 @@ describe('Runs cache', () => {
     expect(storage.getItem('hermes_runs_v1_runner@example.com')).toBeNull();
   });
 
-  it('rejects an oversized snapshot atomically without leaving a partial v2 entry', () => {
+  it('rejects an oversized snapshot atomically without leaving a partial v3 entry', () => {
     const storage = createStorage({
-      'hermes_runs_v2_runner@example.com': JSON.stringify({ complete: true, sourceCount: 1, runs: [makeRun(0)] }),
+      'hermes_runs_v3_runner@example.com': JSON.stringify({ complete: true, sourceCount: 1, runs: [makeRun(0)] }),
       'hermes_runs_v1_runner@example.com': 'stale partial cache',
     });
     const oversizedRun = { ...makeRun(0), name: 'x'.repeat(750_000) };
 
     expect(writeRunsCache(storage, 'runner@example.com', [oversizedRun], null, null, NOW)).toBe(false);
-    expect(storage.getItem('hermes_runs_v2_runner@example.com')).toBeNull();
+    expect(storage.getItem('hermes_runs_v3_runner@example.com')).toBeNull();
     expect(storage.getItem('hermes_runs_v1_runner@example.com')).toBeNull();
     expect(storage.writes).toHaveLength(0);
+  });
+
+  it('ignores legacy v2 completeness claims and invalidates all cache generations', () => {
+    const storage = createStorage({
+      'hermes_runs_v2_runner@example.com': JSON.stringify({ runs: [makeRun(0)], cachedAt: NOW, complete: true, sourceCount: 1 }),
+      'hermes_runs_v1_runner@example.com': 'partial legacy snapshot',
+    });
+    expect(readRunsCache(storage, 'runner@example.com', NOW)).toBeNull();
+    expect(writeRunsCache(storage, 'runner@example.com', [makeRun(0)], null, null, NOW, { complete: true, sourceCount: 1 })).toBe(true);
+    expect(storage.getItem('hermes_runs_v2_runner@example.com')).toBeNull();
+    expect(storage.getItem('hermes_runs_v1_runner@example.com')).toBeNull();
+    expect(storage.getItem('hermes_runs_v3_runner@example.com')).not.toBeNull();
+  });
+
+  it('rejects partial or count-mismatched page evidence without replacing a complete snapshot', () => {
+    const storage = createStorage();
+    expect(writeRunsCache(storage, 'runner@example.com', [makeRun(0), makeRun(1)], null, null, NOW)).toBe(true);
+    expect(writeRunsCache(storage, 'runner@example.com', [makeRun(0)], null, null, NOW + 1, { complete: false, sourceCount: 2 })).toBe(false);
+    expect(writeRunsCache(storage, 'runner@example.com', [makeRun(0)], null, null, NOW + 1, { complete: true, sourceCount: 2 })).toBe(false);
+    expect(readRunsCache(storage, 'runner@example.com', NOW + 2)?.sourceCount).toBe(2);
   });
 
   it('rejects snapshots at the TTL boundary and from the future', () => {
@@ -113,7 +133,7 @@ describe('Runs cache', () => {
     ['source-count mismatched', { complete: true, sourceCount: 2 }],
   ])('ignores %s snapshots', (_label, metadata) => {
     const storage = createStorage({
-      'hermes_runs_v2_runner@example.com': JSON.stringify({
+      'hermes_runs_v3_runner@example.com': JSON.stringify({
         ...metadata,
         runs: [makeRun(0)],
         cachedAt: NOW,
@@ -125,16 +145,16 @@ describe('Runs cache', () => {
 
   it('ignores malformed or non-array storage and invalidates both cache generations', () => {
     const storage = createStorage({
-      'hermes_runs_v2_runner@example.com': '{not-json',
+      'hermes_runs_v3_runner@example.com': '{not-json',
     });
     expect(readRunsCache(storage, 'runner@example.com', NOW)).toBeNull();
 
-    storage.setItem('hermes_runs_v2_runner@example.com', JSON.stringify({ complete: true, sourceCount: 1, runs: {}, cachedAt: NOW }));
+    storage.setItem('hermes_runs_v3_runner@example.com', JSON.stringify({ complete: true, sourceCount: 1, runs: {}, cachedAt: NOW }));
     expect(readRunsCache(storage, 'runner@example.com', NOW)).toBeNull();
 
     storage.setItem('hermes_runs_v1_runner@example.com', 'stale partial cache');
     invalidateRunsCache(storage, 'runner@example.com');
-    expect(storage.getItem('hermes_runs_v2_runner@example.com')).toBeNull();
+    expect(storage.getItem('hermes_runs_v3_runner@example.com')).toBeNull();
     expect(storage.getItem('hermes_runs_v1_runner@example.com')).toBeNull();
   });
 
@@ -159,7 +179,7 @@ describe('Runs cache', () => {
   it('canonicalizes stable identities and disables anonymous cache access', () => {
     const storage = createStorage();
     expect(writeRunsCache(storage, ' Runner@Example.COM ', [makeRun(0)], null, null, NOW)).toBe(true);
-    expect(storage.getItem('hermes_runs_v2_runner@example.com')).not.toBeNull();
+    expect(storage.getItem('hermes_runs_v3_runner@example.com')).not.toBeNull();
     expect(readRunsCache(storage, 'runner@example.com', NOW)).not.toBeNull();
 
     const writesBeforeAnonymous = storage.writes.length;
@@ -169,7 +189,7 @@ describe('Runs cache', () => {
     expect(invalidateRunsCache(storage, undefined as unknown as string)).toBe(false);
     expect(storage.writes).toHaveLength(writesBeforeAnonymous);
     expect(storage.removals).toHaveLength(removalsBeforeAnonymous);
-    expect(storage.getItem('hermes_runs_v2_null')).toBeNull();
+    expect(storage.getItem('hermes_runs_v3_null')).toBeNull();
   });
 
   it('marks an older load token stale when a newer generation begins', () => {

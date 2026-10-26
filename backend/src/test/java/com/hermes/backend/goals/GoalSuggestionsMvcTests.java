@@ -7,11 +7,15 @@ import com.hermes.backend.activity.ImportProvider;
 import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import java.util.ArrayList;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -43,6 +48,7 @@ class GoalSuggestionsMvcTests {
     @Autowired private AuthService authService;
     @Autowired private RunnerRepository runners;
     @Autowired private ActivityRepository activities;
+    @Autowired private ObjectMapper json;
 
     private Runner runner() {
         return runners.saveAndFlush(new Runner("suggest-mvc-" + UUID.randomUUID() + "@hermes.test", "active"));
@@ -72,10 +78,15 @@ class GoalSuggestionsMvcTests {
 
     /** Three 10 km runs in each of the last eight complete weeks. */
     private void steadyWeeks(Runner owner) {
-        LocalDate thisMonday = GoalPeriods.start(GoalPeriods.WEEK, today());
+        LocalDate currentDay = today();
+        LocalDate thisMonday = GoalPeriods.start(GoalPeriods.WEEK, currentDay);
+        // Include both today and Sunday so the planner's weekend rule cannot replace today's run.
+        var runDays = new java.util.LinkedHashSet<>(java.util.List.of(
+                currentDay.getDayOfWeek(), DayOfWeek.SUNDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY))
+                .stream().limit(3).toList();
         for (int back = 1; back <= 8; back++) {
-            for (int i = 0; i < 3; i++) {
-                run(owner, thisMonday.minusWeeks(back).plusDays(i * 2L), 10);
+            for (DayOfWeek day : runDays) {
+                run(owner, thisMonday.minusWeeks(back).plusDays(day.getValue() - 1), 10);
             }
         }
     }
@@ -95,9 +106,11 @@ class GoalSuggestionsMvcTests {
     }
 
     @Test
-    void aRunnerWhoRunsThirtyKilometresAWeekIsOfferedThirtyFiveWithTheNumbersBehindIt() throws Exception {
+    void theGoalTargetEqualsTheSharedCoachTargetWithoutIndependentGrowth() throws Exception {
         Runner owner = runner();
         steadyWeeks(owner);
+        var prescription = json.readTree(mockMvc.perform(get("/api/coach/today").header("Authorization", bearer(owner)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
 
         mockMvc.perform(get("/api/goals/suggestions").header("Authorization", bearer(owner)))
                 .andExpect(status().isOk())
@@ -105,12 +118,62 @@ class GoalSuggestionsMvcTests {
                 .andExpect(jsonPath("$.timeZone").value("Z"))
                 .andExpect(jsonPath("$.suggestions[0].period").value("WEEK"))
                 .andExpect(jsonPath("$.suggestions[0].metric").value("DISTANCE"))
-                .andExpect(jsonPath("$.suggestions[0].target").value(35.0))
+                .andExpect(jsonPath("$.suggestions[0].target").value(prescription.path("plan").path("targetWeeklyKm").asDouble()))
                 .andExpect(jsonPath("$.suggestions[0].unit").value("km"))
-                .andExpect(jsonPath("$.suggestions[0].basis.kind").value("weekly-average"))
+                .andExpect(jsonPath("$.suggestions[0].basis.kind").value("coach-plan"))
                 .andExpect(jsonPath("$.suggestions[0].basis.span").value(8))
                 .andExpect(jsonPath("$.suggestions[0].basis.usual").value(30.0))
-                .andExpect(jsonPath("$.suggestions[0].basis.stretchPercent").value(10));
+                .andExpect(jsonPath("$.suggestions[0].basis.stretchPercent").value(0));
+    }
+
+    @Test
+    void theEndpointKeepsHistoricalMonthAndYearTargetsBesideThePrescribedWeek() throws Exception {
+        Runner owner = runner();
+        var days = new ArrayList<GoalSuggestions.Day>();
+        LocalDate monday = GoalPeriods.start(GoalPeriods.WEEK, today());
+        for (int back = 1; back <= 60; back++) {
+            LocalDate day = monday.minusWeeks(back).plusDays(1);
+            run(owner, day, 6);
+            days.add(new GoalSuggestions.Day(day, 6, 1980, 1, 0));
+        }
+        var response = json.readTree(mockMvc.perform(get("/api/goals/suggestions")
+                        .header("Authorization", bearer(owner)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        var actual = new ArrayList<com.fasterxml.jackson.databind.JsonNode>();
+        response.path("suggestions").forEach(actual::add);
+        assertThat(actual.get(0).path("basis").path("kind").asText()).isEqualTo("coach-plan");
+        assertThat(actual.get(0).path("target").asDouble())
+                .isEqualTo(response.at("/recommendation/plan/targetWeeklyKm").asDouble());
+        var historical = GoalSuggestions.suggest(days, today(), Set.of()).stream()
+                .filter(s -> !s.period().equals("WEEK")).toList();
+        assertThat(historical).extracting(GoalSuggestions.Suggestion::period).containsExactly("MONTH", "YEAR");
+        for (var suggestion : historical) assertThat(actual).contains(json.valueToTree(suggestion));
+        assertThat(actual).extracting(s -> s.path("period").asText() + "/" + s.path("metric").asText())
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
+    void easierDayPersistsAcrossTodayGoalsAndScheduleAndCanBeReset() throws Exception {
+        Runner owner=runner();steadyWeeks(owner);String token=bearer(owner);
+        var before=json.readTree(mockMvc.perform(get("/api/coach/today").header("Authorization",token))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        double original=before.path("today").path("plannedDistanceKm").asDouble();
+        assert original>0;
+        var adjusted=json.readTree(mockMvc.perform(post("/api/coach/today/ease").header("Authorization",token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":true}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.today.reasonCode").value("manual_ease"))
+                .andReturn().getResponse().getContentAsString());
+        double distance=adjusted.path("today").path("plannedDistanceKm").asDouble();
+        org.assertj.core.api.Assertions.assertThat(distance).isEqualTo(Math.floor(original*0.75*10)/10d);
+        mockMvc.perform(get("/api/coach/today").header("Authorization",token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.today.plannedDistanceKm").value(distance));
+        mockMvc.perform(get("/api/coach/schedule?days=14").header("Authorization",token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].plannedDistanceKm").value(distance));
+        mockMvc.perform(get("/api/goals/suggestions").header("Authorization",token)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.suggestions[0].target").value(adjusted.path("plan").path("targetWeeklyKm").asDouble()));
+        mockMvc.perform(post("/api/coach/today/ease").header("Authorization",token)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"enabled\":false}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.today.plannedDistanceKm").value(original));
     }
 
     @Test

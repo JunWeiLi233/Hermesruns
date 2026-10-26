@@ -1,8 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { useNavigate } from 'react-router';
-import { apiFetch, apiJson } from '../api';
+import { useLocation, useNavigate } from 'react-router';
+import { apiFetch, apiJson, isHeatmapCapabilityPath, isPublicHeatmapPath } from '../api';
 import { invalidateHeatmapCache } from '../utils/heatmap/cache.js';
+import { clearPlanReadCache } from '../utils/trainingPlanCache';
+import { consumeTrainingAuthReturn } from '../utils/trainingAuthReturn';
 import {
   STRAVA_SYNC_FINISHED_EVENT,
   clearStravaOauthPendingFlag,
@@ -22,6 +24,11 @@ const AUTH_PING_TIMEOUT_MS = 12000;
 
 function readAuthFromUrl() {
   try {
+    // These are single-purpose public capabilities, never Hermes session tokens.
+    // The heatmap page consumes and removes the query after mounting.
+    if (isHeatmapCapabilityPath(window.location.pathname)) {
+      return { token: null, email: null, source: null };
+    }
     const searchParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     return {
@@ -59,12 +66,15 @@ export function useAuth() {
 
 export function AuthProvider({ children }) {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const publicHeatmap = isPublicHeatmapPath(pathname);
   // If OAuth redirects back with `#token=...` (backend RedirectView), derive the initial token synchronously
   // so route guards do not kick the user to `/login` or `/admin` before URL-hash parsing runs.
   const incomingAuth = readAuthFromUrl();
   persistIncomingAuth(incomingAuth);
   const initialToken = incomingAuth?.token || localStorage.getItem('hermes_jwt') || null;
   const initialEmail = incomingAuth?.email || localStorage.getItem('hermes_email') || null;
+  const incomingReturnPending = useRef(Boolean(incomingAuth.token));
 
   const [token, setToken] = useState(() => initialToken);
   const [email, setEmail] = useState(() => initialEmail);
@@ -73,6 +83,7 @@ export function AuthProvider({ children }) {
   /** False while JWT exists but role has not been confirmed by the server yet. */
   const [authHydrated, setAuthHydrated] = useState(() => !initialToken);
   const [stravaOauthPending, setStravaOauthPending] = useState(false);
+  const [logoutDestination, setLogoutDestination] = useState(null);
 
   // OAuth / magic-link: token in URL hash or query (backend redirect)
   useEffect(() => {
@@ -80,12 +91,7 @@ export function AuthProvider({ children }) {
       localStorage.removeItem('hermes_admin');
     } catch { /* ignore */ }
 
-    const searchParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-
-    const incomingToken = hashParams.get('token') || searchParams.get('token');
-    const incomingEmail = hashParams.get('email') || searchParams.get('email');
-    const incomingSource = hashParams.get('source') || searchParams.get('source');
+    const { token: incomingToken, email: incomingEmail, source: incomingSource } = readAuthFromUrl();
 
     if (incomingToken) {
       localStorage.setItem('hermes_jwt', incomingToken);
@@ -105,8 +111,32 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  useEffect(()=>{
+    if(!incomingReturnPending.current || !authHydrated || !token)return;
+    incomingReturnPending.current=false;
+    const target=consumeTrainingAuthReturn(window.location.origin);
+    if(role!=='ADMIN' && target)navigate(target,{replace:true});
+  },[authHydrated,navigate,role,token]);
+
+  useLayoutEffect(() => {
+    if (!token || !authHydrated || role !== 'ADMIN') return;
+    const adminPage = pathname === '/admin' || pathname === '/admin/'
+      || pathname === '/dashboard' || pathname.startsWith('/dashboard/')
+      || pathname === '/workflows';
+    if (!adminPage) navigate('/dashboard', { replace: true });
+  }, [authHydrated, navigate, pathname, role, token]);
+
+  useEffect(() => {
+    if (logoutDestination && pathname === logoutDestination) setLogoutDestination(null);
+  }, [logoutDestination, pathname]);
+
   // Resolve role from backend whenever JWT changes
   useEffect(() => {
+    if (publicHeatmap && token) {
+      // Public capabilities/help must remain usable with an expired saved session.
+      setAuthHydrated(false);
+      return;
+    }
     if (!token) {
       setRole(null);
       localStorage.removeItem(ROLE_STORAGE_KEY);
@@ -145,7 +175,7 @@ export function AuthProvider({ children }) {
       window.clearTimeout(timeoutId);
       authController.abort();
     };
-  }, [token]);
+  }, [token, publicHeatmap]);
 
   useEffect(() => {
     if (!shouldTriggerStravaAutoSync({ isAuthenticated: Boolean(token), authHydrated, token })) {
@@ -215,8 +245,15 @@ export function AuthProvider({ children }) {
   }, [authHydrated, email, stravaOauthPending, token]);
 
   const login = useCallback((newToken, newEmail) => {
+    const credentialChanged = localStorage.getItem('hermes_jwt') !== newToken;
+    if (credentialChanged) clearPlanReadCache();
     // Commit token before callers run navigate(); otherwise route guards still see the old (empty) session.
     flushSync(() => {
+      setLogoutDestination(null);
+      if (credentialChanged) {
+        setRole(null);
+        setAuthHydrated(false);
+      }
       localStorage.setItem('hermes_jwt', newToken);
       setToken(newToken);
       if (newEmail) {
@@ -226,8 +263,11 @@ export function AuthProvider({ children }) {
     });
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback((options = {}) => {
     const tokenToInvalidate = token || localStorage.getItem('hermes_jwt');
+    const redirectTo = role === 'ADMIN' ? '/' : options?.redirectTo || '/login';
+    setLogoutDestination(redirectTo);
+    clearPlanReadCache();
     // Clear local state immediately so the UI updates before the API call.
     localStorage.removeItem('hermes_jwt');
     localStorage.removeItem('hermes_email');
@@ -248,15 +288,15 @@ export function AuthProvider({ children }) {
     setRole(null);
     setAuthHydrated(true);
     setStravaOauthPending(false);
-    navigate('/login');
+    navigate(redirectTo, { replace: true });
     // Best-effort backend invalidation — fire and forget.
-    if (tokenToInvalidate) {
+    if (tokenToInvalidate && options?.invalidate !== false) {
       apiFetch('/api/auth/logout', {
         method: 'POST',
         headers: { Authorization: `Bearer ${tokenToInvalidate}` },
       }).catch(() => {});
     }
-  }, [navigate, token]);
+  }, [navigate, role, token]);
 
   const isAuthenticated = Boolean(token);
   const isAdmin = role === 'ADMIN';
@@ -274,7 +314,8 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {/* Unmount protected guards until logout navigation commits, including lazy destination loads. */}
+      {logoutDestination && pathname !== logoutDestination ? null : children}
     </AuthContext.Provider>
   );
 }

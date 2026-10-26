@@ -1,29 +1,37 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useContext } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useI18n } from '../../contexts/I18nContext';
+import ThemeContext from '../../contexts/ThemeContext';
 import { apiFetch, apiJson } from '../../api';
 import { waitWhileDocumentHidden } from '../../utils/pageVisibility';
 import { cachedApiJson, invalidateResourceCache } from '../../api/resourceCache';
 import AppIcon from '../../components/AppIcon';
+import PageSkeleton from '../../components/PageSkeleton';
 import TopbarUserMenu from '../../components/TopbarUserMenu';
 import FooterNavLinks from '../../components/FooterNavLinks';
 import RunnerShellTopNav from '../../components/RunnerShellTopNav';
 import RunsSubpageNav from '../../components/RunsSubpageNav';
 import TopbarNotifications from '../../components/TopbarNotifications';
-import { formatDuration, formatLongDate, formatPaceSeconds } from '../../utils/format';
+import { formatDuration, formatPaceSeconds } from '../../utils/format';
+import { formatActivityTime } from '../../utils/timeZone';
 import { getRunnerShellNavItems } from '../../utils/runnerShellNav';
 import { buildRunDetailPath } from '../../utils/runRoute';
 import { formatShoeDisplayName } from '../../utils/shoeNames';
-import RunBestEfforts from './RunBestEfforts';
-import RunGoalsCard from '../../components/goals/RunGoalsCard';
-import RunEditDrawer from './RunEditDrawer';
+import RunPaceAnalysis from './RunPaceAnalysis';
+import RunTrainingCards from './RunTrainingCards';
 import RunLabelsCard from './RunLabelsCard';
+import RunGoalsCard from '../../components/goals/RunGoalsCard';
+import RunPlanBacklink from '../training-plan/RunPlanBacklink';
+import RunIntervalAnalysis from './RunIntervalAnalysis';
+import ConditionSessionComparison from './ConditionSessionComparison';
+import RunDetailSessionAnalysis from './RunDetailSessionAnalysis';
+import { SessionConversationTool } from '../../features/training/integrated/AthleteTools';
+import RunBestEfforts from './RunBestEfforts';
+import RunEditDrawer from './RunEditDrawer';
 import RunNotes from './RunNotes';
 import RunMatches from './RunMatches';
-import RunPaceAnalysis from './RunPaceAnalysis';
 import RunSummaryCard from './RunSummaryCard';
-import RunTrainingCards from './RunTrainingCards';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -226,8 +234,9 @@ function resampleTelemetrySamples(
 export default function RunDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token, email } = useAuth();
   const { t, lang } = useI18n();
+  const isDark = useContext(ThemeContext)?.isDark ?? false;
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isMapExpanded, setIsMapExpanded] = useState(false);
@@ -254,6 +263,7 @@ export default function RunDetail() {
   // The run whose stream the page has finished asking for, so the pace analysis asks for it only after that.
   const [streamCheckedFor, setStreamCheckedFor] = useState(null);
   const [paceRefresh, setPaceRefresh] = useState(0);
+  const [comparisonRefresh, setComparisonRefresh] = useState(0);
   // The edit drawer, and a count of the saves that changed what the cards beside it are drawn from (type, tags, rating, title).
   const [editOpen, setEditOpen] = useState(false);
   const [editVersion, setEditVersion] = useState(0);
@@ -263,6 +273,7 @@ export default function RunDetail() {
   const mapInstanceRef = useRef(null);
   // The run on screen right now, for work that finishes later and must not touch the page of another run.
   const shownRunIdRef = useRef(null);
+  const shoeScopeRef = useRef(null);
   const navItems = useMemo(() => getRunnerShellNavItems({
     t,
     lang,
@@ -318,12 +329,22 @@ export default function RunDetail() {
   }, [id, isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    const scope = { mutated: false };
+    shoeScopeRef.current = scope;
+    setAssigningShoeId(null);
+    setShoeActionMessage('');
+    setShoeDropdownOpen(false);
+    if (!isAuthenticated) return () => { shoeScopeRef.current = null; };
     // /api/shoes stays uncached on purpose: its write sites (Shoes/AddShoes/
     // RunDetail assign/admin flows) cannot all be covered by invalidation.
-    apiJson('/api/shoes').then((data) => setShoes(Array.isArray(data) ? data : [])).catch(() => {});
-    cachedApiJson('/api/profile/me').then((data) => setProfile(data)).catch(() => {});
-  }, [isAuthenticated]);
+    apiJson('/api/shoes').then((data) => {
+      if (shoeScopeRef.current === scope && !scope.mutated) setShoes(Array.isArray(data) ? data : []);
+    }).catch(() => {});
+    cachedApiJson('/api/profile/me').then((data) => {
+      if (shoeScopeRef.current === scope) setProfile(data);
+    }).catch(() => {});
+    return () => { shoeScopeRef.current = null; };
+  }, [id, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated || !id) return;
@@ -365,15 +386,22 @@ export default function RunDetail() {
     }
     const normalizedShoeId = Number(shoeId);
     const isUnlinking = normalizedShoeId === 0;
+    const activityId = run.id;
+    const scope = shoeScopeRef.current;
+    const requestPathname = window.location.pathname;
+    const stillHere = () => scope != null && shoeScopeRef.current === scope
+      && window.location.pathname === requestPathname;
     setAssigningShoeId(normalizedShoeId);
     setShoeActionMessage('');
     try {
-      const response = await apiJson(`/api/shoes/${normalizedShoeId}/assign/${run.id}`, { method: 'PATCH' });
-      if (response?.activityId != null && String(response.activityId) !== String(run.id)) {
+      const response = await apiJson(`/api/shoes/${normalizedShoeId}/assign/${activityId}`, { method: 'PATCH' });
+      if (response?.activityId != null && String(response.activityId) !== String(activityId)) {
         throw new Error('Activity mismatch');
       }
       // The assignment changed this run's shoeId inside /api/activities.
       invalidateResourceCache('/api/activities');
+      if (!stillHere()) return;
+      scope.mutated = true;
       const selectedShoe = isUnlinking
         ? null
         : shoes.find((item) => String(item.id) === String(normalizedShoeId));
@@ -384,7 +412,7 @@ export default function RunDetail() {
       const nextShoeName = isUnlinking ? null : (response?.shoeName || selectedShoeName);
 
       setRun((prev) => {
-        if (!prev) return prev;
+        if (!prev || String(prev.id) !== String(activityId)) return prev;
         const nextRun = {
           ...prev,
           shoeId: nextShoeId,
@@ -395,14 +423,21 @@ export default function RunDetail() {
         }
         return nextRun;
       });
+      // Mileage is aggregated by the server across all assigned activities.
+      // A transfer changes both pairs, so refresh the whole owned inventory.
+      const refreshedShoes = await apiJson('/api/shoes').catch(() => null);
+      if (!stillHere()) return;
+      setShoes(Array.isArray(refreshedShoes)
+        ? refreshedShoes
+        : shoes.map((shoe) => ({ ...shoe, currentDistanceKm: null })));
       setShoeDropdownOpen(false);
       setShoeActionMessage(isUnlinking
         ? t('run_detail.shoe_unlinked')
         : t('run_detail.shoe_linked', { shoe: nextShoeName || t('run_detail.shoe') }));
     } catch {
-      setShoeActionMessage(t('run_detail.shoe_assign_failed'));
+      if (stillHere()) setShoeActionMessage(t('run_detail.shoe_assign_failed'));
     } finally {
-      setAssigningShoeId(null);
+      if (stillHere()) setAssigningShoeId(null);
     }
   }
 
@@ -609,13 +644,13 @@ export default function RunDetail() {
   const lapRows = useMemo(() => (Array.isArray(analytics?.laps) ? analytics.laps : []), [analytics]);
 
   const telemetryDefinitions = useMemo(() => [
-    { key: 'heartRate', label: t('run_detail.telemetry_heart_rate'), unit: t('run_detail.unit_bpm'), color: '#b75f4a', fill: 'rgba(183, 95, 74, 0.18)', icon: 'monitor_heart' },
-    { key: 'cadence', label: t('run_detail.telemetry_cadence'), unit: t('run_detail.unit_spm'), color: '#54756a', fill: 'rgba(84, 117, 106, 0.16)', icon: 'telemetry_cadence' },
-    { key: 'strideLength', label: t('run_detail.telemetry_stride'), unit: t('run_detail.unit_meter'), color: '#9b6c35', fill: 'rgba(155, 108, 53, 0.15)', icon: 'telemetry_stride' },
-    { key: 'groundContactTimeMs', label: t('run_detail.ground_contact_time'), unit: 'ms', color: '#7b684b', fill: 'rgba(123, 104, 75, 0.16)', icon: 'telemetry_ground_contact' },
-    { key: 'verticalOscillationCm', label: t('run_detail.vertical_oscillation'), unit: 'cm', color: '#7d7565', fill: 'rgba(125, 117, 101, 0.16)', icon: 'telemetry_vertical' },
-    { key: 'elevation', label: t('run_detail.telemetry_elevation'), unit: t('run_detail.unit_meter'), color: '#6f6b5e', fill: 'rgba(111, 107, 94, 0.16)', icon: 'telemetry_elevation' },
-  ], [t]);
+    { key: 'heartRate', label: t('run_detail.telemetry_heart_rate'), unit: t('run_detail.unit_bpm'), color: isDark ? '#f07561' : '#a0392a', fill: 'rgba(160, 57, 42, 0.12)', icon: 'monitor_heart' },
+    { key: 'cadence', label: t('run_detail.telemetry_cadence'), unit: t('run_detail.unit_spm'), color: isDark ? '#8fc0ae' : '#54756a', fill: 'rgba(84, 117, 106, 0.16)', icon: 'telemetry_cadence' },
+    { key: 'strideLength', label: t('run_detail.telemetry_stride'), unit: t('run_detail.unit_meter'), color: isDark ? '#dfb77e' : '#9b6c35', fill: 'rgba(155, 108, 53, 0.15)', icon: 'telemetry_stride' },
+    { key: 'groundContactTimeMs', label: t('run_detail.ground_contact_time'), unit: 'ms', color: isDark ? '#c5b18e' : '#7b684b', fill: 'rgba(123, 104, 75, 0.16)', icon: 'telemetry_ground_contact' },
+    { key: 'verticalOscillationCm', label: t('run_detail.vertical_oscillation'), unit: 'cm', color: isDark ? '#c0b7a5' : '#7d7565', fill: 'rgba(125, 117, 101, 0.16)', icon: 'telemetry_vertical' },
+    { key: 'elevation', label: t('run_detail.telemetry_elevation'), unit: t('run_detail.unit_meter'), color: isDark ? '#b9b5a5' : '#6f6b5e', fill: 'rgba(111, 107, 94, 0.16)', icon: 'telemetry_elevation' },
+  ], [t, isDark]);
   const telemetryTabDefinitions = useMemo(() => telemetryDefinitions
     .map((definition, index) => {
       const samples = getTelemetrySamples(telemetry?.series?.[definition.key]);
@@ -710,10 +745,14 @@ export default function RunDetail() {
     scales: {
       x: {
         type: 'linear',
-        display: false,
+        border: { display: false },
+        grid: { display: false },
+        ticks: { color: '#8a837c', maxTicksLimit: 6, maxRotation: 0, font: { size: 11 }, callback: formatTelemetryInteractionTime },
       },
       y: {
-        display: false,
+        border: { display: false },
+        grid: { color: 'rgba(128, 120, 112, 0.12)', drawTicks: false },
+        ticks: { color: '#8a837c', maxTicksLimit: 3, padding: 8, font: { size: 11 } },
         min: Math.max(0, min - pad),
         max: max + pad,
       },
@@ -967,19 +1006,7 @@ export default function RunDetail() {
   }
 
   if (isBootstrappingRun) {
-    return renderRunnerShell(
-      <div className="run-detail-page run-detail-profile-cockpit">
-        <div className="run-detail-loading-card" aria-live="polite">
-          <span className="run-detail-loading-kicker">{t('run_detail.hero_eyebrow')}</span>
-          <h1>{t('run_detail.loading_summary')}</h1>
-          <div className="run-detail-loading-bars" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </div>
-        </div>
-      </div>,
-    );
+    return <PageSkeleton variant="run-detail" />;
   }
 
   if (!run) {
@@ -993,7 +1020,9 @@ export default function RunDetail() {
     );
   }
 
-  const dateText = formatLongDate(run.startTime || run.startDate, lang);
+  const dateText = formatActivityTime(run, lang || 'zh-CN', {
+    weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
   const metaSeparator = t('run_detail.meta_separator');
   const distanceUnitLabel = t('run_detail.unit_km');
   const paceUnitLabel = t('run_detail.unit_pace');
@@ -1002,6 +1031,7 @@ export default function RunDetail() {
   const heroMetaText = [
     dateText,
     run.locationCity || run.city || run.locationName || run.location,
+    run.provider,
   ].filter(Boolean).join(metaSeparator) || t('run_detail.imported_activity');
 
   const activeShoes = shoes.filter((shoe) => !shoe.retired);
@@ -1012,12 +1042,12 @@ export default function RunDetail() {
       : null);
   const linkedShoeMileage = linkedShoe?.currentDistanceKm != null
     ? `${linkedShoe.currentDistanceKm.toFixed(0)} ${distanceUnitLabel}`
-    : null;
-  const linkedShoeUsage = linkedShoe?.maxDistanceKm > 0 && linkedShoe?.currentDistanceKm >= 0
+    : run.shoeId ? `-- ${distanceUnitLabel}` : null;
+  const linkedShoeUsage = linkedShoe?.currentDistanceKm != null && linkedShoe?.maxDistanceKm > 0 && linkedShoe.currentDistanceKm >= 0
     ? Math.min(100, (linkedShoe.currentDistanceKm / linkedShoe.maxDistanceKm) * 100)
     : null;
 
-  const visibleLapRows = showAllSplits ? lapRows : lapRows.slice(0, 5);
+  const visibleLapRows = showAllSplits ? lapRows : lapRows.slice(0, 6);
   const lapPaceSeconds = (lap) => {
     if (Number.isFinite(lap?.durationSeconds) && lap.durationSeconds > 0 && lap.distanceKm > 0) {
       return lap.durationSeconds / lap.distanceKm;
@@ -1071,6 +1101,14 @@ export default function RunDetail() {
     return Math.max(10, Math.min(100, Math.round(35 + ((slowestLapPace - seconds) / span) * 65)));
   };
   const telemetryBounds = hasTelemetryData ? getTelemetryValueBounds(activeTelemetrySamples) : null;
+  const telemetryAverage = activeTelemetrySamples.length
+    ? activeTelemetrySamples.reduce((sum, sample) => sum + sample.value, 0) / activeTelemetrySamples.length
+    : null;
+  const selectedTelemetrySample = selectedTelemetryPoint?.key === activeTelemetryDefinition.key ? selectedTelemetryPoint : null;
+  const readinessScore = analytics?.debrief?.readinessScore;
+  const readinessProgress = readinessScore != null && Number.isFinite(Number(readinessScore))
+    ? Math.max(0, Math.min(100, Number(readinessScore)))
+    : 0;
   const effectSegments = (value) => [1, 2, 3, 4, 5].map((step) => Number.isFinite(value) && value >= step - 0.5);
   return renderRunnerShell(
     <div className="run-detail-page run-detail-profile-cockpit run-detail-profile-minimal run-detail-v2">
@@ -1097,6 +1135,7 @@ export default function RunDetail() {
               <p className="run-detail-v2__meta">{heroMetaText}</p>
               <h1>{run.name || t('run_detail.detail_title')}</h1>
               <div className="run-detail-v2__actions">
+                <SessionConversationTool canonicalId={run.id} />
                 {run.provider && <span className="run-detail-provider-pill run-detail-v2__provider">{run.provider}</span>}
                 <button
                   type="button"
@@ -1107,16 +1146,16 @@ export default function RunDetail() {
                   <AppIcon name="edit" />
                   {t('run_detail.edit_run')}
                 </button>
+                <button type="button" className="run-detail-v2__btn" onClick={handleShare} aria-label={t('run_detail.share')}>
+                  <AppIcon name="upload" />
+                  {shareFeedback || t('run_detail.share')}
+                </button>
                 {run.provider === 'STRAVA' && (
                   <button type="button" className="run-detail-v2__btn" disabled={syncDisabled} onClick={handleResync}>
                     <AppIcon name="sync" />
                     {syncBtnText || t('run_detail.resync_strava')}
                   </button>
                 )}
-                <button type="button" className="run-detail-v2__btn" onClick={handleShare} aria-label={t('run_detail.share')}>
-                  <AppIcon name="upload" />
-                  {shareFeedback || t('run_detail.share')}
-                </button>
               </div>
               {editNotice && editNotice.runId === run.id ? <p className="run-detail-v2__edit-notice" role="status">{editNotice.text}</p> : null}
               <RunNotes notes={run.notes} />
@@ -1174,9 +1213,14 @@ export default function RunDetail() {
         {analytics?.debrief && (
           <section id="run-detail-coach" className="run-detail-v2__coach">
             <div className="run-detail-v2__coach-score">
-              <span>{t('run_detail.coach_debrief_title')}</span>
-              <strong>{analytics.debrief.readinessScore}<small>%</small></strong>
-              <em>{t('run_detail.pre_run_readiness')}</em>
+              <div className="run-detail-v2__readiness-ring">
+                <svg viewBox="0 0 56 56" aria-hidden="true">
+                  <circle cx="28" cy="28" r="24" />
+                  <circle cx="28" cy="28" r="24" pathLength="100" strokeDasharray={`${readinessProgress} 100`} />
+                </svg>
+                <strong>{analytics.debrief.readinessScore ?? '--'}</strong>
+              </div>
+              <div><span>{t('run_detail.coach_debrief_title')}</span><em>{t('run_detail.pre_run_readiness')}</em></div>
             </div>
             <p className="run-detail-v2__coach-read">{analytics.debrief.interpretation}</p>
             <div className="run-detail-v2__coach-next">
@@ -1191,7 +1235,6 @@ export default function RunDetail() {
             <h2>{t('run_detail.telemetry_title')}</h2>
             <div className="run-detail-v2__tabs" role="tablist" aria-label={t('run_detail.telemetry_title')}>
               {telemetryTabDefinitions.map((definition) => {
-                const displaySample = definition.displaySample;
                 const isActive = definition.key === activeTelemetryDefinition.key;
                 return (
                   <button
@@ -1202,32 +1245,43 @@ export default function RunDetail() {
                     onClick={() => setActiveTelemetryKey(definition.key)}
                     role="tab"
                     aria-selected={isActive}
+                    id={`telemetry-tab-${definition.key}`}
+                    aria-controls="run-detail-telemetry-panel"
+                    tabIndex={isActive ? 0 : -1}
+                    onKeyDown={(event) => {
+                      if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+                      event.preventDefault();
+                      const tabs = [...event.currentTarget.parentElement.querySelectorAll('[role="tab"]')];
+                      const index = tabs.indexOf(event.currentTarget);
+                      const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+                        : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+                      tabs[next].click();
+                      tabs[next].focus();
+                    }}
                   >
                     <span>{definition.label}</span>
-                    <strong>
-                      {displaySample ? formatTelemetryValue(displaySample.value, definition.key) : '--'}
-                      {displaySample && <em>{definition.unit}</em>}
-                    </strong>
                   </button>
                 );
               })}
             </div>
           </div>
-          <div className="run-detail-v2__telemetry-stage">
+          <div className="run-detail-v2__telemetry-stage" id="run-detail-telemetry-panel" role="tabpanel" aria-labelledby={`telemetry-tab-${activeTelemetryDefinition.key}`}>
             <div className="run-detail-v2__readout" style={{ '--tab-color': activeTelemetryDefinition.color }}>
-              <span>{activeTelemetryDefinition.label}</span>
-              <strong>
-                {focusTelemetryPoint ? formatTelemetryValue(focusTelemetryPoint.value, activeTelemetryDefinition.key) : '--'}
-                <em>{activeTelemetryDefinition.unit}</em>
-              </strong>
-              <p>
+              <div className="run-detail-v2__reading">
+                <span>{t(selectedTelemetrySample ? 'run_detail.telemetry_selected_sample' : 'run_detail.telemetry_average')}</span>
+                <strong>
+                  {selectedTelemetrySample || telemetryAverage != null ? formatTelemetryValue(selectedTelemetrySample?.value ?? telemetryAverage, activeTelemetryDefinition.key) : '--'}
+                  <em>{activeTelemetryDefinition.unit}</em>
+                </strong>
+              </div>
+              {selectedTelemetrySample && <p>
                 {focusTelemetryPoint
                   ? t('run_detail.telemetry_focus_copy', {
                     time: formatTelemetryInteractionTime(focusTelemetryPoint.t),
                     distance: focusTelemetryPoint.distanceKm != null ? `${focusTelemetryPoint.distanceKm.toFixed(2)} ${distanceUnitLabel}` : '--',
                   })
                   : t('run_detail.telemetry_no_stream')}
-              </p>
+              </p>}
               {telemetryBounds ? (
                 <dl className="run-detail-v2__bounds">
                   <div><dt>{t('run_detail.telemetry_min')}</dt><dd>{formatTelemetryValue(telemetryBounds.min, activeTelemetryDefinition.key)} {activeTelemetryDefinition.unit}</dd></div>
@@ -1263,6 +1317,12 @@ export default function RunDetail() {
           )}
         </section>
 
+        <RunPlanBacklink key={`plan-${id}-${token}`} activityId={id} />
+
+        <RunDetailSessionAnalysis key={`analysis-${run.id}`}>
+          <RunIntervalAnalysis key={`intervals-${run.id}-${token}-${email}`} activityId={run.id} token={token} onAnalysisSaved={() => setComparisonRefresh((value) => value + 1)} />
+          <ConditionSessionComparison key={`conditions-${run.id}-${token}-${email}`} activityId={run.id} token={token} currentRun={run} recentRuns={recentRuns} refreshToken={comparisonRefresh} />
+        </RunDetailSessionAnalysis>
         {/* Siblings need different keys: two children with the same key are duplicated or dropped on update. */}
         <RunPaceAnalysis key={`pace-${run.id}`} runId={run.id} startTime={run.startTime || run.startDate} streamReady={streamCheckedFor === run.id} refreshToken={paceRefresh} />
 
@@ -1276,9 +1336,9 @@ export default function RunDetail() {
           <section id="run-detail-splits" className="run-detail-v2__card run-detail-v2__splits">
             <div className="run-detail-v2__card-head">
               <h2>{t('run_detail.splits')}</h2>
-              {lapRows.length > 5 && (
+              {lapRows.length > 6 && (
                 <button type="button" className="run-detail-v2__link" onClick={() => setShowAllSplits((prev) => !prev)}>
-                  {showAllSplits ? t('run_detail.show_less') : t('run_detail.view_all')}
+                  {showAllSplits ? t('run_detail.show_less') : `${t('run_detail.view_all')} ${lapRows.length}`}
                 </button>
               )}
             </div>
@@ -1313,10 +1373,8 @@ export default function RunDetail() {
           </section>
 
           <aside className="run-detail-v2__side">
-            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} refreshToken={editVersion} />
-
+            <RunLabelsCard key={`labels-${run.id}`} runId={run.id} compact refreshToken={editVersion} />
             <RunGoalsCard key={`goals-${run.id}`} runId={run.id} />
-
             <section className="run-detail-v2__card run-detail-gear-section run-detail-v2__gear">
               <div className="run-detail-v2__card-head">
                 <h3>{t('run_detail.gear_linked')}</h3>
@@ -1352,13 +1410,11 @@ export default function RunDetail() {
                 <div className="run-detail-gear-copy">
                   <strong>{linkedShoeName || t('run_detail.no_shoe')}</strong>
                   <span>{linkedShoeMileage ? t('run_detail.linked_shoe_mileage', { mileage: linkedShoeMileage }) : t('run_detail.no_shoe')}</span>
-                  {linkedShoeUsage != null && (
-                    <div className="run-detail-gear-usage">
-                      <div style={{ width: `${linkedShoeUsage}%` }} />
-                    </div>
-                  )}
                 </div>
               </div>
+              {linkedShoeUsage != null && (
+                <div className="run-detail-gear-usage"><div style={{ width: `${linkedShoeUsage}%` }} /></div>
+              )}
               {shoeDropdownOpen && (
                 <div className="shoe-run-dropdown run-detail-dropdown" role="menu">
                   {activeShoes.length > 0 ? activeShoes.map((shoe) => (
