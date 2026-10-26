@@ -344,6 +344,7 @@ const Dashboard = memo(function Dashboard() {
   const [selectedCourseMapId, setSelectedCourseMapId] = useState(null);
   const [courseMapDetail, setCourseMapDetail] = useState(null);
   const [courseMapLoadState, setCourseMapLoadState] = useState('idle');
+  const [courseMapInventoryFailed, setCourseMapInventoryFailed] = useState(false);
   const [courseMapActions, setCourseMapActions] = useState({});
   const [courseMapErrors, setCourseMapErrors] = useState({});
   const [courseMapScanTimeline, setCourseMapScanTimeline] = useState([]);
@@ -351,6 +352,7 @@ const Dashboard = memo(function Dashboard() {
   const [courseMapQueueCollapsed, setCourseMapQueueCollapsed] = useState(false);
   const [courseMapStageHeight, setCourseMapStageHeight] = useState(null);
   const courseMapUploadInputId = 'dashboard-course-map-upload-input';
+  const courseMapInventoryRequestRef = useRef(0);
   const courseMapDetailRequestRef = useRef(0);
   const courseMapTimelineRequestRef = useRef(0);
   const courseMapStageContentRef = useRef(null);
@@ -462,12 +464,16 @@ const Dashboard = memo(function Dashboard() {
   }, [userQuery.page, userQuery.search, userQuery.role, userQuery.status, userQuery.queue]);
 
   const loadCourseMaps = useCallback(async () => {
+    const requestId = ++courseMapInventoryRequestRef.current;
     try {
       // This endpoint returns the full inventory; the queue filters it locally.
       const data = await apiJson('/api/admin/race-course-maps');
+      if (courseMapInventoryRequestRef.current !== requestId) return;
       setCourseMapsPage(normalizePage(data));
+      setCourseMapInventoryFailed(false);
     } catch {
-      setCourseMapsPage({ items: [], page: 0, totalPages: 0, totalItems: 0 });
+      if (courseMapInventoryRequestRef.current !== requestId) return;
+      setCourseMapInventoryFailed(true);
     }
   }, []);
 
@@ -553,10 +559,7 @@ const Dashboard = memo(function Dashboard() {
       setCourseMapLoadState('ready');
     } catch {
       if (courseMapDetailRequestRef.current !== requestId) return;
-      setCourseMapDetail(buildCourseMapAdminDetailFallback(
-        fallbackItem || courseMapQueueItems.find((item) => getCourseMapRaceId(item) === raceId) || { raceId },
-      ));
-      setCourseMapLoadState('ready');
+      setCourseMapLoadState('error');
     }
   }, [courseMapBackendItems, courseMapQueueItems]);
 
@@ -1428,9 +1431,11 @@ const Dashboard = memo(function Dashboard() {
   const openCourseMapWorkspace = useCallback((item) => {
     const raceId = getCourseMapRaceId(item);
     setSelectedCourseMapId(raceId);
-    setCourseMapDetail((current) => (getCourseMapRaceId(current) === raceId ? current : buildCourseMapAdminDetailFallback(item)));
+    setCourseMapDetail((current) => (getCourseMapRaceId(current) === raceId
+      ? current
+      : hasCourseMapBackendRecord(raceId, courseMapBackendItems) ? null : buildCourseMapAdminDetailFallback(item)));
     loadCourseMapDetail(raceId, item);
-  }, [loadCourseMapDetail]);
+  }, [courseMapBackendItems, loadCourseMapDetail]);
 
   async function uploadCourseMapPreview(raceId, file) {
     if (!raceId || !file) return;
@@ -2439,7 +2444,8 @@ const Dashboard = memo(function Dashboard() {
         {activeTab === 'courseMaps' && (
           <CourseMapsSection
             lang={lang}
-            courseMapError={courseMapErrors[selectedCourseMapId] || ''}
+            courseMapError={courseMapInventoryFailed || courseMapLoadState === 'error'
+              ? t('dashboard.course_maps_load_error') : courseMapErrors[selectedCourseMapId] || ''}
             t={t}
             courseMapActivePipelines={courseMapActivePipelines}
             courseMapSatellitesConnected={courseMapSatellitesConnected}
@@ -2485,7 +2491,7 @@ const Dashboard = memo(function Dashboard() {
             scanCourseMapSources={scanCourseMapSources}
             courseMapTimelineLoadState={courseMapTimelineLoadState}
             courseMapScanTimeline={courseMapScanTimeline}
-            courseMapLoadState={courseMapLoadState}
+            courseMapLoadState={courseMapInventoryFailed ? 'error' : courseMapLoadState}
           />
         )}
 

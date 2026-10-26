@@ -2604,6 +2604,7 @@ export default {
     "course_maps_scan_quality_hint": "请给 AI 一张清晰的单页赛道图，能看清路线、起终点、转向标注和比例尺。海报、赞助图或多面板拼图通常很难正确识别。",
     "course_maps_file_type_error": "请上传赛道图图片或 PDF 文件。",
     "course_maps_source_missing_error": "已保存的源文件缺失。请重新上传官方赛道图后再试。",
+    "course_maps_load_error": "无法加载赛道图数据。请刷新重试，并按提示重新登录。",
     "course_maps_alignment_review_warning": "此路线需要重新核对对齐结果，确认后才能替换线上地图。",
     "course_maps_interactive_source_hint": "此路线来自交互式地图。如需运行图像提取，请先上传图片或 PDF。",
     "course_maps_publish_error": "赛道图发布失败，请重试。",

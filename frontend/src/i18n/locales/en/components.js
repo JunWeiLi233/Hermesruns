@@ -2636,6 +2636,7 @@ export default {
     "course_maps_actions_hint": "Upload accepts local images and PDFs, and Re-analyze reuses the stored upload. Best results come from one clear map page, not a poster or collage.",
     "course_maps_file_type_error": "Upload a course-map image or PDF file.",
     "course_maps_source_missing_error": "The saved source file is missing. Upload the official map again, then retry.",
+    "course_maps_load_error": "Could not load course-map data. Reload to retry, and sign in if prompted.",
     "course_maps_alignment_review_warning": "This route needs an alignment review before it can replace the live map.",
     "course_maps_interactive_source_hint": "This route uses an interactive map. Upload an image or PDF to run image extraction.",
     "course_maps_publish_error": "The map could not be published. Please retry.",

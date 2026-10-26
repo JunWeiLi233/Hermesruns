@@ -69,7 +69,8 @@ export default function CourseMapsSection({
   const previewSourceLabel = t(!preview ? "dashboard.review_state_missing"
     : previewTab === "pending" ? "dashboard.review_panel_pending" : "dashboard.review_panel_live");
   const previewSummary = getLocalizedCourseMapSummary(preview, selectedCourseMapId, lang, t);
-  const actionDisabled = courseMapActionIsSelected || courseMapLoadState === "loading";
+  const actionDisabled = courseMapActionIsSelected
+    || courseMapLoadState === "loading" || courseMapLoadState === "error";
   return (
     <div className="admin-ref-workspace admin-ref-map-workspace">
       <section

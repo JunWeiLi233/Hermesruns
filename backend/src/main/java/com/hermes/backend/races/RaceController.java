@@ -219,7 +219,8 @@ public class RaceController {
                     : image.mediaType();
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(mediaType))
-                    .header("Cache-Control", "public, max-age=604800, immutable")
+                    // Bearer-protected images must not be reused by shared caches.
+                    .header("Cache-Control", "private, no-store")
                     .body(image.imageBytes());
         } catch (Exception error) {
             return ResponseEntity.notFound().build();

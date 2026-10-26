@@ -78,7 +78,7 @@ class SecureByDefaultRouteSecurityTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/api/nothing-here", "/api/activities", "/api", "/wp-login.php", "/backup.zip", "/some/dir/.env"})
+    @ValueSource(strings = {"/api/nothing-here", "/api/activities", "/api/races/course-map-image", "/api", "/wp-login.php", "/backup.zip", "/some/dir/.env"})
     void anythingThatIsNotAPageStaysTheJsonUnauthorizedEvenForABrowser(String path) throws Exception {
         mockMvc.perform(get(path).accept(MediaType.TEXT_HTML, MediaType.ALL))
                 .andExpect(status().isUnauthorized())
