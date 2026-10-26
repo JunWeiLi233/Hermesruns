@@ -115,7 +115,8 @@ class ActivityIngestedCoachingTransactionTests {
         new TransactionTemplate(transactions).executeWithoutResult(status -> {
             Activity run = new Activity();
             run.setRunner(runner); run.setActivityType(ActivityType.RUN);
-            run.setStartTime(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(10));
+            // Keep this completed run in the runner's current week, including just after Monday midnight.
+            run.setStartTime(java.time.LocalDate.now(ZoneOffset.UTC).atStartOfDay());
             run.setDistanceKm(35.3); run.setDistanceMeters(35_300.0); run.setMovingTimeSeconds(14_000);
             run = activities.saveAndFlush(run);
             events.publishEvent(new ActivityIngestedEvent(runner.getId(), run.getId()));
@@ -126,7 +127,7 @@ class ActivityIngestedCoachingTransactionTests {
         assertThat(today.routeRecommendation()).isNull();
         assertThat(today.plan().weeklyBudgets().get(0).completedKm()).isGreaterThanOrEqualTo(35.3);
         assertThat(today.plan().weeklyBudgets().get(0).remainingAllowanceKm()).isZero();
-        var end = java.time.LocalDate.now().with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY));
+        var end = today.today().scheduledDate().with(java.time.temporal.TemporalAdjusters.nextOrSame(java.time.DayOfWeek.SUNDAY));
         assertThat(today.schedule().stream().filter(day -> !day.scheduledDate().isAfter(end)))
                 .allSatisfy(day -> assertThat(day.workoutType()).isEqualTo("REST"));
     }

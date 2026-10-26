@@ -8,6 +8,7 @@ import com.hermes.backend.auth.AuthService;
 import com.hermes.backend.runner.Runner;
 import com.hermes.backend.runner.RunnerRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -77,10 +78,15 @@ class GoalSuggestionsMvcTests {
 
     /** Three 10 km runs in each of the last eight complete weeks. */
     private void steadyWeeks(Runner owner) {
-        LocalDate thisMonday = GoalPeriods.start(GoalPeriods.WEEK, today());
+        LocalDate currentDay = today();
+        LocalDate thisMonday = GoalPeriods.start(GoalPeriods.WEEK, currentDay);
+        // Include both today and Sunday so the planner's weekend rule cannot replace today's run.
+        var runDays = new java.util.LinkedHashSet<>(java.util.List.of(
+                currentDay.getDayOfWeek(), DayOfWeek.SUNDAY, DayOfWeek.TUESDAY, DayOfWeek.THURSDAY))
+                .stream().limit(3).toList();
         for (int back = 1; back <= 8; back++) {
-            for (int i = 0; i < 3; i++) {
-                run(owner, thisMonday.minusWeeks(back).plusDays((today().getDayOfWeek().getValue() - 1 + i * 2) % 7), 10);
+            for (DayOfWeek day : runDays) {
+                run(owner, thisMonday.minusWeeks(back).plusDays(day.getValue() - 1), 10);
             }
         }
     }
