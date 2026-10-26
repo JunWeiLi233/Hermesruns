@@ -487,6 +487,24 @@ class RaceControllerTests {
         assertThat(payload).containsKey("totalClimbMeters");
     }
 
+    @Test
+    void courseMapImageCannotBeStoredInSharedCaches() {
+        RaceCourseMapService courseMaps = mock(RaceCourseMapService.class);
+        byte[] imageBytes = new byte[] {1, 2, 3};
+        when(courseMaps.resolveDisplayableLocalImage("local-course-map:course.png"))
+                .thenReturn(new RaceCourseMapImageService.DisplayableCourseMapImage("image/png", imageBytes));
+        RaceController controller = createController(
+                mock(AuthService.class), mock(RaceEventRepository.class), mock(ActivityRepository.class),
+                mock(RaceOfficialImageService.class), mock(RaceElevationProfileService.class), courseMaps);
+
+        ResponseEntity<?> response = controller.courseMapImage("local-course-map:course.png");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getHeaders().getContentType()).isEqualTo(org.springframework.http.MediaType.IMAGE_PNG);
+        assertThat(response.getBody()).isEqualTo(imageBytes);
+        assertThat(response.getHeaders().getCacheControl()).isEqualTo("private, no-store");
+    }
+
     private RaceController createController(AuthService authService, RaceEventRepository races,
                                             ActivityRepository activities, RaceOfficialImageService images,
                                             RaceElevationProfileService elevation, RaceCourseMapService courseMaps) {
