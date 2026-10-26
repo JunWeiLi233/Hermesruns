@@ -69,7 +69,7 @@ assertOrdered(backend, [
 ])
 assertOrdered(runtime, [
   'WORKDIR /app',
-  'RUN addgroup -S hermes && adduser -S -G hermes hermes && chown -R hermes:hermes /app',
+  'RUN addgroup -S -g 101 hermes && adduser -S -u 100 -G hermes hermes && chown -R hermes:hermes /app',
   'COPY --chown=hermes:hermes --from=backend-build /backend/target/*.jar app.jar',
   'COPY --chown=hermes:hermes frontend/src/data/worldRaceCatalog.json ./frontend/src/data/worldRaceCatalog.json',
   'USER hermes',

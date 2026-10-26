@@ -74,20 +74,26 @@ class CommunitySchemaMigrationTests {
     }
 
     private void verifyPostgresCompatibilityMigration(JdbcTemplate jdbc) throws Exception {
-        var tables = List.of("daily_sleep_data", "daily_hrv_data", "daily_wellness_summary", "daily_stress_data");
+        var tables = List.of("daily_sleep_data", "daily_hrv_data", "daily_wellness_summary", "daily_stress_data",
+                "body_composition_data");
         for (String table : tables) {
             jdbc.execute("create table " + table + " (id integer primary key, provider varchar(32) not null"
                     + " check(provider in ('GARMIN','STRAVA')), amount integer check(amount >= 0))");
             jdbc.update("insert into " + table + " values(1,'GARMIN',1)");
         }
-        String sql;
-        try (var input = new ClassPathResource("db/compatibility/V001__runtime_schema.sql").getInputStream()) {
-            sql = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        for (int pass = 0; pass < 2; pass++) {
+            for (String resource : List.of("V001__runtime_schema.sql", "V002__wellness_provider_domain.sql")) {
+                try (var input = new ClassPathResource("db/compatibility/" + resource).getInputStream()) {
+                    jdbc.execute(new String(input.readAllBytes(), StandardCharsets.UTF_8));
+                }
+            }
         }
-        jdbc.execute(sql);
-        jdbc.execute(sql);
         for (String table : tables) {
             jdbc.update("insert into " + table + " values(2,'MANUAL',1)");
+            int id = 10;
+            for (var provider : com.hermes.backend.activity.ImportProvider.values()) {
+                jdbc.update("insert into " + table + " values(?,?,1)", id++, provider.name());
+            }
             assertThat(jdbc.queryForObject("select provider from " + table + " where id=1", String.class))
                     .isEqualTo("GARMIN");
             for (String invalid : List.of("(3,'UNKNOWN',1)", "(3,NULL,1)", "(3,'MANUAL',-1)")) {
@@ -97,6 +103,31 @@ class CommunitySchemaMigrationTests {
         }
         assertThat(jdbc.queryForList("select local_route_artifact_ref, local_route_updated_at,"
                 + " local_route_updated_by_email from race_course_map_asset")).hasSize(1);
+        // Invalid legacy data must abort the entire five-table upgrade, leaving
+        // the evidence and every original check intact for an operator to review.
+        jdbc.execute("alter table daily_stress_data drop constraint daily_stress_data_provider_check,"
+                + " add constraint daily_stress_data_provider_check check(provider <> 'FORBIDDEN')");
+        jdbc.update("insert into daily_stress_data values(99,'UNKNOWN',1)");
+        String checks = "select t.relname, c.conname, pg_get_constraintdef(c.oid) as predicate from pg_constraint c"
+                + " join pg_class t on t.oid=c.conrelid join pg_namespace n on n.oid=t.relnamespace"
+                + " where n.nspname=current_schema() and c.contype='c' order by t.relname,c.conname";
+        var before = jdbc.queryForList(checks);
+        String sql;
+        try (var input = new ClassPathResource("db/compatibility/V002__wellness_provider_domain.sql").getInputStream()) {
+            sql = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        String migration = sql;
+        jdbc.execute("alter table daily_sleep_data add constraint unexpected_provider_rule check(provider <> 'FORBIDDEN')");
+        var extraCheckBefore = jdbc.queryForList(checks);
+        assertThatThrownBy(() -> jdbc.execute(migration)).hasMessageContaining("Missing or unexpected provider constraint");
+        assertThat(jdbc.queryForList(checks)).isEqualTo(extraCheckBefore);
+        jdbc.execute("alter table daily_sleep_data drop constraint unexpected_provider_rule");
+        assertThatThrownBy(() -> jdbc.execute(migration)).hasMessageContaining("Unexpected provider values");
+        assertThat(jdbc.queryForList(checks)).isEqualTo(before);
+        assertThat(jdbc.queryForObject("select provider from daily_stress_data where id=99", String.class))
+                .isEqualTo("UNKNOWN");
+        jdbc.update("delete from daily_stress_data where id=99");
+        jdbc.execute(migration);
     }
 
     private Configuration configuration(String url, String user, String password, String schemaAction, List<Class<?>> entities) {

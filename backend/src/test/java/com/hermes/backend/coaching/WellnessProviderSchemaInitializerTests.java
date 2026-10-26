@@ -4,6 +4,8 @@ import java.sql.Connection;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -15,7 +17,23 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class WellnessProviderSchemaInitializerTests {
     private static final List<String> TABLES = List.of(
-            "daily_sleep_data", "daily_hrv_data", "daily_wellness_summary", "daily_stress_data");
+            "daily_sleep_data", "daily_hrv_data", "daily_wellness_summary", "daily_stress_data", "body_composition_data");
+
+    @ParameterizedTest
+    @ValueSource(strings = {"unexpected", "MixedCase", "x'y"})
+    void rejectsEveryUnexpectedQuotedProviderBeforeChangingChecks(String unexpected) {
+        var jdbc = new JdbcTemplate(new DriverManagerDataSource(
+                "jdbc:h2:mem:" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1", "sa", ""));
+        jdbc.execute("create table daily_sleep_data(provider varchar(32) check(provider in ('GARMIN','STRAVA','"
+                + unexpected.replace("'", "''") + "')))");
+        var before = jdbc.queryForList("select CHECK_CLAUSE from INFORMATION_SCHEMA.CHECK_CONSTRAINTS");
+
+        assertThatThrownBy(() -> new WellnessProviderSchemaInitializer().allowManualProvider(jdbc))
+                .isInstanceOf(IllegalStateException.class).hasMessageContaining("Unexpected existing");
+
+        assertThat(jdbc.queryForList("select CHECK_CLAUSE from INFORMATION_SCHEMA.CHECK_CONSTRAINTS"))
+                .isEqualTo(before);
+    }
 
     @Test
     void upgradesExistingH2ChecksWithoutDroppingValidation() throws Exception {
@@ -59,6 +77,9 @@ class WellnessProviderSchemaInitializerTests {
         migration.allowManualProvider(jdbc);
         migration.allowManualProvider(jdbc);
         jdbc.update("INSERT INTO daily_sleep_data VALUES (2, 'MANUAL')");
+        jdbc.update("INSERT INTO daily_sleep_data VALUES (4, 'APPLE_HEALTH')");
+        jdbc.update("INSERT INTO daily_sleep_data VALUES (5, 'GOOGLE_HEALTH')");
+        jdbc.update("INSERT INTO daily_sleep_data VALUES (6, 'OURA')");
         assertThat(jdbc.queryForObject("SELECT provider FROM daily_sleep_data WHERE id=1", String.class)).isEqualTo("GARMIN");
         assertThatThrownBy(() -> jdbc.update("INSERT INTO daily_sleep_data VALUES (3, NULL)"))
                 .isInstanceOf(DataIntegrityViolationException.class);
@@ -108,6 +129,10 @@ class WellnessProviderSchemaInitializerTests {
         migration.allowManualProvider(jdbc);
         for (String table : TABLES) {
             jdbc.update("INSERT INTO " + table + " VALUES (2, 'MANUAL', 1)");
+            int id = 10;
+            for (var provider : com.hermes.backend.activity.ImportProvider.values()) {
+                jdbc.update("INSERT INTO " + table + " VALUES (?, ?, 1)", id++, provider.name());
+            }
             assertThat(jdbc.queryForObject("SELECT provider FROM " + table + " WHERE id=1", String.class)).isEqualTo("GARMIN");
             for (String invalid : List.of("(3, 'UNKNOWN', 1)", "(3, NULL, 1)", "(3, 'MANUAL', -1)")) {
                 assertThatThrownBy(() -> jdbc.update("INSERT INTO " + table + " VALUES " + invalid))

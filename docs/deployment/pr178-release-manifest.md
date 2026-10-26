@@ -38,7 +38,7 @@ process. Community, billing and compatibility scripts contain their own transact
 | 2 | `backend/src/main/resources/db/analysis/V001__run_records.sql`, `V002__goals.sql` | Check current tables, columns and indexes before applying in order. |
 | 3 | `backend/src/main/resources/db/community/V001__entertainment_and_story.sql` | Ten additive entity tables, owner FKs, unique constraints and indexes. Contains its own release transaction. `IF NOT EXISTS` does not repair an incompatible existing table. |
 | 4 | `docs/deployment/2026-10-21-billing-budget.sql` | Add billing checkout attempts and AI budget windows; preserve balances and receipts. |
-| 5 | `docs/deployment/2026-10-21-compatibility.sql` | Three course artifact columns and the exact legacy wellness provider constraint expansion. Contains its own transaction and a short lock timeout; failure must stop release. No course rows or route bytes are updated. |
+| 5 | `docs/deployment/2026-10-21-compatibility.sql` | Runs compatibility V001 then V002: three course artifact columns and canonical eight-provider checks on five wellness/body tables. Each resource has its own transaction and a short lock timeout; failure must stop release. Unexpected names or provider values abort V002. No rows or route bytes are updated. |
 | 6 | `backend/src/main/resources/db/performance/V001__activity_history_index.sql` | Run with autocommit **outside** a transaction, then verify `pg_index.indisvalid`. |
 | Conditional | `backend/src/main/resources/explorer-migrations/V001__explorer_r0_r1.sql` | Only if intentionally enabling Explorer; confirm the intended profile before execution. |
 
@@ -47,6 +47,11 @@ historical CHECK constraints reject current `EXTERNAL`, `BASE`, `AUTHORED` and
 `CUSTOM` values. If a database already contains those legacy constraints, stop and
 review their exact definitions before a compatibility migration; marking V003
 applied does not repair them. Do not edit previously applied migration resources.
+
+Migration markers must match the **bundled artifact bytes**, including line
+endings. Windows working copies can contain CRLF while the Linux deployment uses
+Git's LF resources. Compute/check markers from the canonical release export or
+the actual candidate JAR; do not copy a working-directory checksum into production.
 
 Boot the immutable candidate against the migrated restore with the production
 profile and validation enabled. Validate every entity, all five training markers,
@@ -58,6 +63,8 @@ Rehearse application rollback against the same additive schema.
 Attach a persistent web volume, restore all referenced course bytes and verify
 ownership for the Docker `hermes` user. Configure `HERMES_COURSE_MAP_UPLOAD_DIR`
 inside `RAILWAY_VOLUME_MOUNT_PATH`; the production guard rejects missing mounts.
+The runtime image pins that identity to UID 100 / GID 101, matching the original
+deployment. Verify it in the exact candidate image before changing volume ownership.
 Persist the private import directory too when retained jobs depend on it. Verify
 source downloads and route rendering before changing traffic. Source images are
 retained as evidence; runner routes render as geometry on OpenStreetMap.
